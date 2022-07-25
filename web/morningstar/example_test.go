@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/web/pkg/morningstar"
-	"github.com/alpine-hodler/web/tools"
+	"github.com/alpine-hodler/driver/tools"
+	"github.com/alpine-hodler/driver/web/morningstar"
 	"github.com/joho/godotenv"
 )
 

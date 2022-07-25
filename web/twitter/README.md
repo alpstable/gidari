@@ -10,7 +10,7 @@
 This package wraps the references defined by the [Twitter API](https://developer.twitter.com/en/docs/api-reference-index), and can be installed using
 
 ```
-go get github.com/alpine-hodler/web/pkg/twitter
+go get github.com/alpine-hodler/driver/web/twitter
 ```
 
 ## Creating a Client

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/alpine-hodler/web/internal/serial"
+	"github.com/alpine-hodler/driver/internal/serial"
 )
 
 // * This is a generated file, do not edit

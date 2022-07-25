@@ -9,7 +9,7 @@
 This package wraps the references defined by the [Coinbase Cloud API](https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccounts), and can be installed using
 
 ```
-go get github.com/alpine-hodler/web/pkg/coinbasepro
+go get github.com/alpine-hodler/driver/web/coinbasepro
 ```
 
 ## Creating a Client

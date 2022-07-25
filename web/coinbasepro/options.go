@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/alpine-hodler/web/internal"
+	"github.com/alpine-hodler/driver/internal"
 )
 
 // * This is a generated file, do not edit

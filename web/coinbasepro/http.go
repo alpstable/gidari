@@ -1,6 +1,6 @@
 package coinbasepro
 
-import "github.com/alpine-hodler/web/internal"
+import "github.com/alpine-hodler/driver/internal"
 
 // * This is a generated file, do not edit
 

@@ -1,6 +1,6 @@
 package coinbasepro
 
-import "github.com/alpine-hodler/web/pkg/websocket"
+import "github.com/alpine-hodler/driver/web/websocket"
 
 type ProductWebsocket struct {
 	conn websocket.Connector
