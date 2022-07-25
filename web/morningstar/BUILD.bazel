@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "morningstar",
+    srcs = [
+        "client.go",
+        "http.go",
+        "models.go",
+        "options.go",
+        "path.go",
+        "ratelimiter.go",
+    ],
+    importpath = "github.com/alpine-hodler/driver/web/morningstar",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_alpine_hodler_web//pkg/transport:go_default_library",
+        "@org_golang_x_time//rate",
+    ],
+)
+
+go_test(
+    name = "morningstar_test",
+    srcs = ["example_test.go"],
+    deps = [
+        "@com_github_alpine_hodler_web//pkg/morningstar:go_default_library",
+        "@com_github_alpine_hodler_web//tools:go_default_library",
+        "@com_github_joho_godotenv//:godotenv",
+    ],
+)

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "websocket",
+    srcs = [
+        "channel.go",
+        "connector.go",
+        "message.go",
+        "mock.go",
+        "websocket.go",
+    ],
+    importpath = "github.com/alpine-hodler/driver/web/websocket",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_gorilla_websocket//:websocket"],
+)
