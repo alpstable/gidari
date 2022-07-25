@@ -1,0 +1,7 @@
+{
+	"api": "coinbasepro",
+	"model": "flags",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": []
+}

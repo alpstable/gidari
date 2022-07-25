@@ -1,0 +1,23 @@
+{
+	"api": "twitter",
+	"model": "withheld",
+	"modelDescription": "Withheld contains withholding details for withheld content.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "copyright",
+			"goType": "bool",
+			"description": "Copyright indicates if the content is being withheld for on the basis of copyright infringement."
+		},
+		{
+			"identifier": "country_codes",
+			"goType": "[]string",
+			"description": "CountryCodes is a list of countries where this content is not available."
+		},
+		{
+			"identifier": "scope",
+			"goType": "WithholdingScope",
+			"description": "Scope indicates whether the content being withheld is a Tweet or a user."
+		}
+	]
+}

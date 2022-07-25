@@ -1,0 +1,45 @@
+{
+	"api": "coinbasepro",
+	"model": "product_ticker",
+	"modelDescription": "ProductTicker is a snapshot information about the last trade (tick), best bid/ask and 24h volume.",
+	"endpoints": [
+		{
+			"path": "/products/{product_id}/ticker",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getproductticker",
+			"httpMethod": "GET",
+			"enumRoot": "ProductTicker",
+			"rateLimit": 5,
+			"description": "ProductTicker will return snapshot information about the last trade (tick), best bid/ask and 24h volume."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "ask",
+			"goType": "string"
+		},
+		{
+			"identifier": "bid",
+			"goType": "string"
+		},
+		{
+			"identifier": "volume",
+			"goType": "string"
+		},
+		{
+			"identifier": "trade_id",
+			"goType": "int"
+		},
+		{
+			"identifier": "price",
+			"goType": "string"
+		},
+		{
+			"identifier": "size",
+			"goType": "string"
+		},
+		{
+			"identifier": "time",
+			"goType": "time.Time"
+		}
+	]
+}

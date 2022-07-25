@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
+
+# gem "rails"
+
+gem 'string_inflection', '~> 0.1.2'
+
+gem 'minitest', '~> 5.15'
+
+gem 'json', '~> 2.6'
+
+gem 'json-schema', '~> 2.8'
+
+gem "dry-inflector", "~> 0.2.1"

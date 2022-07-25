@@ -1,0 +1,36 @@
+{
+	"api": "coinbasepro",
+	"model": "uk_deposit_information",
+	"modelDescription": "UKDepositInformation information regarding a wallet's deposits.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "account_number",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_country",
+			"goType": "BankCountry"
+		},
+		{
+			"identifier": "account_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "reference",
+			"goType": "string"
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"api": "twitter",
+	"model": "coordinates",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "coordinates",
+			"goType": "[]float64"
+		}
+	]
+}

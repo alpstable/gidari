@@ -1,0 +1,13 @@
+{
+	"api": "polygon",
+	"model": "update_rules",
+	"modelDescription": "UpdateRules are a list of aggregation rules.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "consolidated",
+			"goType": "Consolidated",
+			"description": "Describes aggregation rules on a consolidated (all exchanges) basis."
+		}
+	]
+}

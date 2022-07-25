@@ -1,0 +1,55 @@
+{
+	"api": "coinbasepro",
+	"model": "account_hold",
+	"modelDescription": "AccountHold represents the hold on an account that belong to the same profile as the API key. Holds are placed on an account for any active orders or pending withdraw requests. As an order is filled, the hold amount is updated. If an order is canceled, any remaining hold is removed. For withdrawals, the hold is removed after it is completed.",
+	"endpoints": [
+		{
+			"path": "/accounts/{account_id}/holds",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccountholds",
+			"httpMethod": "GET",
+			"enumRoot": "AccountHolds",
+			"slice": true,
+			"rateLimit": 5,
+			"queryParams": [
+				{
+					"identifier": "before",
+					"goType": "string",
+					"description": "Before is used for pagination and sets start cursor to `before` date."
+				},
+				{
+					"identifier": "after",
+					"goType": "string",
+					"description": "After is used for pagination and sets end cursor to `after` date."
+				},
+				{
+					"identifier": "limit",
+					"goType": "int",
+					"description": "Limit puts a limit on number of results to return."
+				}
+			],
+			"description": "AccountHolds will return the holds of an account that belong to the same profile as the API key. Holds are placed on an account for any active orders or pending withdraw requests. As an order is filled, the hold amount is updated. If an order is canceled, any remaining hold is removed. For withdrawals, the hold is removed after it is completed."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "updated_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "ref",
+			"goType": "string"
+		}
+	]
+}

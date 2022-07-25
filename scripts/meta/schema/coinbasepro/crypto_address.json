@@ -1,0 +1,77 @@
+{
+	"api": "coinbasepro",
+	"model": "crypto_address",
+	"modelDescription": "CryptoAddress is used for a one-time crypto address for depositing crypto.",
+	"endpoints": [
+		{
+			"path": "/coinbase-accounts/{account_id}/addresses",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_postcoinbaseaccountaddresses",
+			"httpMethod": "POST",
+			"rateLimit": 5,
+			"enumRoot": "GenerateCryptoAddress",
+			"description": "GenerateCryptoAddress will create a one-time crypto address for depositing crypto, using a wallet account id.  This endpoint requires the \"transfer\" permission. API key must belong to default profile."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "address",
+			"goType": "string"
+		},
+		{
+			"identifier": "address_info",
+			"goType": "CryptoAddressInfo"
+		},
+		{
+			"identifier": "name",
+			"goType": "string"
+		},
+		{
+			"identifier": "create_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "updated_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "network",
+			"goType": "string"
+		},
+		{
+			"identifier": "uri_scheme",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource_path",
+			"goType": "string"
+		},
+		{
+			"identifier": "warnings",
+			"goType": "[]*CryptoAddressWarning"
+		},
+		{
+			"identifier": "legacy_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "destination_tag",
+			"goType": "string"
+		},
+		{
+			"identifier": "deposit_uri",
+			"goType": "string"
+		},
+		{
+			"identifier": "callback_url",
+			"goType": "string"
+		}
+	]
+}

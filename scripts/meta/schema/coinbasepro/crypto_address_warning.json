@@ -1,0 +1,20 @@
+{
+	"api": "coinbasepro",
+	"model": "crypto_address_warning",
+	"modelDescription": "CryptoAddressWarning is a warning for generating a crypting address",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "title",
+			"goType": "string"
+		},
+		{
+			"identifier": "details",
+			"goType": "string"
+		},
+		{
+			"identifier": "image_url",
+			"goType": "string"
+		}
+	]
+}

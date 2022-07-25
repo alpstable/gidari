@@ -1,0 +1,23 @@
+{
+	"api": "twitter",
+	"model": "cashtag",
+	"modelDescription": "Cashtag contains details about text recognized as a Cashtag.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "start",
+			"goType": "int",
+			"description": "Start is the start position (zero-based) of the recognized Cashtag within the Tweet. All start indices are inclusive."
+		},
+		{
+			"identifier": "end",
+			"goType": "int",
+			"description": "End is the end position (zero-based) of the recognized Cashtag within the Tweet. This end index is exclusive."
+		},
+		{
+			"identifier": "tag",
+			"goType": "string",
+			"description": "Tag is the text of the Cashtag."
+		}
+	]
+}

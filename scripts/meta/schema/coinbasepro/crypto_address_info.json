@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "crypto_address_info",
+	"modelDescription": "CryptoAddressInfo holds info for a crypto address",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "address",
+			"goType": "string"
+		},
+		{
+			"identifier": "destination_tag",
+			"goType": "string"
+		}
+	]
+}

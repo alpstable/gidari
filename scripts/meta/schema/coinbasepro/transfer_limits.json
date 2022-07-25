@@ -1,0 +1,56 @@
+{
+	"api": "coinbasepro",
+	"model": "transfer_limits",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "buy",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "sell",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "exchange_withdraw",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "ach",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "ach_no_balance",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "credit_debit_card",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "secure3d_buy",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "paypal_buy",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "paypal_withdrawal",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "ideal_deposit",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "sofort_deposit",
+			"goType": "CurrencyTransferLimits"
+		},
+		{
+			"identifier": "instance_ach_withdrawal",
+			"goType": "CurrencyTransferLimits"
+		}
+	]
+}

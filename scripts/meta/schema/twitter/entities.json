@@ -1,0 +1,33 @@
+{
+	"api": "twitter",
+	"model": "entities",
+	"modelDescription": "Entities are details about text that has a special meaning in a Tweet. To return this field, add tweet.fields=entities in the request's query parameter.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "annotations",
+			"goType": "[]*Annotation",
+			"description": "Annotations contain details about annotations relative to the text within a Tweet."
+		},
+		{
+			"identifier": "urls",
+			"goType": "[]*URL",
+			"description": "Urls contains details about text recognized as a URL."
+		},
+		{
+			"identifier": "hashtags",
+			"goType": "[]*Hashtag",
+			"description": "Hashtags contains details about text recognized as a Hashtag."
+		},
+		{
+			"identifier": "mentions",
+			"goType": "[]*Mention",
+			"description": "Mentions contains details about text recognized as a user mention."
+		},
+		{
+			"identifier": "cashtags",
+			"goType": "[]*Cashtag",
+			"description": "Cashtags contain details about text recognized as a Cashtag."
+		}
+	]
+}

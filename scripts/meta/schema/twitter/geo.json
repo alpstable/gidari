@@ -1,0 +1,16 @@
+{
+	"api": "twitter",
+	"model": "geo",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "coordinates",
+			"goType": "*Coordinates"
+		},
+		{
+			"identifier": "place_id",
+			"goType": "string"
+		}
+	]
+}

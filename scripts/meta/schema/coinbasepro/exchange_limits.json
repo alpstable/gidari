@@ -1,0 +1,25 @@
+{
+	"api": "coinbasepro",
+	"model": "exchange_limits",
+	"modelDescription": "ExchangeLimits represents exchange limit information for a single user.",
+	"endpoints": [
+		{
+			"path": "/users/{user_id}/exchange-limits",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getuserexchangelimits",
+			"httpMethod": "GET",
+			"enumRoot": "ExchangeLimits",
+			"rateLimit": 5,
+			"description": "ExchangeLimits returns exchange limits information for a single user."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "limit_currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "transfer_limits",
+			"goType": "TransferLimits"
+		}
+	]
+}

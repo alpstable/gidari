@@ -1,0 +1,73 @@
+{
+	"api": "coinbasepro",
+	"model": "account_ledger",
+	"modelDescription": "AccountLedger lists ledger activity for an account. This includes anything that would affect the accounts balance - transfers, trades, fees, etc.",
+	"endpoints": [
+		{
+			"path": "/accounts/{account_id}/ledger",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccountledger",
+			"httpMethod": "GET",
+			"enumRoot": "AccountLedger",
+			"slice": true,
+			"rateLimit": 5,
+			"queryParams": [
+				{
+					"identifier": "start_date",
+					"goType": "string",
+					"description": "StartDate will filter results by minimum posted date."
+				},
+				{
+					"identifier": "end_date",
+					"goType": "string",
+					"description": "EndDate will filter results by maximum posted date."
+				},
+				{
+					"identifier": "before",
+					"goType": "int",
+					"description": "Before is used for pagination. Sets start cursor to `before` date."
+				},
+				{
+					"identifier": "after",
+					"goType": "int",
+					"description": "After is used for pagination. Sets end cursor to `after` date."
+				},
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "limit",
+					"goType": "int",
+					"description": "Limit puts a limit on number of results to return."
+				}
+			],
+			"description": "AccountLedger returns ledger activity for an account. This includes anything that would affect the accounts balance - transfers, trades, fees, etc. This endpoint requires either the \"view\" or \"trade\" permission."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "amount",
+			"goType": "string"
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "balance",
+			"goType": "string"
+		},
+		{
+			"identifier": "type",
+			"goType": "EntryType"
+		},
+		{
+			"identifier": "details",
+			"goType": "AccountLedgerDetails"
+		}
+	]
+}

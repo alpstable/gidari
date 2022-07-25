@@ -1,0 +1,74 @@
+{
+	"api": "coinbasepro",
+	"model": "create_report",
+	"modelDescription": "CreateReport represents information for a report created through the client.",
+	"endpoints": [
+		{
+			"path": "/reports",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_postreports",
+			"httpMethod": "POST",
+			"enumRoot": "CreateReport",
+			"rateLimit": 5,
+			"body": [
+				{
+					"identifier": "start_date",
+					"goType": "string",
+					"description": "Start date for items to be included in report."
+				},
+				{
+					"identifier": "end_date",
+					"goType": "string",
+					"description": "End date for items to be included in report"
+				},
+				{
+					"identifier": "type",
+					"goType": "ReportType",
+					"required": true
+				},
+				{
+					"identifier": "year",
+					"goType": "string",
+					"description": "required for 1099k-transaction-history-type reports"
+				},
+				{
+					"identifier": "format",
+					"goType": "FileFormat"
+				},
+				{
+					"identifier": "product_id",
+					"goType": "string",
+					"description": "Product - required for fills-type reports"
+				},
+				{
+					"identifier": "account_id",
+					"goType": "string",
+					"description": "Account - required for account-type reports"
+				},
+				{
+					"identifier": "email",
+					"goType": "string",
+					"description": "Email to send generated report to"
+				},
+				{"identifier": "profile_id",
+					"goType": "string",
+					"description": "Portfolio - Which portfolio to generate the report for"
+				}
+			],
+			"description": "CreateReport generates a report. Reports are either for past account history or past fills on either all accounts or one product's account."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "type",
+			"goType": "ReportType"
+		},
+		{
+			"identifier": "status",
+			"goType": "Status"
+		}
+	]
+}

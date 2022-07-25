@@ -1,0 +1,18 @@
+{
+	"api": "twitter",
+	"model": "attachments",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "media_keys",
+			"goType": "[]string",
+			"description": "MediaKeys is a list of unique identifiers of media attached to this Tweet. These identifiers use the same media key format as those returned by the Media Library. You can obtain the expanded object in includes.media by adding expansions=attachments.media_keys in the request's query parameter."
+		},
+		{
+			"identifier": "poll_ids",
+			"goType": "[]string",
+			"description": "PollIds list of unique identifiers of polls present in the Tweets returned. These are returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+		}
+	]
+}

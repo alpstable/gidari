@@ -1,0 +1,40 @@
+{
+	"api": "coinbasepro",
+	"model": "sepa_deposit_information",
+	"modelDescription": "SEPADepositInformation information regarding a wallet's deposits.  A SEPA credit transfer is a single transfer of Euros from one person or organisation to another. For example, this could be to pay the deposit for a holiday rental or to settle an invoice. A SEPA direct debit is a recurring payment, for example to pay monthly rent or for a service like a mobile phone contract.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "iban",
+			"goType": "string"
+		},
+		{
+			"identifier": "swift",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_country",
+			"goType": "BankCountry"
+		},
+		{
+			"identifier": "account_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "reference",
+			"goType": "string"
+		}
+	]
+}

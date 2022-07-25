@@ -1,0 +1,20 @@
+{
+	"api": "coinbasepro",
+	"model": "crypto_account",
+	"modelDescription": "CryptoAccount references a crypto account that a CoinbasePaymentMethod belongs to",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource_path",
+			"goType": "string"
+		}
+	]
+}

@@ -1,0 +1,20 @@
+{
+	"api": "coinbasepro",
+	"model": "available_balance",
+	"modelDescription": "AvailableBalance is the available balance on the coinbase account",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "amount",
+			"goType": "string"
+		},
+		{
+			"identifier": "currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "scale",
+			"goType": "string"
+		}
+	]
+}

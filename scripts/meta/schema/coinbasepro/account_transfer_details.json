@@ -1,0 +1,20 @@
+{
+	"api": "coinbasepro",
+	"model": "account_transfer_details",
+	"modelDescription": "AccountTransferDetails are the details for an account transfer.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "coinbase_account_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "coinbase_transaction_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "coinbase_payment_method_id",
+			"goType": "string"
+		}
+	]
+}

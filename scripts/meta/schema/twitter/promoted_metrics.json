@@ -1,0 +1,32 @@
+{
+	"api": "twitter",
+	"model": "promoted_metrics",
+	"modelDescription": "PromotedMetrics are engagement metrics for the Tweet at the time of the request in a promoted context. Requires user context authentication.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "impression_count",
+			"goType": "int"
+		},
+		{
+			"identifier": "url_link_clicks",
+			"goType": "int"
+		},
+		{
+			"identifier": "user_profile_clicks",
+			"goType": "int"
+		},
+		{
+			"identifier": "retweet_count",
+			"goType": "int"
+		},
+		{
+			"identifier": "reply_count",
+			"goType": "int"
+		},
+		{
+			"identifier": "like_count",
+			"goType": "int"
+		}
+	]
+}

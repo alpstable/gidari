@@ -1,0 +1,12 @@
+{
+	"api": "twitter",
+	"model": "bookmarked",
+	"modelDescription": "Bookmarked holds details about the status of a bookmark write.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "Bookmarked",
+			"goType": "bool"
+		}
+	]
+}

@@ -1,0 +1,28 @@
+{
+	"api": "twitter",
+	"model": "public_metrics",
+	"modelDescription": "PublicMetrics are the engagement metrics for the Tweet at the time of the request.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "retweet_count",
+			"goType": "int",
+			"description": "RetweetCount is the number of times this Tweet has been Retweeted."
+		},
+		{
+			"identifier": "reply_count",
+			"goType": "int",
+			"description": "ReplyCount is the number of Replies of this Tweet."
+		},
+		{
+			"identifier": "like_count",
+			"goType": "int",
+			"description": "LikeCount is the number of Likes of this Tweet."
+		},
+		{
+			"identifier": "quote_count",
+			"goType": "int",
+			"description": "QuoteCount is the number of times this Tweet has been Retweeted with a comment (also known as Quote)."
+		}
+	]
+}

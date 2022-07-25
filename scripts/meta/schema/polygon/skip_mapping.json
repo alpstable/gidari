@@ -1,0 +1,20 @@
+{
+	"api": "polygon",
+	"model": "skip_mapping",
+	"modelDescription": "SkipMapping is a mapping to a symbol for each SIP that has this condition.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "CTA",
+			"goType": "string"
+		},
+		{
+			"identifier": "OPRA",
+			"goType": "string"
+		},
+		{
+			"identifier": "UTP",
+			"goType": "string"
+		}
+	]
+}

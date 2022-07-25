@@ -1,0 +1,44 @@
+{
+	"api": "coinbasepro",
+	"model": "book",
+	"modelDescription": "Book is a list of open orders for a product. The amount of detail shown can be customized with the level parameter.",
+	"endpoints": [
+		{
+			"path": "/products/{product_id}/book",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getproductbook",
+			"httpMethod": "GET",
+			"enumRoot": "Book",
+			"rateLimit": 5,
+			"description": "Book will return a list of open orders for a product. The amount of detail shown can be customized with the level parameter.",
+			"queryParams": [
+				{
+					"identifier": "level",
+					"goType": "int32",
+					"description": "Levels 1 and 2 are aggregated. The size field is the sum of the size of the orders at that price, and num-orders is the count of orders at that price; size should not be multiplied by num-orders.\n\nLevel 3 is non-aggregated and returns the entire order book.\n\nWhile the book is in an auction, the L1, L2 and L3 book will also contain the most recent indicative quote disseminated during the auction, and auction_mode will be set to true.  These indicative quote messages are sent on an interval basis (approximately once a second) during the collection phase of an auction and includes information about the tentative price and size affiliated with the completion.\n\nLevel 1 and Level 2 are recommended for polling. For the most up-to-date data, consider using the websocket stream. Level 3 is only recommended for users wishing to maintain a full real-time order book using the websocket stream. Abuse of Level 3 via polling will cause your access to be limited or blocked."
+				}
+			]
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "bids",
+			"goType": "BidAsk"
+		},
+		{
+			"identifier": "asks",
+			"goType": "BidAsk"
+		},
+		{
+			"identifier": "sequence",
+			"goType": "float64"
+		},
+		{
+			"identifier": "auction_mode",
+			"goType": "bool"
+		},
+		{
+			"identifier": "auction",
+			"goType": "Auction"
+		}
+	]
+}

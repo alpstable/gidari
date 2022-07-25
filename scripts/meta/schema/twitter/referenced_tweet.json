@@ -1,0 +1,18 @@
+{
+	"api": "twitter",
+	"model": "referenced_tweet",
+	"modelDescription": "ReferencedTweet is a tweet referenced by another tweet.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string",
+			"description": "ID is the unique identifier of the referenced Tweet. You can obtain the expanded object in includes.tweets by adding expansions=referenced_tweets.id in the request's query parameter."
+		},
+		{
+			"identifier": "type",
+			"goType": "string",
+			"description": "Type indicates the type of relationship between this Tweet and the Tweet returned in the response: retweeted (this Tweet is a Retweet), quoted (a Retweet with comment, also known as Quoted Tweet), or replied_to (this Tweet is a reply)."
+		}
+	]
+}

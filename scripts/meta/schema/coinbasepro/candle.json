@@ -1,0 +1,43 @@
+{
+	"api": "coinbasepro",
+	"model": "candle",
+	"modelDescription": "Candle represents the historic rate for a product at a point in time.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "product_id",
+			"goType": "string",
+			"description": "ProductID is the productID for the candle, e.g. BTC-ETH. This is not through the Coinbase Pro web API and is inteded for use in data layers and business logic."
+		},
+		{
+			"identifier": "unix",
+			"goType": "int64",
+			"description": "Unix is the bucket start time as an int64 Unix value."
+		},
+		{
+			"identifier": "price_low",
+			"goType": "float64",
+			"description": "PriceLow is the lowest price during the bucket interval."
+		},
+		{
+			"identifier": "price_high",
+			"goType": "float64",
+			"description": "PriceHigh is the highest price during the bucket interval."
+		},
+		{
+			"identifier": "price_open",
+			"goType": "float64",
+			"description": "PriceOpen is the opening price (first trade) in the bucket interval."
+		},
+		{
+			"identifier": "price_close",
+			"goType": "float64",
+			"description": "PriceClose is the closing price (last trade) in the bucket interval."
+		},
+		{
+			"identifier": "volume",
+			"goType": "float64",
+			"description": "Volumes is the volume of trading activity during the bucket interval."
+		}
+	]
+}

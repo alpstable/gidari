@@ -1,0 +1,20 @@
+{
+	"api": "coinbasepro",
+	"model": "fiat_account",
+	"modelDescription": "FIATAccount references a FIAT account thata CoinbasePaymentMethod belongs to",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource",
+			"goType": "string"
+		},
+		{
+			"identifier": "resource_path",
+			"goType": "string"
+		}
+	]
+}

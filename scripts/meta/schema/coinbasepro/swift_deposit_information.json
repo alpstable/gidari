@@ -1,0 +1,36 @@
+{
+	"api": "coinbasepro",
+	"model": "swift_deposit_information",
+	"modelDescription": "SWIFTDepositInformation information regarding a wallet's deposits.  SWIFT stands for Society for Worldwide Interbank Financial Telecommunications. Basically, it's a computer network that connects over 900 banks around the world – and enables them to transfer money. ING is part of this network. There is no fee for accepting deposits into your account with ING.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "account_number",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_country",
+			"goType": "BankCountry"
+		},
+		{
+			"identifier": "account_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_address",
+			"goType": "string"
+		},
+		{
+			"identifier": "reference",
+			"goType": "string"
+		}
+	]
+}

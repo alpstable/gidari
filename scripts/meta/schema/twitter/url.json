@@ -1,0 +1,38 @@
+{
+	"api": "twitter",
+	"model": "url",
+	"modelDescription": "Entity identifies detailed information regarding the domain classification bases on Tweet text.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "start",
+			"goType": "int",
+			"description": "Start is the start position (zero-based) of the recognized URL within the Tweet. All start indices are inclusive."
+		},
+		{
+			"identifier": "end",
+			"goType": "int",
+			"description": "End is the end position (zero-based) of the recognized URL within the Tweet. This end index is exclusive."
+		},
+		{
+			"identifier": "url",
+			"goType": "string",
+			"description": "Url is the URL in the format tweeted by the user."
+		},
+		{
+			"identifier": "expanded_url",
+			"goType": "string",
+			"description": "ExpandedUrl is the The fully resolved URL."
+		},
+		{
+			"identifier": "display_url",
+			"goType": "string",
+			"description": "DisplayUrl is the URL as displayed in the Twitter client."
+		},
+		{
+			"identifier": "unwound_url",
+			"goType": "string",
+			"description": "UnwoundUrl is the full destination URL."
+		}
+	]
+}

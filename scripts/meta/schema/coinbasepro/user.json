@@ -1,0 +1,84 @@
+{
+	"api": "coinbasepro",
+	"model": "user",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "active_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "name",
+			"goType": "string"
+		},
+		{
+			"identifier": "roles",
+			"goType": "[]*Role"
+		},
+		{
+			"identifier": "is_banned",
+			"goType": "bool"
+		},
+		{
+			"identifier": "user_type",
+			"goType": "string"
+		},
+		{
+			"identifier": "fulfills_new_requirements",
+			"goType": "bool"
+		},
+		{
+			"identifier": "flags",
+			"goType": "Flags"
+		},
+		{
+			"identifier": "details",
+			"goType": "UserDetails"
+		},
+		{
+			"identifier": "preferences",
+			"goType": "UserPreferences"
+		},
+		{
+			"identifier": "has_default",
+			"goType": "bool"
+		},
+		{
+			"identifier": "state_code",
+			"goType": "string"
+		},
+		{
+			"identifier": "cb_data_from_cache",
+			"goType": "bool"
+		},
+		{
+			"identifier": "two_factor_method",
+			"goType": "string"
+		},
+		{
+			"identifier": "legal_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "terms_accepted",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "has_clawback_payment_pending",
+			"goType": "bool"
+		},
+		{
+			"identifier": "has_restricted_assets",
+			"goType": "bool"
+		}
+	]
+}

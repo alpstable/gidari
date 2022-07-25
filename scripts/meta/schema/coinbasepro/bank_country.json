@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "bank_country",
+	"modelDescription": "BankCountry are the name and code for the bank's country associated with a wallet",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "name",
+			"goType": "string"
+		},
+		{
+			"identifier": "code",
+			"goType": "string"
+		}
+	]
+}

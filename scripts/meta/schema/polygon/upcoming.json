@@ -1,0 +1,50 @@
+
+{
+	"api": "polygon",
+	"model": "upcoming",
+	"modelDescription": "Upcoming returns information concerning market holidays and their open/close times.",
+	"endpoints": [
+		{
+			"path": "/v1/marketstatus/upcoming",
+			"documentation": "https://polygon.io/docs/crypto/get_v1_marketstatus_upcoming",
+			"httpMethod": "GET",
+			"enumRoot": "Upcoming",
+			"slice": true,
+			"rateLimit": 99,
+			"description": "Upcoming gets market holidays and their open/close times."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "close",
+			"goType": "string",
+			"description": "Close is the market close time on the holiday (if it's not closed)."
+		},
+		{
+			"identifier": "date",
+			"goType": "string",
+			"description": "Date is the date of the holiday."
+		},
+		{
+			"identifier": "exchange",
+			"goType": "string",
+			"description": "Exchange is market the record is for."
+		},
+		{
+			"identifier": "name",
+			"goType": "string",
+			"description": "Name is the name of the holiday."
+		},
+		{
+			"identifier": "open",
+			"goType": "string",
+			"description": "Open is the market open time on the holiday (if it's not closed)."
+		}
+		,
+		{
+			"identifier": "status",
+			"goType": "string",
+			"description": "Status is the status of the market on the holiday."
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "currency_transfer_limit",
+	"modelDescription": "CurrencyTransferLimit encapsulates ACH data for a currency via Max/Remaining amounts.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "max",
+			"goType": "float64"
+		},
+		{
+			"identifier": "remaining",
+			"goType": "float64"
+		}
+	]
+}

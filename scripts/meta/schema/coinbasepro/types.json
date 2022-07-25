@@ -1,0 +1,232 @@
+{
+	"api": "coinbasepro",
+	"enums": [
+		{
+			"identifier": "entry_type",
+			"values": [
+				{
+					"identifier": "transfer",
+					"description": "EntryTypeTransfer are funds moved to/from Coinbase to Coinbase Exchange."
+				},
+				{
+					"identifier": "match",
+					"description": "EntryTypeMatch are funds moved as a result of a trade."
+				},
+				{
+					"identifier": "fee",
+					"description": "EntryTypeFee is a fee as a result of a trade."
+				},
+				{
+					"identifier": "rebate",
+					"description": "EntryTypeRebate is a fee rebate as per our fee schedule."
+				},
+				{
+					"identifier": "conversion",
+					"description": "EntryTypeConversion are funds converted between fiat currency and a stablecoin."
+				}
+			],
+			"description": "EntryType indicates the reason for the account change."
+		},
+		{
+			"identifier": "side",
+			"values": [
+				{
+					"identifier": "buy"
+				},
+				{
+					"identifier": "sell"
+				}
+			],
+			"description": "Side represents which side our order is on: the \"sell\" side or the \"buy\" side."
+		},
+		{
+			"identifier": "stop",
+			"values": [
+				{
+					"identifier": "loss"
+				},
+				{
+					"identifier": "entry"
+				}
+			],
+			"description": "Stop is either loss or entry."
+		},
+		{
+			"identifier": "time_in_force",
+			"values": [
+				{
+					"identifier": "GTC",
+					"description": "TimeInForceGTC Good till canceled orders remain open on the book until canceled. This is the default behavior if no policy is specified."
+				},
+				{
+					"identifier": "IOC",
+					"description": "TimeInForceIOC Immediate or cancel orders instantly cancel the remaining size of the limit order instead of opening it on the book."
+				},
+				{
+					"identifier": "FOK",
+					"description": "TimeInForceFOK Fill or kill orders are rejected if the entire size cannot be matched."
+				},
+				{
+					"identifier": "GTT",
+					"description": "TimeInForceGTT Good till time orders remain open on the book until canceled or the allotted cancel_after is depleted on the matching engine. GTT orders are guaranteed to cancel before any other order is processed after the cancel_after timestamp which is returned by the API. A day is considered 24 hours."
+				}
+			],
+			"description": "TimeInForce policies provide guarantees about the lifetime of an order."
+		},
+		{
+			"identifier": "OrderType",
+			"values": [
+				{
+					"identifier": "market",
+					"description": "OrderTypeMarket is an order to buy or sell the product immediately. This type of order guarantees that the order will be executed, but does not guarantee the execution price. A market order generally will execute at or near the current bid (for a sell order) or ask (for a buy order) price. However, it is important for investors to remember that the last-traded price is not necessarily the price at which a market order will be executed."
+				},
+				{
+					"identifier": "limit",
+					"description": "OrderTypeLimit is an order to buy or sell a product at a specific price or better. A buy limit order can only be executed at the limit price or lower, and a sell limit order can only be executed at the limit price or higher."
+				}
+			],
+			"description": "OrderType represents the way in which an order should execute."
+		},
+		{
+			"identifier": "status",
+			"values": [
+				{
+					"identifier": "online"
+				},
+				{
+					"identifier": "offline"
+				},
+				{
+					"identifier": "internal"
+				},
+				{
+					"identifier": "delisted"
+				},
+				{
+					"identifier": "pending"
+				},
+				{
+					"identifier": "creating"
+				},
+				{
+					"identifier": "ready"
+				},
+				{
+					"identifier": "created"
+				},
+				{
+					"identifier": "in_progress"
+				},
+				{
+					"identifier": "failed"
+				},
+				{
+					"identifier": "complete"
+				}
+			]
+		},
+		{
+			"identifier": "ReportType",
+			"values": [
+				{
+					"identifier": "fills"
+				},
+				{
+					"identifier": "accounts"
+				},
+				{
+					"identifier": "otc_fills"
+				},
+				{
+					"identifier": "type_1099k_transaction_history"
+				},
+				{
+					"identifier": "tax_invoice"
+				}
+			]
+		},
+		{
+			"identifier": "FileFormat",
+			"values": [
+				{
+					"identifier": "pdf"
+				},
+				{
+					"identifier": "csv"
+				}
+			]
+		},
+		{
+			"identifier": "CancelAfter",
+			"values": [
+				{
+					"identifier": "min"
+				},
+				{
+					"identifier": "hour"
+				},
+				{
+					"identifier": "day"
+				}
+			],
+			"description": "CancelAfter is the timeframe in which to cancel an order if it hasn't been filled"
+		},
+		{
+			"identifier": "STP",
+			"values": [
+				{
+					"identifier": "dc",
+					"description": "STPDc is decrease and cancel, default."
+				},
+				{
+					"identifier": "co",
+					"description": "STPCo is cancel oldest."
+				},
+				{
+					"identifier": "cn",
+					"description": "STPCn is cancel newest."
+				},
+				{
+					"identifier": "cb",
+					"description": "STPCb is cancel both."
+				}
+			],
+			"description": "STP is the order's Self trade preservation flag."
+		},
+		{
+			"identifier": "transfer_method",
+			"values": [
+				{
+					"identifier": "deposit"
+				},
+				{
+					"identifier": "withdraw"
+				}
+			]
+		},
+		{
+			"identifier": "granularity",
+			"values": [
+				{
+					"identifier": "60"
+				},
+				{
+					"identifier": "300"
+				},
+				{
+					"identifier": "900"
+				},
+				{
+					"identifier": "3600"
+				},
+				{
+					"identifier": "21600"
+				},
+				{
+					"identifier": "86400"
+				}
+			],
+			"description": "Granularity is the time in seconds between each candle tick."
+		}
+	]
+}

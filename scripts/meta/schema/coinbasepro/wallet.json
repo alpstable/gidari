@@ -1,0 +1,86 @@
+{
+	"api": "coinbasepro",
+	"model": "wallet",
+	"modelDescription": "Wallet represents a user's available Coinbase wallet (These are the wallets/accounts that are used for buying and selling on www.coinbase.com)",
+	"endpoints": [
+		{
+			"path": "/coinbase-accounts",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getcoinbaseaccounts",
+			"httpMethod": "GET",
+			"enumRoot": "Wallets",
+			"slice": true,
+			"rateLimit": 5,
+			"description": "Wallets will return all the user's available Coinbase wallets (These are the wallets/accounts that are used for buying and selling on www.coinbase.com)"
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "name",
+			"goType": "string"
+		},
+		{
+			"identifier": "balance",
+			"goType": "string"
+		},
+		{
+			"identifier": "currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "primary",
+			"goType": "bool"
+		},
+		{
+			"identifier": "active",
+			"goType": "bool"
+		},
+		{
+			"identifier": "available_on_consumer",
+			"goType": "bool"
+		},
+		{
+			"identifier": "ready",
+			"goType": "bool"
+		},
+		{
+			"identifier": "wire_deposit_information",
+			"goType": "WireDepositInformation"
+		},
+		{
+			"identifier": "swift_deposit_information",
+			"goType": "SWIFTDepositInformation"
+		},
+		{
+			"identifier": "sepa_deposit_information",
+			"goType": "SEPADepositInformation"
+		},
+		{
+			"identifier": "uk_deposit_information",
+			"goType": "UKDepositInformation"
+		},
+		{
+			"identifier": "destination_tag_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "destination_tag_regex",
+			"goType": "string"
+		},
+		{
+			"identifier": "hold_balance",
+			"goType": "string"
+		},
+		{
+			"identifier": "hold_currency",
+			"goType": "string"
+		}
+	]
+}

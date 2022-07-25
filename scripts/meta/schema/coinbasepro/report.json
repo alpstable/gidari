@@ -1,0 +1,93 @@
+{
+	"api": "coinbasepro",
+	"model": "report",
+	"modelDescription": "Report represents a list of past fills/account reports.",
+	"endpoints": [
+		{
+			"path": "/reports",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getreports",
+			"httpMethod": "GET",
+			"enumRoot": "Reports",
+			"slice": true,
+			"rateLimit": 5,
+			"description": "Reports returns a list of past fills/account reports.",
+			"queryParams": [
+				{
+					"identifier": "portfolio_id",
+					"goType": "string",
+					"description": "Filter results by a specific profile_id"
+				},
+				{
+					"identifier": "after",
+					"goType": "string",
+					"description": "Filter results after a specific date"
+				},
+				{
+					"identifier": "limit",
+					"goType": "int",
+					"description": "Limit results to a specific number"
+				},
+				{
+					"identifier": "type",
+					"goType": "ReportType",
+					"description": "Filter results by type of report (fills or account)\n  - otc_fills: real string is otc-fills\n  - type_1099k_transaction_history: real string is 1099-transaction-history\n  - tax_invoice: real string is tax-invoice"
+				},
+				{
+					"identifier": "ignored_expired",
+					"goType": "bool",
+					"description": "Ignore expired results"
+				}
+			]
+		},
+		{
+			"path": "/reports/{report_id}",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getreport",
+			"httpMethod": "GET",
+			"enumRoot": "Report",
+			"rateLimit": 5,
+			"description": "Report will return a specific report by report_id."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "type",
+			"goType": "ReportType"
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "updated_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "expires_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "status",
+			"goType": "Status"
+		},
+		{
+			"identifier": "user_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "file_url",
+			"goType": "string"
+		},
+		{
+			"identifier": "params",
+			"goType": "ReportsParams"
+		},
+		{
+			"identifier": "file_count",
+			"goType": "string"
+		}
+	]
+}

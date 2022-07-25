@@ -1,0 +1,12 @@
+{
+	"api": "coinbasepro",
+	"model": "oracle_prices",
+	"modelDescription": "OraclePrices contain human-readable asset prices.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "additionalProp",
+			"goType": "string"
+		}
+	]
+}

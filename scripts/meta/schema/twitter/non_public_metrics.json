@@ -1,0 +1,23 @@
+{
+	"api": "twitter",
+	"model": "non_public_metrics",
+	"modelDescription": "NonPublicMetrics are non-public engagement metrics for the Tweet at the time of the request. This is a private metric, and requires the use of OAuth 2.0 User Context authentication.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "impression_count",
+			"goType": "int",
+			"description": "ImpressionCount are the number of times the Tweet has been viewed. This is a private metric, and requires the use of OAuth 2.0 User Context authentication.."
+		},
+		{
+			"identifier": "url_link_clicks",
+			"goType": "int",
+			"description": "URLLinkClicks are the number of times a user clicks on a URL link or URL preview card in a Tweet. This is a private metric, and requires the use of OAuth 2.0 User Context authentication."
+		},
+		{
+			"identifier": "user_profile_clicks",
+			"goType": "int",
+			"description": "UserProfileClicks are the number of times a user clicks the following portions of a Tweet - display name, user name, profile picture. This is a private metric, and requires the use of OAuth 2.0 User Context authentication."
+		}
+	]
+}

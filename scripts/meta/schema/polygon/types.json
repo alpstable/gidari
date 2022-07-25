@@ -1,0 +1,94 @@
+{
+	"api": "polygon",
+	"enums": [
+		{
+			"identifier": "status",
+			"values": [
+				{
+					"identifier": "ok"
+				},
+				{
+					"identifier": "early-close"
+				},
+				{
+					"identifier": "closed"
+				}
+			]
+		},
+		{
+			"identifier": "timespan",
+			"values": [
+				{
+					"identifier": "minute"
+				},
+				{
+					"identifier": "hour"
+				},
+				{
+					"identifier": "day"
+				},
+				{
+					"identifier": "week"
+				},
+				{
+					"identifier": "month"
+				},
+				{
+					"identifier": "quarter"
+				},
+				{
+					"identifier": "year"
+				}
+			],
+			"description": "Timespan is the size of the time window."
+		},
+		{
+			"identifier": "asset_class",
+			"values": [
+				{
+					"identifier": "stocks"
+				},
+				{
+					"identifier": "options"
+				},
+				{
+					"identifier": "crypto"
+				},
+				{
+					"identifier": "fx"
+				}
+			],
+			"description": "AssetClass is an identifier for a group of similar financial instruments."
+		},
+		{
+			"identifier": "ConditionType",
+			"values": [
+				{
+					"identifier": "sale_condition"
+				},
+				{
+					"identifier": "quote_condition"
+				},
+				{
+					"identifier": "sip_generated_flag"
+				},
+				{
+					"identifier": "financial_status_indicator"
+				},
+				{
+					"identifier": "short_sale_restriction_indicator"
+				},
+				{
+					"identifier": "settlement_condition"
+				},
+				{
+					"identifier": "market_condition"
+				},
+				{
+					"identifier": "trade_thru_exempt"
+				}
+			],
+			"description": "ConditionType is an identifier for a collection of related conditions."
+		}
+	]
+}

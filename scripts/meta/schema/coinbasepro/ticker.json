@@ -1,0 +1,48 @@
+{
+	"api": "coinbasepro",
+	"model": "ticker",
+	"modelDescription": "Ticker is real-time price updates every time a match happens.  It batches updates in case of cascading matches, greatly reducing bandwidth requirements.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "product_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "trade_id",
+			"goType": "int"
+		},
+		{
+			"identifier": "sequence",
+			"goType": "int"
+		},
+		{
+			"identifier": "time",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "side",
+			"goType": "string"
+		},
+		{
+			"identifier": "price",
+			"goType": "string"
+		},
+		{
+			"identifier": "last_size",
+			"goType": "string"
+		},
+		{
+			"identifier": "best_bid",
+			"goType": "string"
+		},
+		{
+			"identifier": "best_ask",
+			"goType": "string"
+		}
+	]
+}

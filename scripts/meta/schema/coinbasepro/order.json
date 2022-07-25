@@ -1,0 +1,190 @@
+{
+	"api": "coinbasepro",
+	"model": "order",
+	"modelDescription": "Order is an open order.",
+	"endpoints": [
+		{
+			"path": "/orders",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getorders",
+			"httpMethod": "GET",
+			"enumRoot": "Orders",
+			"rateLimit": 5,
+			"slice": true,
+			"queryParams": [
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "product_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "sortedBy",
+					"goType": "string"
+				},
+				{
+					"identifier": "sorting",
+					"goType": "string"
+				},
+				{
+					"identifier": "start_date",
+					"goType": "string"
+				},
+				{
+					"identifier": "end_date",
+					"goType": "string"
+				},
+				{
+					"identifier": "before",
+					"goType": "string"
+				},
+				{
+					"identifier": "after",
+					"goType": "string"
+				},
+				{
+					"identifier": "limit",
+					"goType": "int",
+					"required": true
+				},
+				{
+					"identifier": "status",
+					"goType": "[]string",
+					"required": true
+				}
+			],
+			"description": "Orders will return your current open orders. Only open or un-settled orders are returned by default. As soon as an order is no longer open and settled, it will no longer appear in the default request. Open orders may change state between the request and the response depending on market conditions."
+		},
+		{
+			"path": "/orders/{order_id}",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getorder",
+			"httpMethod": "GET",
+			"enumRoot": "Order",
+			"rateLimit": 5,
+			"description": "Order returns a single order by id."
+		},
+		{
+			"path": "/orders/{order_id}",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_deleteorder",
+			"httpMethod": "DELETE",
+			"enumRoot": "CancelOrder",
+			"returnType": "string",
+			"rateLimit": 5,
+			"description": "CancelOrder will cancel a single open order by order id."
+		},
+		{
+			"path": "/orders",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_deleteorders",
+			"httpMethod": "DELETE",
+			"enumRoot": "CancelOpenOrders",
+			"returnType": "[]*string",
+			"rateLimit": 5,
+			"queryParams": [
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "product_id",
+					"goType": "string"
+				}
+			],
+			"description": "CancelOpenOrders will try with best effort to cancel all open orders. This may require you to make the request multiple times until all of the open orders are deleted."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "price",
+			"goType": "string"
+		},
+		{
+			"identifier": "size",
+			"goType": "string"
+		},
+		{
+			"identifier": "product_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "side",
+			"goType": "Side"
+		},
+		{
+			"identifier": "funds",
+			"goType": "string"
+		},
+		{
+			"identifier": "specified_funds",
+			"goType": "string"
+		},
+		{
+			"identifier": "type",
+			"goType": "OrderType"
+		},
+		{
+			"identifier": "time_in_force",
+			"goType": "TimeInForce"
+		},
+		{
+			"identifier": "expire_time",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "post_only",
+			"goType": "bool"
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "done_at",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "done_reason",
+			"goType": "string"
+		},
+		{
+			"identifier": "reject_reason",
+			"goType": "string"
+		},
+		{
+			"identifier": "fill_fees",
+			"goType": "string"
+		},
+		{
+			"identifier": "filled_size",
+			"goType": "string"
+		},
+		{
+			"identifier": "executed_value",
+			"goType": "string"
+		},
+		{
+			"identifier": "status",
+			"goType": "string"
+		},
+		{
+			"identifier": "settled",
+			"goType": "bool"
+		},
+		{
+			"identifier": "stop",
+			"goType": "string"
+		},
+		{
+			"identifier": "stop_price",
+			"goType": "string"
+		},
+		{
+			"identifier": "funding_amount",
+			"goType": "string"
+		}
+	]
+}

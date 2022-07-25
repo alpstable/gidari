@@ -1,0 +1,46 @@
+{
+	"api": "twitter",
+	"model": "tweets",
+	"modelDescription": "TODO",
+	"endpoints": [
+		{
+			"path": "/2/tweets/search/all",
+			"documentation": "https://developer.twitter.com/en/docs/twitter-api/tweets/search/api-reference/get-tweets-search-all",
+			"httpMethod": "GET",
+			"enumRoot": "AllTweets",
+			"queryParams": [
+				{
+					"identifier": "max_results",
+					"goType": "int",
+					"description": "MaxResults are the maximum number of search results to be returned by a request. A number between 10 and the system limit (currently 500). By default, a request response will return 10 results."
+				}
+			],
+			"description": "TODO"
+		},
+		{
+			"path": "/2/tweets",
+			"documentation": "https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets",
+			"httpMethod": "GET",
+			"enumRoot": "Tweets",
+			"queryParams": [
+				{
+					"identifier": "ids",
+					"goType": "[]string",
+					"description": "TODO",
+					"required": true
+				}
+			],
+			"description": "TODO"
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "data",
+			"goType": "[]*Tweet"
+		},
+		{
+			"identifier": "meta",
+			"goType": "Meta"
+		}
+	]
+}

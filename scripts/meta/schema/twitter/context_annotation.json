@@ -1,0 +1,18 @@
+{
+	"api": "twitter",
+	"model": "context_annotation",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "domain",
+			"goType": "Domain",
+			"description": "Domain are elements which identify detailed information regarding the domain classification based on Tweet text."
+		},
+		{
+			"identifier": "entity",
+			"goType": "Entity",
+			"description": "Entity are elements which identify detailed information regarding the domain classification bases on Tweet text."
+		}
+	]
+}

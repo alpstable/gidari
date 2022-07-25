@@ -1,0 +1,61 @@
+{
+	"api": "coinbasepro",
+	"model": "account",
+	"modelDescription": "Account holds data for trading account from the profile of the API key",
+	"endpoints": [
+		{
+			"path": "/accounts",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccounts",
+			"httpMethod": "GET",
+			"enumRoot": "Accounts",
+			"slice": true,
+			"rateLimit": 5,
+			"description": "Accounts will return a list of trading accounts from the profile of the API key."
+		},
+		{
+			"path": "/accounts/{account_id}",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccount",
+			"httpMethod": "GET",
+			"enumRoot": "Account",
+			"rateLimit": 5,
+			"description": "Account will return data for a single account. Use this endpoint when you know the account_id. API key must belong to the same profile as the account."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "balance",
+			"goType": "string"
+		},
+		{
+			"identifier": "available",
+			"goType": "string"
+		},
+		{
+			"identifier": "hold",
+			"goType": "string"
+		},
+		{
+			"identifier": "profile_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "trading_enabled",
+			"goType": "bool"
+		}
+	],
+	"modelTests": [
+		{
+			"name": "200_1",
+			"description": "200 status example from coinbase",
+			"json": "{\"id\":\"7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da\",\"currency\":\"USD\",\"balance\":\"0.0000000000000000\",\"available\":\"0\",\"hold\":\"0.0000000000000000\",\"profile_id\":\"8058d771-2d88-4f0f-ab6e-299c153d4308\",\"trading_enabled\":true}"
+		}
+	]
+}

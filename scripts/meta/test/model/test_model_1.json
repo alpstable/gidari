@@ -1,0 +1,26 @@
+{
+	"api": "test_api",
+	"modelDescription": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus",
+	"model": "test_model",
+	"endpoints": [
+		{
+			"path": "/some/{path_id}",
+			"documentation": "something.com",
+			"httpMethod": "GET",
+			"enumRoot": "SomeData",
+			"queryParams": [
+				{
+					"identifier": "before",
+					"goType": "string"
+				}
+			],
+			"description": "Some description"
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		}
+	]
+}

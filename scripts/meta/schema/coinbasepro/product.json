@@ -1,0 +1,112 @@
+{
+	"api": "coinbasepro",
+	"model": "product",
+	"modelDescription": "Product represents a currency pair available for trading.",
+	"endpoints": [
+		{
+			"path": "/products",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getproducts",
+			"httpMethod": "GET",
+			"enumRoot": "Products",
+			"slice": true,
+			"rateLimit": 5,
+			"description": "Products will return a list of available currency pairs for trading.",
+			"queryParams": [
+				{
+					"identifier": "type",
+					"goType": "string"
+				}
+			]
+		},
+		{
+			"path": "/products/{product_id}",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getproduct",
+			"httpMethod": "GET",
+			"enumRoot": "Product",
+			"rateLimit": 5,
+			"description": "Product will return information on a single product."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "base_currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "quote_currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "base_min_size",
+			"goType": "string"
+		},
+		{
+			"identifier": "base_max_size",
+			"goType": "string"
+		},
+		{
+			"identifier": "quote_increment",
+			"goType": "string"
+		},
+		{
+			"identifier": "base_increment",
+			"goType": "string"
+		},
+		{
+			"identifier": "display_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "min_market_funds",
+			"goType": "string"
+		},
+		{
+			"identifier": "max_market_funds",
+			"goType": "string"
+		},
+		{
+			"identifier": "margin_enabled",
+			"goType": "bool"
+		},
+		{
+			"identifier": "post_only",
+			"goType": "bool"
+		},
+		{
+			"identifier": "limit_only",
+			"goType": "bool"
+		},
+		{
+			"identifier": "cancel_only",
+			"goType": "bool"
+		},
+		{
+			"identifier": "status",
+			"goType": "Status"
+		},
+		{
+			"identifier": "status_message",
+			"goType": "string"
+		},
+		{
+			"identifier": "trading_disabled",
+			"goType": "bool"
+		},
+		{
+			"identifier": "fx_stablecoin",
+			"goType": "bool"
+		},
+		{
+			"identifier": "max_slippage_percentage",
+			"goType": "string"
+		},
+		{
+			"identifier": "auction_mode",
+			"goType": "bool"
+		}
+	]
+}

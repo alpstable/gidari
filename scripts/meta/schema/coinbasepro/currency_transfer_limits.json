@@ -1,0 +1,8 @@
+{
+	"api": "coinbasepro",
+	"model": "currency_transfer_limits",
+	"modelDescription": "CurrencyTransferLimits encapsulates ACH data for many currencies.",
+	"modelOnly": true,
+	"nonStruct": "map[string]CurrencyTransferLimit",
+	"modelFields": []
+}

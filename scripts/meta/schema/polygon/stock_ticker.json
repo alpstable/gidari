@@ -1,0 +1,68 @@
+{
+	"api": "polygon",
+	"model": "stock_ticker",
+	"modelDescription": "StockTicker are conditions that match a stock ticker query.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "abbreviation",
+			"goType": "string",
+			"description": "Abbreviation is a commonly-used abbreviation for this condition."
+		},
+		{
+			"identifier": "asset_class",
+			"goType": "AssetClass",
+			"description": "AssetClass is an identifier for a group of similar financial instruments."
+		},
+		{
+			"identifier": "data_types",
+			"goType": "[]string",
+			"description": "DataTypes are data types that this condition applies to."
+		},
+		{
+			"identifier": "description",
+			"goType": "string",
+			"description": "Description is a short description of the semantics of this condition."
+		},
+		{
+			"identifier": "exchange",
+			"goType": "int",
+			"description": "Exchange, if present, is a mapping this condition from a Polygon.io code to a SIP symbol depends on this attribute. In other words, data with this condition attached comes exclusively from the given exchange."
+		},
+		{
+			"identifier": "id",
+			"goType": "int",
+			"description": "ID is an identifier used by Polygon.io for this condition. Unique per data type."
+		},
+		{
+			"identifier": "legacy",
+			"goType": "bool",
+			"description": "Legacy, if true, is this condition is from an old version of the SIPs' specs and no longer is used. Other conditions may or may not reuse the same symbol as this one."
+		},
+		{
+			"identifier": "name",
+			"goType": "string",
+			"description": "Name is the name of this condition."
+		},
+		{
+			"identifier": "sip_mapping",
+			"goType": "SkipMapping",
+			"description": "SipMapping is a mapping to a symbol for each SIP that has this condition."
+		},
+		{
+			"identifier": "type",
+			"goType": "ConditionType",
+			"description": "Type is an identifier for a collection of related conditions."
+		},
+		{
+			"identifier": "update_rules",
+			"goType": "UpdateRules",
+			"description": "UpdateRules are a list of aggregation rules."
+		},
+		{
+			"identifier": "market_center",
+			"goType": "MarketCenter",
+			"description": "MarketCenter describes aggregation rules on a per-market-center basis."
+		}
+	]
+}

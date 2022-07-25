@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "balance",
+	"modelDescription": "Balance is the balance for picker data",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "amount",
+			"goType": "string"
+		},
+		{
+			"identifier": "currency",
+			"goType": "string"
+		}
+	]
+}

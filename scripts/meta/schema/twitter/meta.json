@@ -1,0 +1,12 @@
+{
+	"api": "twitter",
+	"model": "meta",
+	"modelDescription": "Meta holds metadata concerning requests",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "result_count",
+			"goType": "int"
+		}
+	]
+}

@@ -1,0 +1,44 @@
+{
+	"api": "coinbasepro",
+	"model": "reports_params",
+	"modelDescription": "TODO",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "start_date",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "end_date",
+			"goType": "time.Time"
+		},
+		{
+			"identifier": "format",
+			"goType": "FileFormat"
+		},
+		{
+			"identifier": "product_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "profile_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "email",
+			"goType": "string"
+		},
+		{
+			"identifier": "user",
+			"goType": "User"
+		},
+		{
+			"identifier": "new_york_state",
+			"goType": "bool"
+		}
+	]
+}

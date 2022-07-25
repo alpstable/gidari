@@ -1,0 +1,85 @@
+{
+	"api": "twitter",
+	"model": "compliance",
+	"modelDescription": "Compliance is some recent compliance jobs.",
+	"endpoints": [
+		{
+			"path": "/2/compliance/jobs",
+			"documentation": "https://developer.twitter.com/en/docs/twitter-api/compliance/batch-compliance/introduction",
+			"httpMethod": "GET",
+			"enumRoot": "ComplianceJobs",
+			"slice": true,
+			"queryParams": [
+				{
+					"identifier": "type",
+					"required": true,
+					"goType": "ComplianceJob",
+					"description": "Type allows to filter by job type - either by tweets or user ID. Only one filter (tweets or users) can be specified per request."
+				},
+				{
+					"identifier": "status",
+					"goType": "Status",
+					"description": "Status allows to filter by job status. Only one filter can be specified per request.  Default: `all`"
+				}
+			],
+			"description": "ComplianceJobs will return a list of recent compliance jobs."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string",
+			"description": "ID is the unique identifier for this job."
+		},
+		{
+			"identifier": "created_at",
+			"goType": "time.Time",
+			"description": "CreatedAt is the date and time when the job was created."
+		},
+		{
+			"identifier": "type",
+			"goType": "ComplianceJob",
+			"description": "Type is the type of the job, whether tweets or users."
+		},
+		{
+			"identifier": "name",
+			"goType": "string",
+			"description": "Name is the user defined job name. Only returned if specified when the job was created."
+		},
+		{
+			"identifier": "upload_url",
+			"goType": "string",
+			"description": "UploadURL is a URL representing the location where to upload IDs consumed by your app. This URL is already signed with an authentication key, so you will not need to pass any additional credentials or headers to authenticate the request."
+		},
+		{
+			"identifier": "upload_expires_at",
+			"goType": "time.Time",
+			"description": "UploadExpiresAt represents the date and time until which the upload URL will be available (usually 15 minutes from the request time)."
+		},
+		{
+			"identifier": "download_url",
+			"goType": "string",
+			"description": "DownloadURL is the predefined location where to download the results from the compliance job. This URL is already signed with an authentication key, so you will not need to pass any additional credential or header to authenticate the request."
+		},
+		{
+			"identifier": "download_expires_at",
+			"goType": "time.Time",
+			"description": "DownloadExpiresAt the date and time until which the download URL will be available (usually 7 days from the request time)."
+		},
+		{
+			"identifier": "status",
+			"goType": "Status",
+			"description": "Status is the status of this job."
+		},
+		{
+			"identifier": "error",
+			"goType": "string",
+			"description": "Error returns when jobs.status is failed. Specifies the reason why the job did not complete successfully."
+		},
+		{
+			"identifier": "meta",
+			"goType": "Meta",
+			"description": "Meta returns meta information about the request."
+		}
+	]
+}

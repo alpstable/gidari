@@ -1,0 +1,92 @@
+{
+	"api": "coinbasepro",
+	"model": "fill",
+	"modelDescription": "TODO: Get fill description",
+	"endpoints": [
+		{
+			"path": "/fills",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getfills",
+			"httpMethod": "GET",
+			"enumRoot": "Fills",
+			"rateLimit": 5,
+			"slice": true,
+			"queryParams": [
+				{
+					"identifier": "order_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "product_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "limit",
+					"goType": "int"
+				},
+				{
+					"identifier": "before",
+					"goType": "int"
+				},
+				{
+					"identifier": "after",
+					"goType": "int"
+				}
+			],
+			"description": "Fills returns a list of fills. A fill is a partial or complete match on a specific order."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "trade_id",
+			"goType": "int"
+		},
+		{
+			"identifier": "product_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "order_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "user_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "profile_id",
+			"goType": "string"
+		},
+		{
+			"identifier": "liquidity",
+			"goType": "string"
+		},
+		{
+			"identifier": "price",
+			"goType": "string"
+		},
+		{
+			"identifier": "size",
+			"goType": "string"
+		},
+		{
+			"identifier": "fee",
+			"goType": "string"
+		},
+		{
+			"identifier": "side",
+			"goType": "string"
+		},
+		{
+			"identifier": "settled",
+			"goType": "bool"
+		},
+		{
+			"identifier": "usd_volume",
+			"goType": "string"
+		}
+	]
+}

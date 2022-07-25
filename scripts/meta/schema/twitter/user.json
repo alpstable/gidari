@@ -1,0 +1,22 @@
+{
+	"api": "twitter",
+	"model": "user",
+	"modelDescription": "TODO",
+	"endpoints": [
+		{
+			"path": "/2/me",
+			"documentation": "https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users-me",
+			"httpMethod": "GET",
+			"enumRoot": "Me",
+			"slice": true,
+			"description": "TODO"
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string",
+			"description": "ID is a unique identifier of this user. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+		}
+	]
+}

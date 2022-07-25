@@ -1,0 +1,140 @@
+{
+	"api": "coinbasepro",
+	"model": "withdrawal",
+	"modelDescription": "Withdrawal is data concerning withdrawing funds from the specified profile_id to a www.coinbase.com wallet.",
+	"endpoints": [
+		{
+			"path": "/withdrawals/coinbase-account",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_postwithdrawcoinbaseaccount",
+			"httpMethod": "POST",
+			"rateLimit": 5,
+			"enumRoot": "CoinbaseAccountWithdrawal",
+			"body": [
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "amount",
+					"goType": "float64",
+					"required": true
+				},
+				{
+					"identifier": "coinbase_account_id",
+					"goType": "string",
+					"required": true
+				},
+				{
+					"identifier": "currency",
+					"goType": "string",
+					"required": true
+				}
+			],
+			"description": "AccountWithdraws funds from the specified profile_id to a www.coinbase.com wallet.  Withdraw funds to a coinbase account. You can move funds between your Coinbase accounts and your Coinbase Exchange trading accounts within your daily limits. Moving funds between Coinbase and Coinbase Exchange is instant and free. See the Coinbase Accounts section for retrieving your Coinbase accounts.  This endpoint requires the \"transfer\" permission."
+		},
+		{
+			"path": "/withdrawals/crypto",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_postwithdrawcrypto",
+			"httpMethod": "POST",
+			"rateLimit": 5,
+			"enumRoot": "CryptoWithdrawal",
+			"body": [
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "amount",
+					"goType": "float64",
+					"required": true
+				},
+				{
+					"identifier": "crypto_address",
+					"goType": "string",
+					"required": true
+				},
+				{
+					"identifier": "currency",
+					"goType": "string",
+					"required": true
+				},
+				{
+					"identifier": "destination_tag",
+					"goType": "string"
+				},
+				{
+					"identifier": "no_destination_tag",
+					"goType": "bool"
+				},
+				{
+					"identifier": "two_factor_code",
+					"goType": "string"
+				},
+				{
+					"identifier": "nonce",
+					"goType": "int"
+				},
+				{
+					"identifier": "fee",
+					"goType": "float64"
+				}
+			],
+			"description": "CryptoWithdrawal funds from the specified profile_id to an external crypto address.  This endpoint requires the \"transfer\" permission. API key must belong to default profile."
+		},
+		{
+			"path": "/withdrawals/payment-method",
+			"documentation": "https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_postwithdrawpaymentmethod",
+			"httpMethod": "POST",
+			"rateLimit": 5,
+			"enumRoot": "PaymentMethodWithdrawal",
+			"body": [
+				{
+					"identifier": "profile_id",
+					"goType": "string"
+				},
+				{
+					"identifier": "amount",
+					"goType": "float64",
+					"required": true
+				},
+				{
+					"identifier": "payment_method_id",
+					"goType": "string",
+					"required": true
+				},
+				{
+					"identifier": "currency",
+					"goType": "string",
+					"required": true
+				}
+			],
+			"description": "PaymentMethodWithdrawal will fund from the specified profile_id to a linked external payment method.  This endpoint requires the \"transfer\" permission. API key is restricted to the default profile."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string"
+		},
+		{
+			"identifier": "amount",
+			"goType": "string"
+		},
+		{
+			"identifier": "currency",
+			"goType": "string"
+		},
+		{
+			"identifier": "payout_at",
+			"goType": "string"
+		},
+		{
+			"identifier": "fee",
+			"goType": "string"
+		},
+		{
+			"identifier": "subtotal",
+			"goType": "string"
+		}
+	]
+}

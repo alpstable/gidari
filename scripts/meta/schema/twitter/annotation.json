@@ -1,0 +1,33 @@
+{
+	"api": "twitter",
+	"model": "annotation",
+	"modelDescription": "Annotations are details about annotations relative to the text within a Tweet.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "start",
+			"goType": "int",
+			"description": "Start is the start position (zero-based) of the text used to annotate the Tweet. All start indices are inclusive."
+		},
+		{
+			"identifier": "end",
+			"goType": "int",
+			"description": "End is the end position (zero based) of the text used to annotate the Tweet. While all other end indices are exclusive, this one is inclusive."
+		},
+		{
+			"identifier": "probability",
+			"goType": "float64",
+			"description": "Probability is the confidence score for the annotation as it correlates to the Tweet text."
+		},
+		{
+			"identifier": "type",
+			"goType": "string",
+			"description": "Type is the description of the type of entity identified when the Tweet text was interpreted."
+		},
+		{
+			"identifier": "normalized_text",
+			"goType": "string",
+			"description": "NormalizedText is the text used to determine the annotation type."
+		}
+	]
+}

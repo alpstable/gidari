@@ -1,0 +1,23 @@
+{
+	"api": "twitter",
+	"model": "entity",
+	"modelDescription": "Entity identifies detailed information regarding the domain classification bases on Tweet text.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string",
+			"description": "ID is a unique value which correlates to an explicitly mentioned Person, Place, Product or Organization."
+		},
+		{
+			"identifier": "name",
+			"goType": "string",
+			"description": "Name is the name or reference of entity referenced in the Tweet."
+		},
+		{
+			"identifier": "description",
+			"goType": "string",
+			"description": "Description is additional information regarding referenced entity."
+		}
+	]
+}

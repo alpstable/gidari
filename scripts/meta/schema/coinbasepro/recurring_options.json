@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "recurring_options",
+	"modelDescription": "RecurringOptions ??",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "period",
+			"goType": "string"
+		},
+		{
+			"identifier": "label",
+			"goType": "string"
+		}
+	]
+}

@@ -1,0 +1,53 @@
+
+{
+	"api": "polygon",
+	"model": "bar",
+	"modelDescription": "Bar represents an aggregate bar for a stock over a given date range in custom time window sizes.",
+	"endpoints": [
+		{
+			"path": "/v2/aggs/ticker/{stocks_ticker}/range/{multiplier}/{timespan:Timespan}/{from}/{to}",
+			"documentation": "https://polygon.io/docs/stocks/get_v2_aggs_ticker__stocksticker__range__multiplier___timespan___from___to",
+			"httpMethod": "GET",
+			"enumRoot": "AggregateBar",
+			"rateLimit": 99,
+			"description": "Get aggregate bars for a stock over a given date range in custom time window sizes."
+		}
+	],
+	"modelFields": [
+		{
+			"identifier": "ticker",
+			"goType": "string",
+			"description": "The exchange symbol that this item is traded under."
+		},
+		{
+			"identifier": "adjusted",
+			"goType": "bool",
+			"description": "Whether or not this response was adjusted for splits."
+		},
+		{
+			"identifier": "queryCount",
+			"goType": "int",
+			"description": "The number of aggregates (minute or day) used to generate the response."
+		},
+		{
+			"identifier": "request_id",
+			"goType": "string",
+			"description": "A request id assigned by the server."
+		},
+		{
+			"identifier": "resultsCount",
+			"goType": "int",
+			"description": "The total number of results for this request."
+		},
+		{
+			"identifier": "status",
+			"goType": "Status",
+			"description": "Status is the status of the market on the holiday."
+		},
+		{
+			"identifier": "results",
+			"goType": "[]*BarResult",
+			"description": "An array of conditions that match your query."
+		}
+	]
+}

@@ -1,0 +1,76 @@
+{
+	"api": "coinbasepro",
+	"model": "picker_data",
+	"modelDescription": "PickerData ??",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "symbol",
+			"goType": "string"
+		},
+		{
+			"identifier": "customer_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_number",
+			"goType": "string"
+		},
+		{
+			"identifier": "account_type",
+			"goType": "string"
+		},
+		{
+			"identifier": "institution_code",
+			"goType": "string"
+		},
+		{
+			"identifier": "institution_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "iban",
+			"goType": "string"
+		},
+		{
+			"identifier": "swift",
+			"goType": "string"
+		},
+		{
+			"identifier": "paypal_email",
+			"goType": "string"
+		},
+		{
+			"identifier": "paypal_owner",
+			"goType": "string"
+		},
+		{
+			"identifier": "routing_number",
+			"goType": "string"
+		},
+		{
+			"identifier": "institution_identifier",
+			"goType": "string"
+		},
+		{
+			"identifier": "bank_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "branch_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "icon_url",
+			"goType": "string"
+		},
+		{
+			"identifier": "balance",
+			"goType": "Balance"
+		}
+	]
+}

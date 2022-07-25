@@ -1,0 +1,23 @@
+{
+	"api": "polygon",
+	"model": "market_center",
+	"modelDescription": "MarketCenter describes aggregation rules on a per-market-center basis.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "updates_high_low",
+			"goType": "bool",
+			"description": "Whether or not trades with this condition update the high/low."
+		},
+		{
+			"identifier": "updates_open_close",
+			"goType": "bool",
+			"description": "Whether or not trades with this condition update the open/close."
+		},
+		{
+			"identifier": "updates_volume",
+			"goType": "bool",
+			"description": "Whether or not trades with this condition update the volume."
+		}
+	]
+}

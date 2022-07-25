@@ -1,0 +1,23 @@
+{
+	"api": "twitter",
+	"model": "domain",
+	"modelDescription": "Domain identifies detailed information regarding the domain classification based on Tweet text.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "id",
+			"goType": "string",
+			"description": "ID is the numeric value of the domain."
+		},
+		{
+			"identifier": "name",
+			"goType": "string",
+			"description": "Name is the domain name based on the Tweet text."
+		},
+		{
+			"identifier": "description",
+			"goType": "string",
+			"description": "Description is the Long form description of domain classification."
+		}
+	]
+}

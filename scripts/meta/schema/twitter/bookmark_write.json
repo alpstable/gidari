@@ -1,0 +1,16 @@
+{
+	"api": "twitter",
+	"model": "bookmark_write",
+	"modelDescription": "BookmarkWrite details the results from a bookmark write operation.",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "data",
+			"goType": "Bookmarked"
+		},
+		{
+			"identifier": "meta",
+			"goType": "Meta"
+		}
+	]
+}

@@ -1,0 +1,56 @@
+{
+	"api": "coinbasepro",
+	"model": "currency_details",
+	"modelDescription": "CurrencyDetails are the details for a currency that coinbase knows about",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "symbol",
+			"goType": "string"
+		},
+		{
+			"identifier": "network_confirmations",
+			"goType": "int"
+		},
+		{
+			"identifier": "sort_order",
+			"goType": "int"
+		},
+		{
+			"identifier": "crypto_address_link",
+			"goType": "string"
+		},
+		{
+			"identifier": "crypto_transaction_link",
+			"goType": "string"
+		},
+		{
+			"identifier": "push_payment_methods",
+			"goType": "[]string"
+		},
+		{
+			"identifier": "group_types",
+			"goType": "[]string"
+		},
+		{
+			"identifier": "display_name",
+			"goType": "string"
+		},
+		{
+			"identifier": "processing_time_seconds",
+			"goType": "float64"
+		},
+		{
+			"identifier": "min_withdrawal_amount",
+			"goType": "float64"
+		},
+		{
+			"identifier": "max_withdrawal_amount",
+			"goType": "float64"
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"api": "coinbasepro",
+	"model": "Limits",
+	"modelDescription": "Limits defines limits for a payment method",
+	"modelOnly": true,
+	"modelFields": [
+		{
+			"identifier": "type",
+			"goType": "string"
+		},
+		{
+			"identifier": "name",
+			"goType": "string"
+		}
+	]
+}
