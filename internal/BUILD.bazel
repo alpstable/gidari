@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "internal",
-    srcs = ["http.go"],
-    importpath = "github.com/alpine-hodler/driver/internal",
-    visibility = ["//:__subpackages__"],
-    deps = ["@org_golang_x_time//rate"],
-)
