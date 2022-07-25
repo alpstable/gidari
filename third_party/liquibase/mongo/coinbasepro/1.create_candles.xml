@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd
+              http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+	  <changeSet id="tag_create_candles" author="system">
+      <tagDatabase tag="1.0" />
+    </changeSet>
+
+    <changeSet id="1" author="system">
+        <ext:createCollection collectionName="candle_minutes">
+        </ext:createCollection>
+
+        <rollback>
+            <ext:runCommand>
+                <ext:command>
+                    {
+                        drop: "candles60"
+                    }
+                </ext:command>
+            </ext:runCommand>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="2" author="systen">
+        <ext:createIndex collectionName="candle_minutes">
+            <ext:keys>
+                { product_id: 1, unix: 1}
+            </ext:keys>
+            <ext:options>
+                {unique: true, name: "ui_cm_product_unix"}
+            </ext:options>
+        </ext:createIndex>
+    </changeSet>
+
+</databaseChangeLog>

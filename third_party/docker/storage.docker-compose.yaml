@@ -1,0 +1,106 @@
+version: '3'
+
+networks:
+  mongodb_network:
+    driver: bridge
+  postgres_coinbasepro_network:
+    driver: bridge
+  postgres_polygon_network:
+    driver: bridge
+
+services:
+  # MongoDB services for COINBASEP PRO
+  mongo-coinbasepro:
+    image: mongo
+    hostname: mongo-coinbasepro
+    networks:
+      - mongodb_network
+    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27017"]
+    volumes:
+      - ./../../.db/mongo-coinbasepro-test-volume:/data/db
+    ports:
+      - 27017:27017
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongo-coinbasepro:27017\"},{_id:1,host:\"mongo-coinbasepro2:27018\"},{_id:2,host:\"mongo-coinbasepro3:27019\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
+      interval: 10s
+      start_period: 30s
+  mongo-coinbasepro2:
+    image: mongo
+    hostname: mongo-coinbasepro2
+    networks:
+      - mongodb_network
+    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27018"]
+    volumes:
+      - ./../../.db/mongo-coinbasepro2-test-volume:/data/db
+    ports:
+      - 27018:27018
+  mongo-coinbasepro3:
+    image: mongo
+    hostname: mongo-coinbasepro3
+    networks:
+      - mongodb_network
+    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27019"]
+    volumes:
+      - ./../../.db/mongo-coinbasepro3-test-volume:/data/db
+    ports:
+      - 27019:27019
+  liquibase-mongo-coinbasepro:
+    networks:
+      - mongodb_network
+    build:
+      context: ./../../third_party/docker
+      dockerfile: liquibase-mongo.Dockerfile
+    volumes:
+      - ./../../third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
+
+  # PostgreSQL services for COINBASE PRO
+  postgres-coinbasepro:
+    hostname: postgres-coinbasepro
+    networks:
+      - postgres_coinbasepro_network
+    image: postgres:11.1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: coinbasepro
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./../../.db/postgres-coinbasepro-test-volume:/var/lib/postgresql/dat
+    restart: "unless-stopped"
+  liquibase-postgres-coinbasepro:
+    networks:
+      - postgres_coinbasepro_network
+    image: liquibase/liquibase
+    volumes:
+      - ./../../third_party/liquibase/postgres/coinbasepro:/liquibase/changelog
+
+  # PostgreSQL services for POLYGON
+  postgres-polygon:
+    hostname: postgres-polygon
+    networks:
+      - postgres_polygon_network
+    image: postgres:11.1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: polygon
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./../../.db/postgres-polygon-test-volume:/var/lib/postgresql/dat
+    restart: "unless-stopped"
+  liquibase-postgres-polygon:
+    networks:
+      - postgres_polygon_network
+    image: liquibase/liquibase
+    volumes:
+      - ./../../third_party/liquibase/postgres/polygon:/liquibase/changelog
+
+  cache:
+    image: redis
+    hostname: redis1
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - ./../../.db/cache:/data

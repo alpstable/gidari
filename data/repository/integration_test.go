@@ -118,7 +118,7 @@ func testcases(t *testing.T) [][]interface{} {
 
 func TestIntegration(t *testing.T) {
 	// tolerance is the number of times to retry all tests
-	tolerance := 3
+	tolerance := 1
 
 	// upsertbenchmark are the number of records to attempt an upsert
 	upsertbenchmark := func() int {
