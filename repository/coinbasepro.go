@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/alpine-hodler/driver/data/proto"
+	"github.com/alpine-hodler/driver/proto"
 	"github.com/alpine-hodler/driver/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )

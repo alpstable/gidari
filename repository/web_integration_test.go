@@ -8,11 +8,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/driver/data/proto"
-	db "github.com/alpine-hodler/driver/data/storage"
+	"github.com/alpine-hodler/driver/internal"
+	"github.com/alpine-hodler/driver/proto"
 	"github.com/alpine-hodler/driver/tools"
+	"github.com/alpine-hodler/driver/web"
 	"github.com/alpine-hodler/driver/web/transport"
-	"github.com/alpine-hodler/driver/x/web"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +26,7 @@ func TestWebIntegration(t *testing.T) {
 	ctx := context.Background()
 	dns, _ := tools.MongoURI("mongo-coinbasepro", "", "", "27017", "coinbasepro")
 
-	stg, err := db.New(ctx, dns)
+	stg, err := internal.NewStorage(ctx, dns)
 	require.NoError(t, err)
 
 	repo := NewCoinbasePro(ctx, stg)

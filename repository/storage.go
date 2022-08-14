@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/alpine-hodler/driver/data/proto"
+	"github.com/alpine-hodler/driver/proto"
 	"github.com/alpine-hodler/driver/tools"
 )
 
