@@ -1,19 +1,14 @@
 package storage
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 
-	"github.com/alpine-hodler/driver/data/option"
-	"github.com/alpine-hodler/driver/data/proto"
-	"github.com/alpine-hodler/driver/internal/query"
+	"github.com/alpine-hodler/driver/proto"
 	"github.com/alpine-hodler/driver/tools"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
@@ -25,7 +20,7 @@ type Mongo struct {
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
 // constructor uses a URI to make the client connection, and the URI is of the form
 // Mongo://username:password@host:port
-func NewMongo(ctx context.Context, uri string, opts ...func(*option.Database)) (*Mongo, error) {
+func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
@@ -68,52 +63,52 @@ func (m *Mongo) ExecTx(ctx context.Context, fn func(context.Context, tools.Gener
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	bldr, err := query.GetReadBuilder(query.ReadBuilderType(req.ReaderBuilder[0]))
-	if err != nil {
-		return err
-	}
+	// bldr, err := query.GetReadBuilder(query.ReadBuilderType(req.ReaderBuilder[0]))
+	// if err != nil {
+	// 	return err
+	// }
 
-	args, err := bldr.ReaderArgs(req)
-	if err != nil {
-		return err
-	}
-	filterbytes, err := bldr.ReaderQuery(query.MongoStorage, args...)
-	if err != nil {
-		return err
-	}
+	// args, err := bldr.ReaderArgs(req)
+	// if err != nil {
+	// 	return err
+	// }
+	// filterbytes, err := bldr.ReaderQuery(query.MongoStorage, args...)
+	// if err != nil {
+	// 	return err
+	// }
 
-	var outputBuffer bytes.Buffer
-	outputBuffer.Write(filterbytes)
+	// var outputBuffer bytes.Buffer
+	// outputBuffer.Write(filterbytes)
 
-	q := query.Mongo{}
-	if err = gob.NewDecoder(&outputBuffer).Decode(&q); err != nil {
-		return err
-	}
+	// q := query.Mongo{}
+	// if err = gob.NewDecoder(&outputBuffer).Decode(&q); err != nil {
+	// 	return err
+	// }
 
-	cs, err := connstring.ParseAndValidate(m.dns)
-	if err != nil {
-		return nil
-	}
+	// cs, err := connstring.ParseAndValidate(m.dns)
+	// if err != nil {
+	// 	return nil
+	// }
 
-	coll := m.Database(cs.Database).Collection(q.Collection)
-	cursor, err := coll.Find(ctx, q.D)
-	if err != nil {
-		return err
-	}
+	// coll := m.Database(cs.Database).Collection(q.Collection)
+	// cursor, err := coll.Find(ctx, q.D)
+	// if err != nil {
+	// 	return err
+	// }
 
-	for cursor.Next(ctx) {
-		m := make(map[string]interface{})
-		err := cursor.Decode(&m)
-		if err != nil {
-			return err
-		}
-		delete(m, "_id")
-		record, err := structpb.NewStruct(m)
-		if err != nil {
-			return err
-		}
-		rsp.Records = append(rsp.Records, record)
-	}
+	// for cursor.Next(ctx) {
+	// 	m := make(map[string]interface{})
+	// 	err := cursor.Decode(&m)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	delete(m, "_id")
+	// 	record, err := structpb.NewStruct(m)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	rsp.Records = append(rsp.Records, record)
+	// }
 	return nil
 }
 

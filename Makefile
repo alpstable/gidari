@@ -19,7 +19,7 @@ generate:
 
 .PHONY: proto
 proto:
-	protoc --proto_path=data/proto --go_out=data/proto data/proto/db.proto
+	protoc --proto_path=proto --go_out=proto proto/db.proto
 
 .PHONY: test
 test:

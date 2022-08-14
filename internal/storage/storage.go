@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/alpine-hodler/driver/data/proto"
+	"github.com/alpine-hodler/driver/proto"
 )
 
 type Storage interface {
