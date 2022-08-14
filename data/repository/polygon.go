@@ -15,6 +15,7 @@ import (
 type Polygon interface {
 	tools.GenericStorage
 
+	Name() string
 	ReadBarMinutes(context.Context, string, bool, time.Time, time.Time, *proto.ReadResponse) error
 	UpsertBarMinutes(context.Context, []*polygon.BarResult, *proto.CreateResponse) ([]*polygon.BarResult, error)
 }
@@ -26,6 +27,10 @@ func NewPolygon(_ context.Context, r tools.GenericStorage) Polygon {
 	stg := new(storage)
 	stg.r = newStorage(r)
 	return &p{storage: stg}
+}
+
+func (svc *p) Name() string {
+	return "Polygon"
 }
 
 // ReadBarMinutes will query storage for Polygon Bars to the minute-granularity for a given ticker, adjusted value,

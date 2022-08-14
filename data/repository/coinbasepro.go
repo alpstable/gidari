@@ -14,6 +14,7 @@ import (
 type CoinbasePro interface {
 	tools.GenericStorage
 
+	Name() string
 	ReadCandleMinutes(context.Context, string, *coinbasepro.CandlesOptions, *proto.ReadResponse) error
 	UpsertCandleMinutes(context.Context, coinbasepro.Candles, *proto.CreateResponse) (coinbasepro.Candles, error)
 }
@@ -25,6 +26,10 @@ func NewCoinbasePro(_ context.Context, r tools.GenericStorage) CoinbasePro {
 	stg := new(storage)
 	stg.r = newStorage(r)
 	return &cbp{storage: stg}
+}
+
+func (svc *cbp) Name() string {
+	return "Coinbase Pro"
 }
 
 // ReadCandleMinutes will query storage for coinbase pro candles to the 60-granularity for a given productID.

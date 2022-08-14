@@ -50,15 +50,14 @@ func testexecutor(t *testing.T, config testconfig) []interface{} {
 	ctx := context.Background()
 
 	// set the storage object from factory
-	var stg tools.GenericStorage
+	var dns string
 	switch config.ts {
 	case mongoteststg:
-		uri, _ := tools.MongoURI(config.host, "", "", config.port, config.database)
-		stg, err = storage.NewMongo(ctx, uri)
+		dns, _ = tools.MongoURI(config.host, "", "", config.port, config.database)
 	case postgresstg:
-		uri, _ := tools.PostgresURI(config.host, config.username, "", config.port, config.database)
-		stg, err = storage.NewPostgres(ctx, uri)
+		dns, _ = tools.PostgresURI(config.host, config.username, "", config.port, config.database)
 	}
+	stg, err := storage.New(ctx, dns)
 	require.NoError(t, err)
 
 	// Set the repo executor from factory
