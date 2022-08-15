@@ -1,6 +1,10 @@
 PKGS=$(shell scripts/list_pkgs.sh ./pkg)
 
 default:
+	go build cmd/sherpa.go
+
+.PHONY: containers
+containers:
 	chmod +rwx scripts/*.sh
 
 	scripts/build-storage.sh

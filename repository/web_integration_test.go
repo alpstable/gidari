@@ -29,7 +29,7 @@ func TestWebIntegration(t *testing.T) {
 	stg, err := internal.NewStorage(ctx, dns)
 	require.NoError(t, err)
 
-	repo := NewCoinbasePro(ctx, stg)
+	repo := New(ctx, stg)
 
 	cbpurl := os.Getenv("CB_PRO_URL")
 	passphrase := os.Getenv("CB_PRO_ACCESS_PASSPHRASE")
@@ -61,6 +61,6 @@ func TestWebIntegration(t *testing.T) {
 	}
 
 	rsp := new(proto.CreateResponse)
-	err = repo.UpsertAccountsJSON(ctx, bytes, rsp)
+	err = repo.UpsertJSON(ctx, "accounts", bytes, rsp)
 	require.NoError(t, err)
 }
