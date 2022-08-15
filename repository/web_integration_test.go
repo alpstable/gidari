@@ -12,7 +12,7 @@ import (
 	"github.com/alpine-hodler/driver/proto"
 	"github.com/alpine-hodler/driver/tools"
 	"github.com/alpine-hodler/driver/web"
-	"github.com/alpine-hodler/driver/web/transport"
+	"github.com/alpine-hodler/driver/web/auth"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +36,7 @@ func TestWebIntegration(t *testing.T) {
 	key := os.Getenv("CB_PRO_ACCESS_KEY")
 	secret := os.Getenv("CB_PRO_SECRET")
 
-	client, err := web.NewClient(context.TODO(), transport.NewAPIKey().
+	client, err := web.NewClient(context.TODO(), auth.NewAPIKey().
 		SetKey(key).
 		SetPassphrase(passphrase).
 		SetSecret(secret).

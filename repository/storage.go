@@ -32,3 +32,7 @@ func (stg *storage) TruncateTables(ctx context.Context, req *proto.TruncateTable
 func (stg *storage) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.CreateResponse) error {
 	return stg.r.Upsert(ctx, req, rsp)
 }
+
+func (stg *storage) Type() uint8 {
+	return stg.r.Type()
+}

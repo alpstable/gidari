@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/alpine-hodler/driver/web/transport"
+	"github.com/alpine-hodler/driver/web/auth"
 	"golang.org/x/time/rate"
 )
 
@@ -19,7 +19,7 @@ var defaultRateLimitBurstCap = 5
 // CoinbaseProClient is a wrapper for http.Client that can be used to make HTTP Requests to the Coinbase Pro API.
 type Client struct{ http.Client }
 
-func NewClient(_ context.Context, roundtripper transport.T) (*Client, error) {
+func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) {
 	client := new(Client)
 	client.Transport = roundtripper
 	return client, nil
@@ -59,10 +59,10 @@ func validateResponse(res *http.Response) (err error) {
 }
 
 type FetchConfig struct {
-	Client      *Client
-	Method      string
-	URL         *url.URL
-	RateLimiter *rate.Limiter
+	Client            *Client
+	Method            string
+	URL               *url.URL
+	RateLimitBurstCap int
 }
 
 func (cfg *FetchConfig) validate() error {
@@ -86,9 +86,8 @@ func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
 	}
 
 	// If the rate limiter is not set, set it with defaults.
-	if cfg.RateLimiter == nil {
-		cfg.RateLimiter = rate.NewLimiter(rate.Limit(defaultRateLimit), defaultRateLimitBurstCap)
-	}
+	ratelimiter := rate.NewLimiter(rate.Limit(defaultRateLimit), cfg.RateLimitBurstCap)
+	ratelimiter.Wait(ctx)
 
 	req, err := newHTTPRequest(cfg.Method, cfg.URL)
 	if err != nil {

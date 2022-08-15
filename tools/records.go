@@ -159,10 +159,7 @@ func MakeRecordsRequest(data interface{}, records *[]*structpb.Struct) error {
 		return fmt.Errorf("expected slice, got: %v", rv.Kind())
 	}
 
-	fmt.Printf("out: %v\n", out)
-
 	for _, r := range out {
-		fmt.Printf("r: %v\n", r)
 		record, _ := json.Marshal(r)
 		rec := new(structpb.Struct)
 		err := rec.UnmarshalJSON(record)

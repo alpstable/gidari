@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,6 +20,8 @@ func main() {
 		Use:   "sherpa",
 		Short: "sharpa is an ETL executable for storing web data for analysis",
 		Run: func(_ *cobra.Command, _ []string) {
+			ctx := context.Background()
+
 			bytes, err := ioutil.ReadFile(configFilepath)
 			if err != nil {
 				log.Fatalf("error reading config file  %s: %v", configFilepath, err)
@@ -36,7 +39,7 @@ func main() {
 				cfg.Logger.SetLevel(logrus.FatalLevel)
 			}
 
-			if err := transport.Upsert(&cfg); err != nil {
+			if err := transport.Upsert(ctx, &cfg); err != nil {
 				log.Fatalf("error upserting data: %v", err)
 			}
 

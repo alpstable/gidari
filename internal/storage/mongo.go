@@ -33,6 +33,8 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	return mdb, nil
 }
 
+func (m *Mongo) Type() uint8 { return MongoType }
+
 func (m *Mongo) Close() {
 	m.Close()
 }

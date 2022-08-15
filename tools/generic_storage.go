@@ -13,4 +13,5 @@ type GenericStorage interface {
 	Read(context.Context, *proto.ReadRequest, *proto.ReadResponse) error
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
 	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
+	Type() uint8
 }

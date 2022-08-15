@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/alpine-hodler/driver/web"
-	"github.com/alpine-hodler/driver/web/transport"
+	"github.com/alpine-hodler/driver/web/auth"
 	"github.com/joho/godotenv"
 )
 
@@ -30,7 +30,7 @@ func ExampleNewClient_cbp() {
 	key := os.Getenv("CB_PRO_ACCESS_KEY")
 	secret := os.Getenv("CB_PRO_SECRET")
 
-	client, err := web.NewClient(context.TODO(), transport.NewAPIKey().
+	client, err := web.NewClient(context.TODO(), auth.NewAPIKey().
 		SetKey(key).
 		SetPassphrase(passphrase).
 		SetSecret(secret).
@@ -49,7 +49,7 @@ func ExampleFetch_cbpAccounts() {
 	secret := os.Getenv("CB_PRO_SECRET")
 
 	// Get a new client using an API Key for authentication.
-	client, err := web.NewClient(context.TODO(), transport.NewAPIKey().
+	client, err := web.NewClient(context.TODO(), auth.NewAPIKey().
 		SetKey(key).
 		SetPassphrase(passphrase).
 		SetSecret(secret).

@@ -6,6 +6,11 @@ import (
 	"github.com/alpine-hodler/driver/proto"
 )
 
+const (
+	MongoType uint8 = iota
+	PostgressType
+)
+
 type Storage interface {
 	Close()
 	ExecTx(context.Context, func(context.Context, Storage) (bool, error)) error
