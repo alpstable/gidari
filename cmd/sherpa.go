@@ -18,7 +18,7 @@ func main() {
 
 	cmd := &cobra.Command{
 		Use:   "sherpa",
-		Short: "sharpa is an ETL executable for storing web data for analysis",
+		Short: "sherpa is an ETL executable for storing web data for analysis",
 		Run: func(_ *cobra.Command, _ []string) {
 			ctx := context.Background()
 
