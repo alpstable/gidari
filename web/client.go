@@ -13,9 +13,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var defaultRateLimit = 1 * time.Second
-var defaultRateLimitBurstCap = 5
-
 // CoinbaseProClient is a wrapper for http.Client that can be used to make HTTP Requests to the Coinbase Pro API.
 type Client struct{ http.Client }
 
@@ -79,6 +76,12 @@ func (cfg *FetchConfig) validate() error {
 	return nil
 }
 
+var ratelimiter *rate.Limiter
+
+func init() {
+	ratelimiter = rate.NewLimiter(rate.Every(1*time.Second), 3)
+}
+
 // Fetch will make an HTTP request using the underlying client and endpoint.
 func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
 	if err := cfg.validate(); err != nil {
@@ -86,7 +89,6 @@ func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
 	}
 
 	// If the rate limiter is not set, set it with defaults.
-	ratelimiter := rate.NewLimiter(rate.Limit(defaultRateLimit), cfg.RateLimitBurstCap)
 	ratelimiter.Wait(ctx)
 
 	req, err := newHTTPRequest(cfg.Method, cfg.URL)
