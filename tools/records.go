@@ -125,7 +125,8 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 			val := columnPointers[i].(*interface{})
 			switch (*val).(type) {
 			case []byte:
-				// The postgres sherpa treats numbers & decimal columns as []uint8. We chose to parse these values into strings.
+				// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse
+				// these values into strings.
 				f, err := strconv.ParseFloat(string((*val).([]byte)), 64)
 				if err != nil {
 					return err
