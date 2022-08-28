@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/alpine-hodler/driver/proto"
-	"github.com/alpine-hodler/driver/tools"
+	"github.com/alpine-hodler/sherpa/proto"
+	"github.com/alpine-hodler/sherpa/tools"
 )
 
 type storage struct{ r tools.GenericStorage }

@@ -1,4 +1,4 @@
-module github.com/alpine-hodler/driver
+module github.com/alpine-hodler/sherpa
 
 go 1.18
 

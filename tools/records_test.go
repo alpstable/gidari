@@ -3,7 +3,7 @@ package tools
 import (
 	"testing"
 
-	"github.com/alpine-hodler/driver/proto"
+	"github.com/alpine-hodler/sherpa/proto"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )

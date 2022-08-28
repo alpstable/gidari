@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alpine-hodler/driver/internal/storage"
-	"github.com/alpine-hodler/driver/tools"
+	"github.com/alpine-hodler/sherpa/internal/storage"
+	"github.com/alpine-hodler/sherpa/tools"
 )
 
 // NewStorage will attempt to return a generic storage object given a DNS.

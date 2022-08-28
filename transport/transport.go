@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alpine-hodler/driver/internal"
-	"github.com/alpine-hodler/driver/proto"
-	"github.com/alpine-hodler/driver/repository"
-	"github.com/alpine-hodler/driver/web"
-	"github.com/alpine-hodler/driver/web/auth"
-	"github.com/alpine-hodler/driver/web/coinbasepro"
+	"github.com/alpine-hodler/sherpa/internal"
+	"github.com/alpine-hodler/sherpa/proto"
+	"github.com/alpine-hodler/sherpa/repository"
+	"github.com/alpine-hodler/sherpa/web"
+	"github.com/alpine-hodler/sherpa/web/auth"
+	"github.com/alpine-hodler/sherpa/web/coinbasepro"
 	"github.com/sirupsen/logrus"
 )
 

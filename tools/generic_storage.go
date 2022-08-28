@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 
-	"github.com/alpine-hodler/driver/proto"
+	"github.com/alpine-hodler/sherpa/proto"
 )
 
 // GenericStorage provides CRUD methods for interacting with an arbitrary DB.

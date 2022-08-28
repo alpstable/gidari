@@ -2,15 +2,14 @@ package web_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/driver/web"
-	"github.com/alpine-hodler/driver/web/auth"
+	"github.com/alpine-hodler/sherpa/web"
+	"github.com/alpine-hodler/sherpa/web/auth"
 	"github.com/joho/godotenv"
 )
 
@@ -38,7 +37,6 @@ func ExampleNewClient_cbp() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("A Coinbase Pro client: %v", client)
 }
 
 func ExampleFetch_cbpAccounts() {
