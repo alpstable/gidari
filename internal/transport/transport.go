@@ -250,12 +250,18 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	}
 }
 
-type webWorkerJob struct {
-	repoJobs    chan<- *repoJob
-	client      *web.Client
+// flattenedRequest contains all of the request information to create a web job. The number of flattened request
+// for an operation should be 1-1 with the number of requests to the web API.
+type flattenedRequest struct {
 	fetchConfig *web.FetchConfig
-	logger      *logrus.Logger
 	table       *string
+}
+
+type webWorkerJob struct {
+	*flattenedRequest
+	repoJobs chan<- *repoJob
+	client   *web.Client
+	logger   *logrus.Logger
 }
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
@@ -267,13 +273,6 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		job.repoJobs <- &repoJob{b: bytes, url: job.fetchConfig.URL, table: job.table}
 		job.logger.Infof("web fetch completed: (id=%v) %s", id, job.fetchConfig.URL.Path)
 	}
-}
-
-// flattenedRequest contains all of the request information to create a web job. The number of flattened request
-// for an operation should be 1-1 with the number of requests to the web API.
-type flattenedRequest struct {
-	fetchConfig *web.FetchConfig
-	table       *string
 }
 
 // Upsert will use the configuration file to upsert data from the
@@ -356,11 +355,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Enqueue the worker jobs
 	for _, req := range flattenedRequests {
 		webWorkerJobs <- &webWorkerJob{
-			repoJobs:    repoJobCh,
-			client:      client,
-			fetchConfig: req.fetchConfig,
-			logger:      cfg.Logger,
-			table:       req.table,
+			flattenedRequest: req,
+			repoJobs:         repoJobCh,
+			client:           client,
+			logger:           cfg.Logger,
 		}
 	}
 
