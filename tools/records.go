@@ -152,12 +152,15 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 func MakeRecordsRequest(data interface{}, records *[]*structpb.Struct) error {
 	var out []interface{}
 	rv := reflect.ValueOf(data)
-	if rv.Kind() == reflect.Slice {
+	switch rv.Kind() {
+	case reflect.Slice:
 		for i := 0; i < rv.Len(); i++ {
 			out = append(out, rv.Index(i).Interface())
 		}
-	} else {
-		return fmt.Errorf("expected slice, got: %v", rv.Kind())
+	case reflect.Map:
+		out = append(out, rv.Interface())
+	default:
+		return fmt.Errorf("record type not supported: %v", rv.Kind())
 	}
 
 	for _, r := range out {
