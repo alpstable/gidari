@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/alpine-hodler/sherpa/proto"
+	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )

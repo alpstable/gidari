@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/sherpa/web"
-	"github.com/alpine-hodler/sherpa/web/auth"
+	"github.com/alpine-hodler/sherpa/internal/web"
+	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/joho/godotenv"
 )
 
@@ -29,7 +29,7 @@ func ExampleNewClient_cbp() {
 	key := os.Getenv("CB_PRO_ACCESS_KEY")
 	secret := os.Getenv("CB_PRO_SECRET")
 
-	client, err := web.NewClient(context.TODO(), auth.NewAPIKey().
+	_, err := web.NewClient(context.TODO(), auth.NewAPIKey().
 		SetKey(key).
 		SetPassphrase(passphrase).
 		SetSecret(secret).
