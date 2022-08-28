@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alpine-hodler/sherpa/internal"
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
@@ -137,7 +136,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
 	for _, dns := range cfg.DNSList {
-		stg, err := internal.NewStorage(ctx, dns)
+		stg, err := repository.NewStorage(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("error building repositories for transport config: %v", err)
 		}
