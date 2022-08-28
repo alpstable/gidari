@@ -14,7 +14,7 @@ containers:
 
 .PHONY: proto
 proto:
-	protoc --proto_path=proto --go_out=proto proto/db.proto
+	protoc --proto_path=pkg/proto --go_out=pkg/proto pkg/proto/db.proto
 
 .PHONY: test
 test:
