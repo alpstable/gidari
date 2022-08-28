@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/alpine-hodler/sherpa/internal"
-	"github.com/alpine-hodler/sherpa/proto"
-	"github.com/alpine-hodler/sherpa/repository"
-	"github.com/alpine-hodler/sherpa/web"
-	"github.com/alpine-hodler/sherpa/web/auth"
-	"github.com/alpine-hodler/sherpa/web/coinbasepro"
+	"github.com/alpine-hodler/sherpa/internal/web"
+	"github.com/alpine-hodler/sherpa/internal/web/auth"
+	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
+	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/sherpa/pkg/repository"
 	"github.com/sirupsen/logrus"
 )
 

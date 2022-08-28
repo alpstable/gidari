@@ -3,7 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/alpine-hodler/sherpa/proto"
+	"github.com/alpine-hodler/sherpa/internal"
+	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/tools"
 )
 
@@ -35,4 +36,9 @@ func (stg *storage) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *p
 
 func (stg *storage) Type() uint8 {
 	return stg.r.Type()
+}
+
+// NewStorage will attempt to return a generic storage object given a DNS.
+func NewStorage(ctx context.Context, dns string) (tools.GenericStorage, error) {
+	return internal.NewStorage(ctx, dns)
 }
