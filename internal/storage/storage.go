@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/alpine-hodler/driver/proto"
+	"github.com/alpine-hodler/sherpa/proto"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/alpine-hodler/driver/web/auth"
+	"github.com/alpine-hodler/sherpa/web/auth"
 	"golang.org/x/time/rate"
 )
 

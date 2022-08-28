@@ -8,11 +8,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/driver/internal"
-	"github.com/alpine-hodler/driver/proto"
-	"github.com/alpine-hodler/driver/tools"
-	"github.com/alpine-hodler/driver/web"
-	"github.com/alpine-hodler/driver/web/auth"
+	"github.com/alpine-hodler/sherpa/internal"
+	"github.com/alpine-hodler/sherpa/proto"
+	"github.com/alpine-hodler/sherpa/tools"
+	"github.com/alpine-hodler/sherpa/web"
+	"github.com/alpine-hodler/sherpa/web/auth"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )

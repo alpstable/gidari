@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/alpine-hodler/driver/proto"
+	"github.com/alpine-hodler/sherpa/proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -125,7 +125,7 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 			val := columnPointers[i].(*interface{})
 			switch (*val).(type) {
 			case []byte:
-				// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse these values into strings.
+				// The postgres sherpa treats numbers & decimal columns as []uint8. We chose to parse these values into strings.
 				f, err := strconv.ParseFloat(string((*val).([]byte)), 64)
 				if err != nil {
 					return err

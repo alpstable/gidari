@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/alpine-hodler/driver/transport"
+	"github.com/alpine-hodler/sherpa/transport"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
