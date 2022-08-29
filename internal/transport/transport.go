@@ -104,6 +104,9 @@ type Request struct {
 
 	// Timeseries indicates that the underlying data should be queries as a time series. This means that the
 	Timeseries *timeseries `yaml:"timeseries"`
+
+	// Table is the name of the table/collection to insert the data fetched from the web API.
+	Table *string
 }
 
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
@@ -175,8 +178,9 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 }
 
 type repoJob struct {
-	b   []byte
-	url *url.URL
+	b     []byte
+	url   *url.URL
+	table *string
 }
 
 type repoConfig struct {
@@ -193,7 +197,11 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 
 		endpoint := strings.TrimPrefix(job.url.EscapedPath(), "/")
 		endpointParts := strings.Split(endpoint, "/")
+
 		table := endpointParts[len(endpointParts)-1]
+		if job.table != nil {
+			table = *job.table
+		}
 
 		var encodingCallback func(*repoJob) ([]byte, error)
 
@@ -242,11 +250,18 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	}
 }
 
-type webWorkerJob struct {
-	repoJobs    chan<- *repoJob
-	client      *web.Client
+// flattenedRequest contains all of the request information to create a web job. The number of flattened request
+// for an operation should be 1-1 with the number of requests to the web API.
+type flattenedRequest struct {
 	fetchConfig *web.FetchConfig
-	logger      *logrus.Logger
+	table       *string
+}
+
+type webWorkerJob struct {
+	*flattenedRequest
+	repoJobs chan<- *repoJob
+	client   *web.Client
+	logger   *logrus.Logger
 }
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
@@ -255,12 +270,10 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		if err != nil {
 			job.logger.Fatal(err)
 		}
-		job.repoJobs <- &repoJob{b: bytes, url: job.fetchConfig.URL}
+		job.repoJobs <- &repoJob{b: bytes, url: job.fetchConfig.URL, table: job.table}
 		job.logger.Infof("web fetch completed: (id=%v) %s", id, job.fetchConfig.URL.Path)
 	}
 }
-
-//type requestData map[string]
 
 // Upsert will use the configuration file to upsert data from the
 func Upsert(ctx context.Context, cfg *Config) error {
@@ -281,7 +294,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Construct the repository worker configuration.
 
 	// Get all of the fetch configurations needed to process the upsert.
-	var fetchConfigs []*web.FetchConfig
+	var flattenedRequests []*flattenedRequest
 	for _, req := range cfg.Requests {
 		fetchConfig, err := newFetchConfig(ctx, cfg, req, client)
 		if err != nil {
@@ -304,18 +317,24 @@ func Upsert(ctx context.Context, cfg *Config) error {
 				if err != nil {
 					return err
 				}
-				fetchConfigs = append(fetchConfigs, chunkedFetchConfig)
+				flattenedRequests = append(flattenedRequests, &flattenedRequest{
+					fetchConfig: chunkedFetchConfig,
+					table:       req.Table,
+				})
 
 			}
 		} else {
-			fetchConfigs = append(fetchConfigs, fetchConfig)
+			flattenedRequests = append(flattenedRequests, &flattenedRequest{
+				fetchConfig: fetchConfig,
+				table:       req.Table,
+			})
 		}
 	}
 
 	repoWorkerCfg := &repoConfig{
 		repositories: repos,
 		logger:       cfg.Logger,
-		done:         make(chan bool, len(fetchConfigs)),
+		done:         make(chan bool, len(flattenedRequests)),
 		jobs:         repoJobCh,
 		truncate:     cfg.Truncate,
 	}
@@ -334,19 +353,19 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	cfg.Logger.Info("web workers started")
 
 	// Enqueue the worker jobs
-	for _, fetchConfig := range fetchConfigs {
+	for _, req := range flattenedRequests {
 		webWorkerJobs <- &webWorkerJob{
-			repoJobs:    repoJobCh,
-			client:      client,
-			fetchConfig: fetchConfig,
-			logger:      cfg.Logger,
+			flattenedRequest: req,
+			repoJobs:         repoJobCh,
+			client:           client,
+			logger:           cfg.Logger,
 		}
 	}
 
 	cfg.Logger.Info("web worker jobs enqueued")
 
 	// Wait for all of the data to flush.
-	for a := 1; a <= len(fetchConfigs); a++ {
+	for a := 1; a <= len(flattenedRequests); a++ {
 		<-repoWorkerCfg.done
 	}
 	cfg.Logger.Info("repository workers finished")
