@@ -12,15 +12,15 @@ import (
 )
 
 type Generic interface {
-	tools.GenericStorage
+	storage.S
 
 	UpsertJSON(context.Context, string, []byte, *proto.CreateResponse) error
 }
 
-type generic struct{ *storage.S }
+type generic struct{ storage.S }
 
-func New(_ context.Context, r tools.GenericStorage) Generic {
-	return &generic{S: &storage.S{Generic: r}}
+func New(_ context.Context, r storage.S) Generic {
+	return &generic{r}
 }
 
 // UpsertJSON will attempt to read a bytes buffer into the specified table.
@@ -37,5 +37,5 @@ func (svc *generic) UpsertJSON(ctx context.Context, table string, b []byte, rsp 
 	req := new(proto.UpsertRequest)
 	req.Table = table
 	req.Records = records
-	return svc.Generic.Upsert(ctx, req, rsp)
+	return svc.S.Upsert(ctx, req, rsp)
 }
