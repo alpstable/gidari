@@ -288,7 +288,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	return pg, nil
 }
 
-func (pg *Postgres) Type() uint8 { return PostgressType }
+func (pg *Postgres) Type() uint8 { return PostgresType }
 
 // pgMaxConnectionsUpperLimit will return the most ideal upper limit for the maximum number of connections for a
 // Postgres DB. https://tinyurl.com/57kyjtwd
