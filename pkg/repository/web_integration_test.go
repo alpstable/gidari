@@ -11,6 +11,7 @@ import (
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/alpine-hodler/sherpa/tools"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestWebIntegration(t *testing.T) {
 	ctx := context.Background()
 	dns, _ := tools.MongoURI("mongo-coinbasepro", "", "", "27017", "coinbasepro")
 
-	stg, err := NewStorage(ctx, dns)
+	stg, err := storage.New(ctx, dns)
 	require.NoError(t, err)
 
 	repo := New(ctx, stg)

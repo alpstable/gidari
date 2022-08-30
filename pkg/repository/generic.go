@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/alpine-hodler/sherpa/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -16,12 +17,10 @@ type Generic interface {
 	UpsertJSON(context.Context, string, []byte, *proto.CreateResponse) error
 }
 
-type generic struct{ *storage }
+type generic struct{ *storage.S }
 
 func New(_ context.Context, r tools.GenericStorage) Generic {
-	stg := new(storage)
-	stg.r = newStorage(r)
-	return &generic{storage: stg}
+	return &generic{S: &storage.S{Generic: r}}
 }
 
 // UpsertJSON will attempt to read a bytes buffer into the specified table.
@@ -38,5 +37,5 @@ func (svc *generic) UpsertJSON(ctx context.Context, table string, b []byte, rsp 
 	req := new(proto.UpsertRequest)
 	req.Table = table
 	req.Records = records
-	return svc.r.Upsert(ctx, req, rsp)
+	return svc.Generic.Upsert(ctx, req, rsp)
 }
