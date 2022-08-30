@@ -9,7 +9,7 @@ import (
 
 const (
 	MongoType uint8 = iota
-	PostgressType
+	PostgresType
 )
 
 type Storage interface {
@@ -25,7 +25,7 @@ func DNSRoot(t uint8) (string, error) {
 	switch t {
 	case MongoType:
 		return "mongodb", nil
-	case PostgressType:
+	case PostgresType:
 		return "postgresql", nil
 	default:
 		return "", fmt.Errorf("type %q is not supported", t)

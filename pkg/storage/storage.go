@@ -13,11 +13,21 @@ type S storage.Storage
 
 // New will attempt to return a generic storage object given a DNS.
 func New(ctx context.Context, dns string) (S, error) {
-	if strings.Contains(dns, "mongodb") {
+	mongoTypeStr, err := storage.DNSRoot(storage.MongoType)
+	if err != nil {
+		return nil, err
+	}
+	if strings.Contains(dns, mongoTypeStr) {
 		return storage.NewMongo(ctx, dns)
 	}
-	if strings.Contains(dns, "postgresql") {
+
+	postgresqlTypeStr, err := storage.DNSRoot(storage.PostgresType)
+	if err != nil {
+		return nil, err
+	}
+	if strings.Contains(dns, postgresqlTypeStr) {
 		return storage.NewPostgres(ctx, dns)
 	}
+
 	return nil, fmt.Errorf("databse for dns %q is not supported", dns)
 }
