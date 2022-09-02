@@ -2,16 +2,14 @@ package transport
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
-	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/pkg/repository"
 	"github.com/sirupsen/logrus"
@@ -216,9 +214,8 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 }
 
 type repoJob struct {
-	b     []byte
-	url   *url.URL
-	table *string
+	req http.Request
+	b   []byte
 }
 
 type repoConfig struct {
@@ -231,54 +228,14 @@ type repoConfig struct {
 
 func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		// ? Should we put the repos in a worker and run them concurrently as well?
-
-		endpoint := strings.TrimPrefix(job.url.EscapedPath(), "/")
-		endpointParts := strings.Split(endpoint, "/")
-
-		table := endpointParts[len(endpointParts)-1]
-		if job.table != nil {
-			table = *job.table
-		}
-
-		var encodingCallback func(*repoJob) ([]byte, error)
-
-		// Some endpoints for some hosts require special logic.
-		switch table {
-		case "candles":
-			if strings.Contains(job.url.Host, "coinbase.com") {
-				granularity := job.url.Query()["granularity"][0]
-				switch granularity {
-				case "60":
-					table = "candle_minutes"
-				}
-
-				productID := endpointParts[1]
-				encodingCallback = func(job *repoJob) ([]byte, error) {
-					var candles coinbasepro.Candles
-					if err := json.Unmarshal(job.b, &candles); err != nil {
-						return nil, err
-					}
-					for _, candle := range candles {
-						candle.ProductID = productID
-					}
-					return json.Marshal(candles)
-				}
-			}
-		default:
-			encodingCallback = func(job *repoJob) ([]byte, error) {
-				return job.b, nil
-			}
+		table, err := RepositoryEncoders.Lookup(*job.req.URL).Encode(job.req, &job.b)
+		if err != nil {
+			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
 
 		for _, repo := range cfg.repositories {
-
-			bytes, err := encodingCallback(job)
-			if err != nil {
-				cfg.logger.Fatal(err)
-			}
 			rsp := new(proto.CreateResponse)
-			if err := repo.UpsertJSON(ctx, table, bytes, rsp); err != nil {
+			if err := repo.UpsertJSON(ctx, table, job.b, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
 
@@ -304,12 +261,12 @@ type webWorkerJob struct {
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
-		bytes, err := web.Fetch(ctx, job.fetchConfig)
+		req, bytes, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
-		job.repoJobs <- &repoJob{b: bytes, url: job.fetchConfig.URL, table: job.table}
-		job.logger.Infof("web fetch completed: (id=%v) %s", id, job.fetchConfig.URL.Path)
+		job.repoJobs <- &repoJob{b: bytes, req: *req}
+		job.logger.Infof("web fetch completed: (id=%v) %s", id, req.URL.Path)
 	}
 }
 

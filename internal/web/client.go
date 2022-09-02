@@ -86,9 +86,9 @@ func init() {
 }
 
 // Fetch will make an HTTP request using the underlying client and endpoint.
-func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
+func Fetch(ctx context.Context, cfg *FetchConfig) (*http.Request, []byte, error) {
 	if err := cfg.validate(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// If the rate limiter is not set, set it with defaults.
@@ -96,22 +96,23 @@ func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
 
 	req, err := newHTTPRequest(cfg.Method, cfg.URL)
 	if err != nil {
-		return nil, err
+		return req, nil, err
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error waiting on rate limiter: %v", err)
+		return req, nil, fmt.Errorf("error waiting on rate limiter: %v", err)
 	}
 
 	resp, err := cfg.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request %+v: %v", req, err)
+		return req, nil, fmt.Errorf("error making request %+v: %v", req, err)
 	}
 	defer resp.Body.Close()
 
 	if err := validateResponse(resp); err != nil {
-		return nil, err
+		return req, nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
+	return req, b, err
 }
