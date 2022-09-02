@@ -15,6 +15,7 @@ import (
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/pkg/repository"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 // APIKey is one method of HTTP(s) transport that requires a passphrase, key, and secret.
@@ -109,14 +110,36 @@ type Request struct {
 	Table *string
 }
 
+// RateLimitConfig is the data needed for constructing a rate limit for the HTTP requests.
+type RateLimitConfig struct {
+	// Burst represents the number of requests that we limit over a period frequency.
+	Burst *int `yaml:"burst"`
+
+	// Period is the number of times to allow a burst per second.
+	Period *time.Duration `yaml:"period"`
+}
+
+func (rl RateLimitConfig) validate() error {
+	wrapper := func(field string) error {
+		return fmt.Errorf("%q is a required field on transport.RateLimitConfig", field)
+	}
+	if rl.Burst == nil {
+		return wrapper("Burst")
+	}
+	if rl.Period == nil {
+		return wrapper("Period")
+	}
+	return nil
+}
+
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
 // the repositories defined by the "DNSList".
 type Config struct {
-	URL                     string         `yaml:"url"`
-	Authentication          Authentication `yaml:"authentication"`
-	DNSList                 []string       `yaml:"dnsList"`
-	GlobalRateLimitBurstCap int            `yaml:"ratelimit"`
-	Requests                []*Request     `yaml:"requests"`
+	URL             string           `yaml:"url"`
+	Authentication  Authentication   `yaml:"authentication"`
+	DNSList         []string         `yaml:"dnsList"`
+	Requests        []*Request       `yaml:"requests"`
+	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
 
 	Logger   *logrus.Logger
 	Truncate bool
@@ -148,7 +171,21 @@ func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, erro
 	return repos, nil
 }
 
-func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.Client) (*web.FetchConfig, error) {
+func (cfg *Config) validate() error {
+	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on transport.Config", field) }
+	if cfg.RateLimitConfig == nil {
+		return wrapper("RateLimitConfig")
+	}
+	if err := cfg.RateLimitConfig.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// newFetchConfig constructs a new HTTP request.
+func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.Client,
+	rl *rate.Limiter) (*web.FetchConfig, error) {
+
 	rawURL, err := url.JoinPath(cfg.URL, req.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("error joining url %q to endpoint %q: %v", cfg.URL, req.Endpoint, err)
@@ -169,9 +206,10 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 	}
 
 	webcfg := &web.FetchConfig{
-		Client: client,
-		Method: req.Method,
-		URL:    u,
+		Client:      client,
+		Method:      req.Method,
+		URL:         u,
+		RateLimiter: rl,
 	}
 
 	return webcfg, nil
@@ -277,6 +315,9 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 
 // Upsert will use the configuration file to upsert data from the
 func Upsert(ctx context.Context, cfg *Config) error {
+	if err := cfg.validate(); err != nil {
+		return err
+	}
 	client, err := cfg.connect(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to client: %v", err)
@@ -291,12 +332,15 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	// Construct the repository worker configuration.
+	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
+	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
+	// different endpoints could cause a rate limit error on a web API.
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period*time.Second), *cfg.RateLimitConfig.Burst)
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
 	for _, req := range cfg.Requests {
-		fetchConfig, err := newFetchConfig(ctx, cfg, req, client)
+		fetchConfig, err := newFetchConfig(ctx, cfg, req, client, rateLimiter)
 		if err != nil {
 			return err
 		}
@@ -313,7 +357,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 				chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
 				chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
 
-				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client)
+				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client, rateLimiter)
 				if err != nil {
 					return err
 				}

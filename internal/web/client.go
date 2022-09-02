@@ -56,14 +56,14 @@ func validateResponse(res *http.Response) (err error) {
 }
 
 type FetchConfig struct {
-	Client            *Client
-	Method            string
-	URL               *url.URL
-	RateLimitBurstCap int
+	Client      *Client
+	Method      string
+	URL         *url.URL
+	RateLimiter *rate.Limiter
 }
 
 func (cfg *FetchConfig) validate() error {
-	wrapper := func(field string) error { return fmt.Errorf("%q is a required field", field) }
+	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on web.FetchConfig", field) }
 	if cfg.Client == nil {
 		return wrapper("Client")
 	}
@@ -72,6 +72,9 @@ func (cfg *FetchConfig) validate() error {
 	}
 	if cfg.URL == nil {
 		return wrapper("URL")
+	}
+	if cfg.RateLimiter == nil {
+		return wrapper("RateLimiter")
 	}
 	return nil
 }
