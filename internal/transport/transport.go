@@ -2,19 +2,18 @@ package transport
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"runtime"
-	"strings"
 	"time"
 
+	"github.com/alpine-hodler/sherpa/internal/storage"
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
-	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/pkg/repository"
-	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -163,11 +162,11 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
 	for _, dns := range cfg.DNSList {
-		stg, err := storage.New(ctx, dns)
+		repo, err := repository.New(ctx, dns)
 		if err != nil {
-			return nil, fmt.Errorf("error building repositories for transport config: %v", err)
+			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
 		}
-		repos = append(repos, repository.New(ctx, stg))
+		repos = append(repos, repo)
 	}
 	return repos, nil
 }
@@ -217,8 +216,8 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 }
 
 type repoJob struct {
+	req   http.Request
 	b     []byte
-	url   *url.URL
 	table *string
 }
 
@@ -232,58 +231,23 @@ type repoConfig struct {
 
 func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		// ? Should we put the repos in a worker and run them concurrently as well?
-
-		endpoint := strings.TrimPrefix(job.url.EscapedPath(), "/")
-		endpointParts := strings.Split(endpoint, "/")
-
-		table := endpointParts[len(endpointParts)-1]
-		if job.table != nil {
-			table = *job.table
+		raw, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
+		if err != nil {
+			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
 
-		var encodingCallback func(*repoJob) ([]byte, error)
-
-		// Some endpoints for some hosts require special logic.
-		switch table {
-		case "candles":
-			if strings.Contains(job.url.Host, "coinbase.com") {
-				granularity := job.url.Query()["granularity"][0]
-				switch granularity {
-				case "60":
-					table = "candle_minutes"
-				}
-
-				productID := endpointParts[1]
-				encodingCallback = func(job *repoJob) ([]byte, error) {
-					var candles coinbasepro.Candles
-					if err := json.Unmarshal(job.b, &candles); err != nil {
-						return nil, err
-					}
-					for _, candle := range candles {
-						candle.ProductID = productID
-					}
-					return json.Marshal(candles)
-				}
-			}
-		default:
-			encodingCallback = func(job *repoJob) ([]byte, error) {
-				return job.b, nil
-			}
+		// If a table is defined for the job, then replace the table name in the raw data.
+		if table := job.table; table != nil {
+			raw.Table = *table
 		}
 
 		for _, repo := range cfg.repositories {
-
-			bytes, err := encodingCallback(job)
-			if err != nil {
-				cfg.logger.Fatal(err)
-			}
 			rsp := new(proto.CreateResponse)
-			if err := repo.UpsertJSON(ctx, table, bytes, rsp); err != nil {
+			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-
-			cfg.logger.Infof("upsert completed: (id=%v) %s", id, table)
+			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.Scheme(repo.Type()),
+				raw.Table)
 		}
 		cfg.done <- true
 	}
@@ -305,12 +269,16 @@ type webWorkerJob struct {
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
-		bytes, err := web.Fetch(ctx, job.fetchConfig)
+		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
-		job.repoJobs <- &repoJob{b: bytes, url: job.fetchConfig.URL, table: job.table}
-		job.logger.Infof("web fetch completed: (id=%v) %s", id, job.fetchConfig.URL.Path)
+		bytes, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			job.logger.Fatal(err)
+		}
+		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
+		job.logger.Infof("web fetch completed: (id=%v) %s", id, rsp.Request.URL.Path)
 	}
 }
 

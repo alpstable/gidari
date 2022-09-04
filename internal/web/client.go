@@ -85,8 +85,24 @@ func init() {
 	ratelimiter = rate.NewLimiter(rate.Every(1*time.Second), 3)
 }
 
+// FetchResponse is a wrapper for the Fetch function's response data for an HTTP web request.
+type FetchResponse struct {
+	// Request is the request that was made to the server.
+	Request *http.Request
+
+	// Body is the response body from the server.
+	Body io.ReadCloser
+}
+
+func newFetchResponse(req *http.Request, body io.ReadCloser) *FetchResponse {
+	return &FetchResponse{
+		Request: req,
+		Body:    body,
+	}
+}
+
 // Fetch will make an HTTP request using the underlying client and endpoint.
-func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
+func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
@@ -103,15 +119,15 @@ func Fetch(ctx context.Context, cfg *FetchConfig) ([]byte, error) {
 		return nil, fmt.Errorf("error waiting on rate limiter: %v", err)
 	}
 
-	resp, err := cfg.Client.Do(req)
+	rsp, err := cfg.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request %+v: %v", req, err)
 	}
-	defer resp.Body.Close()
 
-	if err := validateResponse(resp); err != nil {
+	if err := validateResponse(rsp); err != nil {
+		rsp.Body.Close()
 		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	return newFetchResponse(req, rsp.Body), nil
 }

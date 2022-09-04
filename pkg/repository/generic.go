@@ -5,37 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alpine-hodler/sherpa/internal/storage"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/alpine-hodler/sherpa/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Generic interface {
-	storage.S
+	storage.Storage
 
-	UpsertJSON(context.Context, string, []byte, *proto.CreateResponse) error
+	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
 }
 
-type generic struct{ storage.S }
+type generic struct{ storage.Storage }
 
-func New(_ context.Context, r storage.S) Generic {
-	return &generic{r}
+func New(ctx context.Context, dns string) (Generic, error) {
+	stg, err := storage.New(ctx, dns)
+	return &generic{stg}, err
 }
 
-// UpsertJSON will attempt to read a bytes buffer into the specified table.
-func (svc *generic) UpsertJSON(ctx context.Context, table string, b []byte, rsp *proto.CreateResponse) error {
+// UpserRawJSON will upsert a Raw struct into the repository.
+func (svc *generic) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.CreateResponse) error {
 	var records []*structpb.Struct
 	var data interface{}
-	if err := json.Unmarshal(b, &data); err != nil {
-		return err
+	if err := json.Unmarshal(raw.Data, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal raw data: %w", err)
 	}
 
 	if err := tools.MakeRecordsRequest(data, &records); err != nil {
 		return fmt.Errorf("error making records request: %v", err)
 	}
 	req := new(proto.UpsertRequest)
-	req.Table = table
+	req.Table = raw.Table
 	req.Records = records
-	return svc.S.Upsert(ctx, req, rsp)
+	return svc.Storage.Upsert(ctx, req, rsp)
 }
