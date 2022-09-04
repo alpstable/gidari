@@ -242,12 +242,14 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 		}
 
 		for _, repo := range cfg.repositories {
+			start := time.Now()
 			rsp := new(proto.CreateResponse)
 			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.Scheme(repo.Type()),
-				raw.Table)
+			duration := time.Since(start)
+			cfg.logger.Infof("partial upsert completed (id=%v, t=%v): '%s.%s'", id, duration,
+				storage.Scheme(repo.Type()), raw.Table)
 		}
 		cfg.done <- true
 	}
@@ -269,6 +271,7 @@ type webWorkerJob struct {
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
+		start := time.Now()
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
@@ -278,12 +281,15 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 			job.logger.Fatal(err)
 		}
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
-		job.logger.Infof("web fetch completed: (id=%v) %s", id, rsp.Request.URL.Path)
+
+		duration := time.Since(start)
+		job.logger.Infof("web fetch completed (id=%v, t=%v): %s", id, duration, rsp.Request.URL.Path)
 	}
 }
 
 // Upsert will use the configuration file to upsert data from the
 func Upsert(ctx context.Context, cfg *Config) error {
+	start := time.Now()
 	if err := cfg.validate(); err != nil {
 		return err
 	}
@@ -381,7 +387,8 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for a := 1; a <= len(flattenedRequests); a++ {
 		<-repoWorkerCfg.done
 	}
-	cfg.Logger.Info("repository workers finished")
 
+	duration := time.Since(start)
+	fmt.Printf("upsert completed (t=%v)\n", duration)
 	return nil
 }
