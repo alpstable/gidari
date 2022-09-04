@@ -63,7 +63,9 @@ func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
 }
 
 // RepositoryEncoders is the registry of encoders used to transform web request data into a byte slice that can be
-// passed to a repository upsert method.
+// passed to a repository upsert method. The reason for making RepositoryEncoders a global variable is to (1) avoid
+// needing to pass it around to every function that needs to access the data, (2) allow custom registration of encoders
+// in the init function, and (3) allow for the possibility of having multiple registries.
 var RepositoryEncoders = make(RepositoryEncoderRegistry)
 
 func init() {
