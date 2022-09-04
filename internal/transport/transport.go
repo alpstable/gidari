@@ -13,6 +13,7 @@ import (
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/pkg/repository"
+	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -161,7 +162,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
 	for _, dns := range cfg.DNSList {
-		stg, err := repository.NewStorage(ctx, dns)
+		stg, err := storage.New(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("error building repositories for transport config: %v", err)
 		}
@@ -245,7 +246,7 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.TypeName(repo.Type()),
+			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.DNSRoot(repo.Type()),
 				raw.Table)
 		}
 		cfg.done <- true
