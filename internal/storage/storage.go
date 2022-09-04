@@ -18,3 +18,15 @@ type Storage interface {
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
 	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
 }
+
+// Type will return the type of the storage.
+func TypeName(t uint8) string {
+	switch t {
+	case MongoType:
+		return "mongo"
+	case PostgressType:
+		return "postgres"
+	default:
+		return "unknown"
+	}
+}

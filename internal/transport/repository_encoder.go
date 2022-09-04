@@ -5,17 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
+	"github.com/alpine-hodler/sherpa/pkg/repository"
+	"github.com/alpine-hodler/sherpa/tools"
 	"github.com/sirupsen/logrus"
 )
-
-// The goal of a repository encoder is to transform the data from a web request
-// into a byte slice that can be passed to a repository upsert method.
-//
-// - MUST be able to register encoders upto table + API (e.g. candles + CoinbasePro)
-// - MUST be mutable, user should be able to register encoders
 
 // ErrRepositoryEncoderExists indicates that an encoder has already been registered for the given url and table.
 var ErrRepositoryEncoderExists = fmt.Errorf("repository encoder already exists")
@@ -26,20 +21,22 @@ type RepositoryEncoderKey struct {
 }
 
 // NewRepositoryEncoderKey will return a key by using the table and parsing the URL.
-func NewRepositoryEncoderKey(u url.URL) RepositoryEncoderKey {
+func NewRepositoryEncoderKey(u *url.URL) RepositoryEncoderKey {
 	return RepositoryEncoderKey{host: u.Host}
 }
 
 // NewDefaultRepositoryEncoderKey will return a key with not host and no table, which is implicitly the default case.
 func NewDefaultRepositoryEncoderKey() RepositoryEncoderKey {
 	u, _ := url.Parse("")
-	return NewRepositoryEncoderKey(*u)
+	return NewRepositoryEncoderKey(u)
 }
 
 // RepositoryEncoder is used to transform data from a web request into a byte slice that can be passed to a repository
 // upsert method.
 type RepositoryEncoder interface {
-	Encode(http.Request, *[]byte) (string, error)
+	// Encode will take an HTTP request and a destination byte slice. The method will transform the byte slice
+	// into a byte slice that can be used by repository upsert methods.
+	Encode(http.Request, []byte) (*repository.Raw, error)
 }
 
 // RepositoryEncoderRegistry is a map of registered repository encoders.
@@ -47,7 +44,7 @@ type RepositoryEncoderRegistry map[RepositoryEncoderKey]RepositoryEncoder
 
 // Register will map a "RepositoryEncoderKey" created by the URL and table to the given encoder. If the encoder has
 // already been regisered, this method will throw the "ErrRepositorEncoderExists" error.
-func (rer RepositoryEncoderRegistry) Register(u url.URL, encoder RepositoryEncoder) error {
+func (rer RepositoryEncoderRegistry) Register(u *url.URL, encoder RepositoryEncoder) error {
 	key := NewRepositoryEncoderKey(u)
 	if rer[key] != nil {
 		return ErrRepositoryEncoderExists
@@ -57,7 +54,7 @@ func (rer RepositoryEncoderRegistry) Register(u url.URL, encoder RepositoryEncod
 }
 
 // Lookup will lookup the "RepositoryEncoder" using a URL and table.
-func (rer RepositoryEncoderRegistry) Lookup(u url.URL) RepositoryEncoder {
+func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
 	key := NewRepositoryEncoderKey(u)
 	if encoder := rer[key]; encoder != nil {
 		return encoder
@@ -72,13 +69,13 @@ var RepositoryEncoders = make(RepositoryEncoderRegistry)
 func init() {
 	// Register the default case
 	u, _ := url.Parse("")
-	if err := RepositoryEncoders.Register(*u, new(DefaultRepositoryEncoder)); err != nil {
+	if err := RepositoryEncoders.Register(u, new(DefaultRepositoryEncoder)); err != nil {
 		logrus.Fatalf("error registering default encoder: %v", err)
 	}
 
 	// Register the CoinbasePro Sandbox Candles case
 	u, _ = url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
-	if err := RepositoryEncoders.Register(*u, new(CBPSandboxCandlesEncoder)); err != nil {
+	if err := RepositoryEncoders.Register(u, new(CBPSandboxEncoder)); err != nil {
 		logrus.Fatalf("error registering Coinbase Pro Sandbox Candles encoder: %v", err)
 	}
 }
@@ -87,21 +84,29 @@ func init() {
 // that the data from the web request is already correctly formatted for upserting to data storage.
 type DefaultRepositoryEncoder struct{}
 
-func (dre *DefaultRepositoryEncoder) Encode(req http.Request, _ *[]byte) (string, error) {
-	endpoint := strings.TrimPrefix(req.URL.EscapedPath(), "/")
-	endpointParts := strings.Split(endpoint, "/")
+// Encode will transform the data from arbitrary web API requests into a byte slice that can be passed to repository
+// upsert methods.
+func (dre *DefaultRepositoryEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
+	table, err := tools.TableFromHTTPRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("error getting table from request: %v", err)
+	}
 
-	table := endpointParts[len(endpointParts)-1]
-	return table, nil
+	raw := repository.NewRaw(table, b)
+	return &raw, nil
 }
 
-type CBPSandboxCandlesEncoder struct{}
+// CBPSandboxEncoder is the encoder used to transform data from Coinbase Pro Sandbox web requests into bytes that
+// can be processed by repository upsert methods.
+type CBPSandboxEncoder struct{}
 
-func (ccre *CBPSandboxCandlesEncoder) Encode(req http.Request, dst *[]byte) (string, error) {
-	endpoint := strings.TrimPrefix(req.URL.EscapedPath(), "/")
-	endpointParts := strings.Split(endpoint, "/")
-
-	table := endpointParts[len(endpointParts)-1]
+// Encode will transform the data from Coinbase Pro Sandbox web requests into a byte slice that can be passed to
+// repository.
+func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
+	table, err := tools.TableFromHTTPRequest(req)
+	if err != nil {
+		return nil, err
+	}
 
 	switch table {
 	case "candles":
@@ -111,21 +116,25 @@ func (ccre *CBPSandboxCandlesEncoder) Encode(req http.Request, dst *[]byte) (str
 			table = "candle_minutes"
 		}
 
-		productID := endpointParts[1]
+		productID := tools.EndpointPartsFromHTTPRequest(req)[1]
 		var candles coinbasepro.Candles
-		if err := json.Unmarshal(*dst, &candles); err != nil {
-			return "", err
+		if err := json.Unmarshal(b, &candles); err != nil {
+			return nil, err
 		}
 		for _, candle := range candles {
 			candle.ProductID = productID
 		}
 
 		var err error
-		*dst, err = json.Marshal(candles)
+		updatedBytes, err := json.Marshal(candles)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-	}
 
-	return table, nil
+		raw := repository.NewRaw(table, updatedBytes)
+		return &raw, nil
+	default:
+		u, _ := url.Parse("")
+		return RepositoryEncoders.Lookup(u).Encode(req, b)
+	}
 }

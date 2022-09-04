@@ -7,10 +7,12 @@ import (
 	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 )
 
 func TestExamples(t *testing.T) {
@@ -61,12 +63,13 @@ func ExampleFetch_cbpAccounts() {
 	parsedURL, _ := url.Parse(u)
 
 	cfg := &web.FetchConfig{
-		Client: client,
-		Method: http.MethodGet,
-		URL:    parsedURL,
+		Client:      client,
+		Method:      http.MethodGet,
+		URL:         parsedURL,
+		RateLimiter: rate.NewLimiter(rate.Every(1*time.Second), 1),
 	}
 
-	_, err = web.Fetch(context.TODO(), cfg)
+	_, _, err = web.Fetch(context.TODO(), cfg)
 	if err != nil {
 		log.Fatalf("error fetching accounts: %v", err)
 	}

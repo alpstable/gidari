@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/alpine-hodler/sherpa/internal/storage"
 	"github.com/alpine-hodler/sherpa/internal/web"
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
@@ -214,8 +215,9 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 }
 
 type repoJob struct {
-	req http.Request
-	b   []byte
+	req   http.Request
+	b     []byte
+	table *string
 }
 
 type repoConfig struct {
@@ -228,18 +230,22 @@ type repoConfig struct {
 
 func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		table, err := RepositoryEncoders.Lookup(*job.req.URL).Encode(job.req, &job.b)
+		raw, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
 			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
 
+		// If a table is defined for the job, then replace the table name in the raw data.
+		if table := job.table; table != nil {
+			raw.Table = *table
+		}
+
 		for _, repo := range cfg.repositories {
 			rsp := new(proto.CreateResponse)
-			if err := repo.UpsertJSON(ctx, table, job.b, rsp); err != nil {
+			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-
-			cfg.logger.Infof("upsert completed: (id=%v) %s", id, table)
+			cfg.logger.Infof("upserted documents into '%s.%s'", storage.TypeName(repo.Type()), raw.Table)
 		}
 		cfg.done <- true
 	}
@@ -265,7 +271,7 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		if err != nil {
 			job.logger.Fatal(err)
 		}
-		job.repoJobs <- &repoJob{b: bytes, req: *req}
+		job.repoJobs <- &repoJob{b: bytes, req: *req, table: job.table}
 		job.logger.Infof("web fetch completed: (id=%v) %s", id, req.URL.Path)
 	}
 }

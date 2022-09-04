@@ -13,7 +13,7 @@ import (
 type Generic interface {
 	tools.GenericStorage
 
-	UpsertJSON(context.Context, string, []byte, *proto.CreateResponse) error
+	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
 }
 
 type generic struct{ *storage }
@@ -24,19 +24,19 @@ func New(_ context.Context, r tools.GenericStorage) Generic {
 	return &generic{storage: stg}
 }
 
-// UpsertJSON will attempt to read a bytes buffer into the specified table.
-func (svc *generic) UpsertJSON(ctx context.Context, table string, b []byte, rsp *proto.CreateResponse) error {
+// UpserRawJSON will upsert a Raw struct into the repository.
+func (svc *generic) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.CreateResponse) error {
 	var records []*structpb.Struct
 	var data interface{}
-	if err := json.Unmarshal(b, &data); err != nil {
-		return err
+	if err := json.Unmarshal(raw.Data, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal raw data: %w", err)
 	}
 
 	if err := tools.MakeRecordsRequest(data, &records); err != nil {
 		return fmt.Errorf("error making records request: %v", err)
 	}
 	req := new(proto.UpsertRequest)
-	req.Table = table
+	req.Table = raw.Table
 	req.Records = records
 	return svc.r.Upsert(ctx, req, rsp)
 }
