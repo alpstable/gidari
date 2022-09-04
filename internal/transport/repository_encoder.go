@@ -25,17 +25,17 @@ func NewRepositoryEncoderKey(u *url.URL) RepositoryEncoderKey {
 	return RepositoryEncoderKey{host: u.Host}
 }
 
-// NewDefaultRepositoryEncoderKey will return a key with not host and no table, which is implicitly the default case.
+// NewDefaultRepositoryEncoderKey will return a key for the default encoder. This key will have an empty host.
 func NewDefaultRepositoryEncoderKey() RepositoryEncoderKey {
 	u, _ := url.Parse("")
 	return NewRepositoryEncoderKey(u)
 }
 
-// RepositoryEncoder is used to transform data from a web request into a byte slice that can be passed to a repository
-// upsert method.
+// RepositoryEncoder is an interface that defines how to transform data from a web API request into a byte slice that
+// can be passed to repository upsert methods.
 type RepositoryEncoder interface {
-	// Encode will take an HTTP request and a destination byte slice. The method will transform the byte slice
-	// into a byte slice that can be used by repository upsert methods.
+	// Encode will transform the data from a web request into a byte slice that can be passed to repository upsert
+	// methods.
 	Encode(http.Request, []byte) (*repository.Raw, error)
 }
 

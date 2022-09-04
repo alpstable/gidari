@@ -46,7 +46,6 @@ func EndpointPartsFromHTTPRequest(req http.Request) []string {
 // TableFromHTTPRequest will return the table name from the request.
 func TableFromHTTPRequest(req http.Request) (string, error) {
 	endpointParts := EndpointPartsFromHTTPRequest(req)
-
 	if len(endpointParts) == 0 {
 		return "", fmt.Errorf("no endpoint parts found in url: %s", req.URL)
 	}

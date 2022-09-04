@@ -245,7 +245,8 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-			cfg.logger.Infof("upserted documents into '%s.%s'", storage.TypeName(repo.Type()), raw.Table)
+			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.TypeName(repo.Type()),
+				raw.Table)
 		}
 		cfg.done <- true
 	}
