@@ -15,7 +15,7 @@ func MongoURI(host, username, password, port, database string) (string, error) {
 	return fmt.Sprintf("mongodb://%s%s:%s/%s", auth, host, port, database), nil
 }
 
-// PostgressURI will return the full URI for accessing a postgres database.
+// PostgresURI will return the full URI for accessing a postgres database.
 func PostgresURI(host, username, password, port, database string) (string, error) {
 	auth := ""
 	if password != "" || username != "" {
@@ -34,8 +34,8 @@ func RedisURI(host, username, password, port, database string) (string, error) {
 
 }
 
-// EndpointPartsFromHTTPRequest will return the endpoint parts from the request.
-func EndpointPartsFromHTTPRequest(req http.Request) []string {
+// SplitURLPath will return the endpoint parts from the request.
+func SplitURLPath(req http.Request) []string {
 	parts := strings.Split(strings.TrimPrefix(req.URL.EscapedPath(), "/"), "/")
 	if len(parts) == 1 && parts[0] == "" {
 		return []string{}
@@ -43,9 +43,9 @@ func EndpointPartsFromHTTPRequest(req http.Request) []string {
 	return parts
 }
 
-// TableFromHTTPRequest will return the table name from the request.
-func TableFromHTTPRequest(req http.Request) (string, error) {
-	endpointParts := EndpointPartsFromHTTPRequest(req)
+// ParseDBTableFromURL will return the table name from the request.
+func ParseDBTableFromURL(req http.Request) (string, error) {
+	endpointParts := SplitURLPath(req)
 	if len(endpointParts) == 0 {
 		return "", fmt.Errorf("no endpoint parts found in url: %s", req.URL)
 	}

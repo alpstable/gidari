@@ -89,7 +89,7 @@ type DefaultRepositoryEncoder struct{}
 // Encode will transform the data from arbitrary web API requests into a byte slice that can be passed to repository
 // upsert methods.
 func (dre *DefaultRepositoryEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
-	table, err := tools.TableFromHTTPRequest(req)
+	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting table from request: %v", err)
 	}
@@ -105,7 +105,7 @@ type CBPSandboxEncoder struct{}
 // Encode will transform the data from Coinbase Pro Sandbox web requests into a byte slice that can be passed to
 // repository.
 func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
-	table, err := tools.TableFromHTTPRequest(req)
+	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*repository.R
 			table = "candle_minutes"
 		}
 
-		productID := tools.EndpointPartsFromHTTPRequest(req)[1]
+		productID := tools.SplitURLPath(req)[1]
 		var candles coinbasepro.Candles
 		if err := json.Unmarshal(b, &candles); err != nil {
 			return nil, err

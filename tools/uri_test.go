@@ -11,7 +11,7 @@ func TestURLHelpers(t *testing.T) {
 		t.Run("should return the table name from the request", func(t *testing.T) {
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
-			table, err := TableFromHTTPRequest(req)
+			table, err := ParseDBTableFromURL(req)
 			if err != nil {
 				t.Errorf("expected error to be nil, got %v", err)
 			}
@@ -23,7 +23,7 @@ func TestURLHelpers(t *testing.T) {
 		t.Run("should return an error when the table name is not present", func(t *testing.T) {
 			u, _ := url.Parse("http://test")
 			req := http.Request{URL: u}
-			_, err := TableFromHTTPRequest(req)
+			_, err := ParseDBTableFromURL(req)
 			if err == nil {
 				t.Error("expected error to not be nil")
 			}
@@ -34,7 +34,7 @@ func TestURLHelpers(t *testing.T) {
 		t.Run("should return the parts of the endpoint", func(t *testing.T) {
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
-			parts := EndpointPartsFromHTTPRequest(req)
+			parts := SplitURLPath(req)
 			if parts[0] != "v1" {
 				t.Errorf("expected parts[0] to be %s, got %s", "v1", parts[0])
 			}
@@ -49,7 +49,7 @@ func TestURLHelpers(t *testing.T) {
 		t.Run("should return an empty slice when the endpoint is not present", func(t *testing.T) {
 			u, _ := url.Parse("http://test")
 			req := http.Request{URL: u}
-			parts := EndpointPartsFromHTTPRequest(req)
+			parts := SplitURLPath(req)
 			if len(parts) != 0 {
 				t.Errorf("expected parts to be empty, got %v", parts)
 			}

@@ -85,10 +85,26 @@ func init() {
 	ratelimiter = rate.NewLimiter(rate.Every(1*time.Second), 3)
 }
 
+// FetchResponse is a wrapper for the Fetch function's response data for an HTTP web request.
+type FetchResponse struct {
+	// Request is the request that was made to the server.
+	Request *http.Request
+
+	// Body is the response body from the server.
+	Body io.ReadCloser
+}
+
+func newFetchResponse(req *http.Request, body io.ReadCloser) *FetchResponse {
+	return &FetchResponse{
+		Request: req,
+		Body:    body,
+	}
+}
+
 // Fetch will make an HTTP request using the underlying client and endpoint.
-func Fetch(ctx context.Context, cfg *FetchConfig) (*http.Request, []byte, error) {
+func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	if err := cfg.validate(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// If the rate limiter is not set, set it with defaults.
@@ -96,23 +112,22 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*http.Request, []byte, error)
 
 	req, err := newHTTPRequest(cfg.Method, cfg.URL)
 	if err != nil {
-		return req, nil, err
+		return nil, err
 	}
 
 	if err != nil {
-		return req, nil, fmt.Errorf("error waiting on rate limiter: %v", err)
+		return nil, fmt.Errorf("error waiting on rate limiter: %v", err)
 	}
 
-	resp, err := cfg.Client.Do(req)
+	rsp, err := cfg.Client.Do(req)
 	if err != nil {
-		return req, nil, fmt.Errorf("error making request %+v: %v", req, err)
-	}
-	defer resp.Body.Close()
-
-	if err := validateResponse(resp); err != nil {
-		return req, nil, err
+		return nil, fmt.Errorf("error making request %+v: %v", req, err)
 	}
 
-	b, err := io.ReadAll(resp.Body)
-	return req, b, err
+	if err := validateResponse(rsp); err != nil {
+		rsp.Body.Close()
+		return nil, err
+	}
+
+	return newFetchResponse(req, rsp.Body), nil
 }

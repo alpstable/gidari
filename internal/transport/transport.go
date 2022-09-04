@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -245,7 +246,7 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
 				cfg.logger.Fatal(err)
 			}
-			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.DNSRoot(repo.Type()),
+			cfg.logger.Infof("upsert completed (id=%v): '%s.%s'", id, storage.Scheme(repo.Type()),
 				raw.Table)
 		}
 		cfg.done <- true
@@ -268,12 +269,16 @@ type webWorkerJob struct {
 
 func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
-		req, bytes, err := web.Fetch(ctx, job.fetchConfig)
+		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
-		job.repoJobs <- &repoJob{b: bytes, req: *req, table: job.table}
-		job.logger.Infof("web fetch completed: (id=%v) %s", id, req.URL.Path)
+		bytes, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			job.logger.Fatal(err)
+		}
+		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
+		job.logger.Infof("web fetch completed: (id=%v) %s", id, rsp.Request.URL.Path)
 	}
 }
 

@@ -69,8 +69,9 @@ func ExampleFetch_cbpAccounts() {
 		RateLimiter: rate.NewLimiter(rate.Every(1*time.Second), 1),
 	}
 
-	_, _, err = web.Fetch(context.TODO(), cfg)
+	rsp, err := web.Fetch(context.TODO(), cfg)
 	if err != nil {
 		log.Fatalf("error fetching accounts: %v", err)
 	}
+	defer rsp.Body.Close()
 }

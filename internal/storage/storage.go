@@ -26,8 +26,8 @@ type Storage interface {
 	Type() uint8
 }
 
-// DNSRoot takes a byte and returns the associated DNS root database resource.
-func DNSRoot(t uint8) string {
+// Scheme takes a byte and returns the associated DNS root database resource.
+func Scheme(t uint8) string {
 	switch t {
 	case MongoType:
 		return "mongodb"
@@ -40,11 +40,11 @@ func DNSRoot(t uint8) string {
 
 // New will attempt to return a generic storage object given a DNS.
 func New(ctx context.Context, dns string) (Storage, error) {
-	if strings.Contains(dns, DNSRoot(MongoType)) {
+	if strings.Contains(dns, Scheme(MongoType)) {
 		return NewMongo(ctx, dns)
 	}
 
-	if strings.Contains(dns, DNSRoot(PostgresType)) {
+	if strings.Contains(dns, Scheme(PostgresType)) {
 		return NewPostgres(ctx, dns)
 	}
 
