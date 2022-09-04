@@ -11,21 +11,25 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// Generic is the interface for the generic service.
 type Generic interface {
 	storage.Storage
 
 	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
 }
 
-type generic struct{ storage.Storage }
+// GenericService is the implementation of the Generic service.
+type GenericService struct{ storage.Storage }
 
+// New returns a new Generic service.
 func New(ctx context.Context, dns string) (Generic, error) {
 	stg, err := storage.New(ctx, dns)
-	return &generic{stg}, err
+	return &GenericService{stg}, err
 }
 
-// UpserRawJSON will upsert a Raw struct into the repository.
-func (svc *generic) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.CreateResponse) error {
+// UpsertRawJSON upserts a raw json document into the database and writes the resulting document to a
+// "proto.CreateResponse" object.
+func (svc *GenericService) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.CreateResponse) error {
 	var records []*structpb.Struct
 	var data interface{}
 	if err := json.Unmarshal(raw.Data, &data); err != nil {

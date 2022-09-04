@@ -1,6 +1,6 @@
 package repository
 
-// Raw is a struct that holds a byte slice and a table name.
+// Raw is a struct that holds a table name and a byte slice of data to upsert into that table.
 type Raw struct {
 	Table string `json:"table"`
 	Data  []byte `json:"data"`
