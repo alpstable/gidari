@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 )
@@ -21,6 +23,7 @@ type Storage interface {
 	Read(context.Context, *proto.ReadRequest, *proto.ReadResponse) error
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
 	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
+	Type() uint8
 }
 
 // DNSRoot takes a byte and returns the associated DNS root database resource.
@@ -33,4 +36,17 @@ func DNSRoot(t uint8) string {
 	default:
 		return "unknown"
 	}
+}
+
+// New will attempt to return a generic storage object given a DNS.
+func New(ctx context.Context, dns string) (Storage, error) {
+	if strings.Contains(dns, DNSRoot(MongoType)) {
+		return NewMongo(ctx, dns)
+	}
+
+	if strings.Contains(dns, DNSRoot(PostgresType)) {
+		return NewPostgres(ctx, dns)
+	}
+
+	return nil, fmt.Errorf("databse for dns %q is not supported", dns)
 }

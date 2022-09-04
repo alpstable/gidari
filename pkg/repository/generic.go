@@ -5,22 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alpine-hodler/sherpa/internal/storage"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/alpine-hodler/sherpa/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Generic interface {
-	storage.S
+	storage.Storage
 
 	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
 }
 
-type generic struct{ storage.S }
+type generic struct{ storage.Storage }
 
-func New(_ context.Context, r storage.S) Generic {
-	return &generic{r}
+func New(ctx context.Context, dns string) (Generic, error) {
+	stg, err := storage.New(ctx, dns)
+	return &generic{stg}, err
 }
 
 // UpserRawJSON will upsert a Raw struct into the repository.
@@ -37,5 +38,5 @@ func (svc *generic) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.Crea
 	req := new(proto.UpsertRequest)
 	req.Table = raw.Table
 	req.Records = records
-	return svc.S.Upsert(ctx, req, rsp)
+	return svc.Storage.Upsert(ctx, req, rsp)
 }

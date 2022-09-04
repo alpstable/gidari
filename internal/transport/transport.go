@@ -13,7 +13,6 @@ import (
 	"github.com/alpine-hodler/sherpa/internal/web/auth"
 	"github.com/alpine-hodler/sherpa/pkg/proto"
 	"github.com/alpine-hodler/sherpa/pkg/repository"
-	"github.com/alpine-hodler/sherpa/pkg/storage"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -162,11 +161,11 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
 	for _, dns := range cfg.DNSList {
-		stg, err := storage.New(ctx, dns)
+		repo, err := repository.New(ctx, dns)
 		if err != nil {
-			return nil, fmt.Errorf("error building repositories for transport config: %v", err)
+			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
 		}
-		repos = append(repos, repository.New(ctx, stg))
+		repos = append(repos, repo)
 	}
 	return repos, nil
 }
