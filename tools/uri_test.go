@@ -7,7 +7,7 @@ import (
 )
 
 func TestURLHelpers(t *testing.T) {
-	t.Run("TableFromHTTPRequest", func(t *testing.T) {
+	t.Run("ParseDBTableFromURL", func(t *testing.T) {
 		t.Run("should return the table name from the request", func(t *testing.T) {
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
@@ -30,7 +30,7 @@ func TestURLHelpers(t *testing.T) {
 		})
 	})
 
-	t.Run("EndpointPartsFromHTTPRequest", func(t *testing.T) {
+	t.Run("SplitURLPath", func(t *testing.T) {
 		t.Run("should return the parts of the endpoint", func(t *testing.T) {
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
