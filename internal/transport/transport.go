@@ -389,6 +389,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	}
 
 	duration := time.Since(start)
-	fmt.Printf("upsert completed (t=%v)\n", duration)
+	cfg.Logger.Infof("upsert completed (t=%v)\n", duration)
 	return nil
 }
