@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/gidari/pkg/proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/protobuf/types/known/structpb"
 )

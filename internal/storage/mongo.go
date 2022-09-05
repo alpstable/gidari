@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/tools"
+	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/tools"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

@@ -3,7 +3,7 @@ package tools
 import (
 	"testing"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/gidari/pkg/proto"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )

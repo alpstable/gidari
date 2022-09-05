@@ -1,4 +1,4 @@
-module github.com/alpine-hodler/sherpa
+module github.com/alpine-hodler/gidari
 
 go 1.18
 

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpine-hodler/sherpa/internal/web"
-	"github.com/alpine-hodler/sherpa/internal/web/auth"
+	"github.com/alpine-hodler/gidari/internal/web"
+	"github.com/alpine-hodler/gidari/internal/web/auth"
 	"github.com/joho/godotenv"
 	"golang.org/x/time/rate"
 )

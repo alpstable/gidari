@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/alpine-hodler/sherpa/internal/storage"
-	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/tools"
+	"github.com/alpine-hodler/gidari/internal/storage"
+	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/tools"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

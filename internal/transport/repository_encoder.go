@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/alpine-hodler/sherpa/internal/web/coinbasepro"
-	"github.com/alpine-hodler/sherpa/pkg/repository"
-	"github.com/alpine-hodler/sherpa/tools"
+	"github.com/alpine-hodler/gidari/internal/web/coinbasepro"
+	"github.com/alpine-hodler/gidari/pkg/repository"
+	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
 )
 

@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/tools"
+	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/tools"
 	_ "github.com/lib/pq"
 	"github.com/micro/micro/v3/service/errors"
 )

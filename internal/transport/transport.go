@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/alpine-hodler/sherpa/internal/storage"
-	"github.com/alpine-hodler/sherpa/internal/web"
-	"github.com/alpine-hodler/sherpa/internal/web/auth"
-	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/pkg/repository"
+	"github.com/alpine-hodler/gidari/internal/storage"
+	"github.com/alpine-hodler/gidari/internal/web"
+	"github.com/alpine-hodler/gidari/internal/web/auth"
+	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/pkg/repository"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )

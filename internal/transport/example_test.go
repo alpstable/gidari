@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/alpine-hodler/sherpa/internal/transport"
-	"github.com/alpine-hodler/sherpa/pkg/repository"
+	"github.com/alpine-hodler/gidari/internal/transport"
+	"github.com/alpine-hodler/gidari/pkg/repository"
 )
 
 type CustomRepositoryEncoder struct{}
@@ -17,7 +17,7 @@ func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) (*repository.
 
 func ExampleRepositoryEncoderRegistry() {
 	// If necessary, you can register your own RepositoryEncoder for a specific host. Of course, this would require
-	// a custom build of the Sherpa library.
+	// a custom build of the Gidari library.
 	u, _ := url.Parse("http://test")
 	transport.RepositoryEncoders.Register(u, new(CustomRepositoryEncoder))
 }

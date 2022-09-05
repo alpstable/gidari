@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
-	"github.com/alpine-hodler/sherpa/pkg/repository"
+	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/pkg/repository"
 )
 
 // testCase is the configuration for the example test.

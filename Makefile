@@ -1,7 +1,7 @@
 PKGS=$(shell scripts/list_pkgs.sh ./pkg)
 
 default:
-	go build cmd/sherpa.go
+	go build cmd/gidari.go
 
 .PHONY: containers
 containers:

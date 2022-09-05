@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/alpine-hodler/sherpa/internal/transport"
+	"github.com/alpine-hodler/gidari/internal/transport"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -17,8 +17,8 @@ func main() {
 	var verbose bool
 
 	cmd := &cobra.Command{
-		Use:   "sherpa",
-		Short: "sherpa is an ETL executable for storing web data for analysis",
+		Use:   "gidari",
+		Short: "gidari is an ETL executable for storing web data for analysis",
 		Run: func(_ *cobra.Command, _ []string) {
 			ctx := context.Background()
 

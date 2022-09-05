@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alpine-hodler/sherpa/pkg/proto"
+	"github.com/alpine-hodler/gidari/pkg/proto"
 )
 
 const (
