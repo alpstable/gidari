@@ -245,7 +245,7 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			start := time.Now()
 			rsp := new(proto.CreateResponse)
 			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
-				cfg.logger.Fatal(err)
+				cfg.logger.Fatalf("error upserting data: %v", err)
 			}
 			duration := time.Since(start)
 			cfg.logger.Infof("partial upsert completed (id=%v, t=%v): '%s.%s'", id, duration,
@@ -315,6 +315,11 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
 	for _, req := range cfg.Requests {
+		// Get is the implicit default method.
+		if req.Method == "" {
+			req.Method = http.MethodGet
+		}
+
 		fetchConfig, err := newFetchConfig(ctx, cfg, req, client, rateLimiter)
 		if err != nil {
 			return err
