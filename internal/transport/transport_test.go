@@ -1,11 +1,16 @@
 package transport
 
 import (
+	"context"
+	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -141,4 +146,51 @@ func TestTimeseries(t *testing.T) {
 		}
 		require.Equal(t, expChunks, chunks)
 	})
+}
+
+func TestUpsert(t *testing.T) {
+	// Create an auth map to fill in the authentication details for the fixture data.
+	credentials, err := ioutil.ReadFile("/etc/alpine-hodler/cred.yml")
+	if err != nil {
+		t.Fatalf("error reading auth config: %v", err)
+	}
+
+	auth := make(map[string]Authentication)
+	if err := yaml.Unmarshal(credentials, &auth); err != nil {
+		t.Fatalf("error unmarshaling auth config: %v", err)
+	}
+
+	// Iterate over the fixtures/upsert directory and run each configuration file.
+	fixtureRoot := "fixtures/upsert"
+	fixtures, err := ioutil.ReadDir(fixtureRoot)
+	if err != nil {
+		t.Fatalf("error reading fixtures: %v", err)
+	}
+	for _, fixture := range fixtures {
+		t.Run(fixture.Name(), func(t *testing.T) {
+			path := filepath.Join(fixtureRoot, fixture.Name())
+
+			bytes, err := ioutil.ReadFile(path)
+			if err != nil {
+				t.Fatalf("error reading fixture: %v", err)
+			}
+
+			var cfg Config
+			if err := yaml.Unmarshal(bytes, &cfg); err != nil {
+				t.Fatalf("error unmarshaling fixture: %v", err)
+			}
+			cfg.Logger = logrus.New()
+
+			// Fill in the authentication details for the fixture.
+			cfgAuth := cfg.Authentication
+			if cfgAuth.APIKey != nil {
+				cfg.Authentication = auth[cfgAuth.APIKey.Passphrase]
+			}
+
+			// Upsert the fixture.
+			if err := Upsert(context.Background(), &cfg); err != nil {
+				t.Fatalf("error upserting: %v", err)
+			}
+		})
+	}
 }

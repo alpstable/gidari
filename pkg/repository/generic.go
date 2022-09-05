@@ -39,6 +39,12 @@ func (svc *GenericService) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *pro
 	if err := tools.MakeRecordsRequest(data, &records); err != nil {
 		return fmt.Errorf("error making records request: %v", err)
 	}
+
+	// If there are no records to upsert, do nothing.
+	if len(records) == 0 {
+		return nil
+	}
+
 	req := new(proto.UpsertRequest)
 	req.Table = raw.Table
 	req.Records = records

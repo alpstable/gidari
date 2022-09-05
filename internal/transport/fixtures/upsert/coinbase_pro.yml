@@ -1,0 +1,44 @@
+url: https://api-public.sandbox.exchange.coinbase.com
+authentication:
+  apiKey:
+    passphrase: coinbaseProTest
+dnsList:
+  - mongodb://mongo-coinbasepro:27017/coinbasepro
+rateLimit:
+  burst: 5
+  period: 1
+truncate: true
+requests:
+  - endpoint: /accounts
+  - endpoint: /currencies
+  - endpoint: /products
+  - endpoint: /products/BTC-USD/stats
+    table: btc_stats
+  - endpoint: /products/BTC-USD/candles
+    timeseries:
+        startName: start
+        endName: end
+        period: 18000
+        layout: "2006-01-02T15:04:05Z"
+    query:
+      granularity: "60"
+      start: "2018-11-09T9:11:08Z"
+      end: "2018-11-09T15:11:08Z"
+  - endpoint: /address-book
+    table: address_book
+  - endpoint: /payment-methods
+    table: payment_methods
+  - endpoint: /transfers
+  - endpoint: /fills
+    query:
+      product_id: BTC-USD
+  - endpoint: /orders
+    query:
+      product_id: BTC-USD
+  - endpoint: /oracle
+    table: price_oracle
+  - endpoint: /products/BTC-USD/trades
+    table: btc_trades
+  - endpoint: /profiles
+  - endpoint: /reports
+  - endpoint: /wrapped-assets
