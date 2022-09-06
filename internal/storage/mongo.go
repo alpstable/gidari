@@ -74,7 +74,7 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 	tx := &Tx{
 		nil,
 		make(chan func(context.Context) error),
-		make(chan bool, 1),
+		make(chan error, 1),
 		make(chan bool, 1),
 		make(chan bool, 1),
 	}
@@ -83,24 +83,32 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 	// Create a go routine that creates a session and listens for writes.
 	tx.Errs.Go(func() error {
 		return m.UseSession(ctx, func(sctx mongo.SessionContext) error {
-			if err := sctx.StartTransaction(); err != nil {
+			var err error
+			if err = sctx.StartTransaction(); err != nil {
+				tx.done <- err
 				return err
 			}
 			for fn := range tx.Ch {
 				if err := fn(sctx); err != nil {
+					tx.done <- err
 					return err
 				}
 			}
-
 			switch {
 			case <-tx.commit:
+				if err != nil {
+					break
+				}
 				if err := sctx.CommitTransaction(sctx); err != nil {
-					return err
+					tx.done <- err
 				}
 			case <-tx.rollback:
+				if err != nil {
+					break
+				}
 				sctx.AbortTransaction(sctx)
 			}
-			tx.done <- true
+			tx.done <- nil
 			return nil
 		})
 	})

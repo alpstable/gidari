@@ -11,23 +11,23 @@ type Tx struct {
 	Errs *errgroup.Group
 	Ch   chan func(context.Context) error
 
-	done     chan bool
+	done     chan error
 	commit   chan bool
 	rollback chan bool
 }
 
 // Commit will commit the transaction.
-func (tx Tx) Commit() {
+func (tx Tx) Commit() error {
 	close(tx.Ch)
 	tx.commit <- true
 	tx.rollback <- false
-	<-tx.done
+	return <-tx.done
 }
 
 // Rollback will rollback the transaction.
-func (tx Tx) Rollback() {
+func (tx Tx) Rollback() error {
 	close(tx.Ch)
 	tx.commit <- false
 	tx.rollback <- true
-	<-tx.done
+	return <-tx.done
 }

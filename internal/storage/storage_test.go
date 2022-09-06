@@ -42,9 +42,8 @@ func TestStartTx(t *testing.T) {
 			tx.Ch <- func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			}
-			tx.Commit()
 
-			if err := tx.Errs.Wait(); err != nil {
+			if err := tx.Commit(); err != nil {
 				t.Fatalf("failed to commit transaction: %v", err)
 			}
 
@@ -79,10 +78,9 @@ func TestStartTx(t *testing.T) {
 			tx.Ch <- func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			}
-			tx.Rollback()
 
-			if err := tx.Errs.Wait(); err != nil {
-				t.Fatalf("failed to commit transaction: %v", err)
+			if err := tx.Rollback(); err != nil {
+				t.Fatalf("failed to rollback transaction: %v", err)
 			}
 
 			// TODO: check if the data was actually inserted

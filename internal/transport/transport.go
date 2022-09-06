@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -409,9 +408,11 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 	// Commit the transactions and check for errors.
 	for _, tr := range txRepos {
-		tr.tx.Commit()
+		if err := tr.tx.Commit(); err != nil {
+			return err
+		}
 		if err := tr.tx.Errs.Wait(); err != nil {
-			log.Fatalf("error waiting for transaction: %v", err)
+			return err
 		}
 	}
 
