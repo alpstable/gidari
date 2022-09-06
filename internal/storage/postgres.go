@@ -361,3 +361,7 @@ func (pg *Postgres) ExecTx(ctx context.Context, fn func(context.Context, tools.G
 	// }
 	return nil
 }
+
+func (pg *Postgres) StartTx(ctx context.Context) Tx {
+	panic("StartTx not implemented for Postgres")
+}

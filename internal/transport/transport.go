@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -158,17 +159,24 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	return nil, nil
 }
 
-// repositories will return a slice of generic repositories for upserting.
-func (cfg *Config) repositories(ctx context.Context) ([]repository.Generic, error) {
-	repos := []repository.Generic{}
+// txRepo is a repository with an asspciated transaction instance.
+type txRepo struct {
+	tx   storage.Tx
+	repo repository.Generic
+}
+
+// txns will return a slice of generic repositories for upserting.
+func (cfg *Config) txns(ctx context.Context) ([]txRepo, error) {
+	txns := []txRepo{}
 	for _, dns := range cfg.DNSList {
 		repo, err := repository.New(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
 		}
-		repos = append(repos, repo)
+		tx := repo.StartTx(ctx)
+		txns = append(txns, txRepo{tx, repo})
 	}
-	return repos, nil
+	return txns, nil
 }
 
 func (cfg *Config) validate() error {
@@ -222,11 +230,11 @@ type repoJob struct {
 }
 
 type repoConfig struct {
-	repositories []repository.Generic
-	jobs         <-chan *repoJob
-	done         chan bool
-	logger       *logrus.Logger
-	truncate     bool
+	txRepos  []txRepo
+	jobs     <-chan *repoJob
+	done     chan bool
+	logger   *logrus.Logger
+	truncate bool
 }
 
 func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
@@ -241,15 +249,21 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			raw.Table = *table
 		}
 
-		for _, repo := range cfg.repositories {
+		for _, tr := range cfg.txRepos {
 			start := time.Now()
 			rsp := new(proto.CreateResponse)
-			if err := repo.UpsertRawJSON(ctx, raw, rsp); err != nil {
-				cfg.logger.Fatalf("error upserting data: %v", err)
+
+			// Put the data onto the transaction channel for storage.
+			tr.tx.Ch <- func(sctx context.Context) error {
+				if err := tr.repo.UpsertRawJSON(sctx, raw, rsp); err != nil {
+					cfg.logger.Fatalf("error upserting data: %v", err)
+				}
+				return err
 			}
+
 			duration := time.Since(start)
 			cfg.logger.Infof("partial upsert completed (id=%v, t=%v): '%s.%s'", id, duration,
-				storage.Scheme(repo.Type()), raw.Table)
+				storage.Scheme(tr.repo.Type()), raw.Table)
 		}
 		cfg.done <- true
 	}
@@ -302,7 +316,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// ? how do we make this a limited buffer?
 	repoJobCh := make(chan *repoJob)
 
-	repos, err := cfg.repositories(ctx)
+	txRepos, err := cfg.txns(ctx)
 	if err != nil {
 		return err
 	}
@@ -356,11 +370,11 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	}
 
 	repoWorkerCfg := &repoConfig{
-		repositories: repos,
-		logger:       cfg.Logger,
-		done:         make(chan bool, len(flattenedRequests)),
-		jobs:         repoJobCh,
-		truncate:     cfg.Truncate,
+		txRepos:  txRepos,
+		logger:   cfg.Logger,
+		done:     make(chan bool, len(flattenedRequests)),
+		jobs:     repoJobCh,
+		truncate: cfg.Truncate,
 	}
 
 	for id := 1; id <= runtime.NumCPU(); id++ {
@@ -391,6 +405,14 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Wait for all of the data to flush.
 	for a := 1; a <= len(flattenedRequests); a++ {
 		<-repoWorkerCfg.done
+	}
+
+	// Commit the transactions and check for errors.
+	for _, tr := range txRepos {
+		tr.tx.Commit()
+		if err := tr.tx.Errs.Wait(); err != nil {
+			log.Fatalf("error waiting for transaction: %v", err)
+		}
 	}
 
 	duration := time.Since(start)

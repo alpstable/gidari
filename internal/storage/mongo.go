@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"sync"
 
 	"github.com/alpine-hodler/gidari/pkg/proto"
 	"github.com/alpine-hodler/gidari/tools"
@@ -9,12 +10,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"golang.org/x/sync/errgroup"
 )
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
 type Mongo struct {
 	*mongo.Client
 	dns string
+
+	txLock   sync.Mutex
+	txCh     chan func(context.Context) error
+	txDoneCh chan bool
 }
 
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
@@ -29,12 +35,17 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
+	mdb.txLock = sync.Mutex{}
 
 	return mdb, nil
 }
 
-func (m *Mongo) Type() uint8 { return MongoType }
+// Type returns the type of storage.
+func (m *Mongo) Type() uint8 {
+	return MongoType
+}
 
+// Close will close the mongo client.
 func (m *Mongo) Close() {
 	m.Close()
 }
@@ -62,6 +73,44 @@ func (m *Mongo) ExecTx(ctx context.Context, fn func(context.Context, tools.Gener
 		sessionContext.EndSession(ctx)
 		return nil
 	})
+}
+
+// StartTx will start a mongodb session where all data from write methods can be rolled back.
+func (m *Mongo) StartTx(ctx context.Context) Tx {
+	tx := &Tx{
+		nil,
+		make(chan func(context.Context) error),
+		make(chan bool, 1),
+		make(chan bool, 1),
+		make(chan bool, 1),
+	}
+	tx.Errs, ctx = errgroup.WithContext(ctx)
+
+	// Create a go routine that creates a session and listens for writes.
+	tx.Errs.Go(func() error {
+		return m.UseSession(ctx, func(sctx mongo.SessionContext) error {
+			if err := sctx.StartTransaction(); err != nil {
+				return err
+			}
+			for fn := range tx.Ch {
+				if err := fn(sctx); err != nil {
+					return err
+				}
+			}
+
+			switch {
+			case <-tx.commit:
+				if err := sctx.CommitTransaction(sctx); err != nil {
+					return err
+				}
+			case <-tx.rollback:
+				sctx.AbortTransaction(sctx)
+			}
+			tx.done <- true
+			return nil
+		})
+	})
+	return *tx
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
@@ -140,6 +189,5 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
