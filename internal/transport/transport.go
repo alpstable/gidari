@@ -165,18 +165,18 @@ type txRepo struct {
 	repo repository.Generic
 }
 
-// txns will return a slice of generic repositories for upserting.
-func (cfg *Config) txns(ctx context.Context) ([]txRepo, error) {
-	txns := []txRepo{}
+// txRepos will return a slice of generic repositories along with associated transaction instances.
+func (cfg *Config) txRepos(ctx context.Context) ([]txRepo, error) {
+	tr := []txRepo{}
 	for _, dns := range cfg.DNSList {
 		repo, err := repository.New(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
 		}
 		tx := repo.StartTx(ctx)
-		txns = append(txns, txRepo{tx, repo})
+		tr = append(tr, txRepo{tx, repo})
 	}
-	return txns, nil
+	return tr, nil
 }
 
 func (cfg *Config) validate() error {
@@ -316,7 +316,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// ? how do we make this a limited buffer?
 	repoJobCh := make(chan *repoJob)
 
-	txRepos, err := cfg.txns(ctx)
+	txRepos, err := cfg.txRepos(ctx)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"sync"
 
 	"github.com/alpine-hodler/gidari/pkg/proto"
 	"github.com/alpine-hodler/gidari/tools"
@@ -17,10 +16,6 @@ import (
 type Mongo struct {
 	*mongo.Client
 	dns string
-
-	txLock   sync.Mutex
-	txCh     chan func(context.Context) error
-	txDoneCh chan bool
 }
 
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
@@ -35,7 +30,6 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
-	mdb.txLock = sync.Mutex{}
 
 	return mdb, nil
 }

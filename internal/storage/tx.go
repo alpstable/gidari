@@ -24,6 +24,7 @@ func (tx Tx) Commit() {
 	<-tx.done
 }
 
+// Rollback will rollback the transaction.
 func (tx Tx) Rollback() {
 	close(tx.Ch)
 	tx.commit <- false
