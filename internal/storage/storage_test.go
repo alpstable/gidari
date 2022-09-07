@@ -93,5 +93,31 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
 		})
+		t.Run(fmt.Sprintf("tx should rollback on error %s", tc.dns), func(t *testing.T) {
+			stg, err := New(tc.ctx, tc.dns)
+			if err != nil {
+				t.Fatalf("failed to create client: %v", err)
+			}
+
+			tx := stg.StartTx(tc.ctx)
+
+			req := new(proto.UpsertRequest)
+			req.Table = "rollback_err_test"
+
+			tx.Ch <- func(sctx context.Context) error {
+				return fmt.Errorf("test error")
+			}
+
+			tx.Ch <- func(sctx context.Context) error {
+				return nil
+			}
+
+			if err := tx.Commit(); err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+
+			// TODO check if the data was actually not inserted
+		})
+
 	}
 }

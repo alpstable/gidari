@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
-	"golang.org/x/sync/errgroup"
 )
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
@@ -72,46 +71,59 @@ func (m *Mongo) ExecTx(ctx context.Context, fn func(context.Context, tools.Gener
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
 func (m *Mongo) StartTx(ctx context.Context) Tx {
 	tx := &Tx{
-		nil,
 		make(chan func(context.Context) error),
 		make(chan error, 1),
 		make(chan bool, 1),
 		make(chan bool, 1),
 	}
-	tx.Errs, ctx = errgroup.WithContext(ctx)
+
+	var globalSessionContext mongo.SessionContext
+
+	go func() {
+	DecisionLoop:
+		for {
+			switch {
+			case <-tx.rollback:
+				globalSessionContext.AbortTransaction(globalSessionContext)
+				break DecisionLoop
+			case <-tx.commit:
+				if err := globalSessionContext.CommitTransaction(globalSessionContext); err != nil {
+					tx.rollback <- true
+					tx.done <- err
+				}
+				break DecisionLoop
+			}
+		}
+		tx.done <- nil
+	}()
 
 	// Create a go routine that creates a session and listens for writes.
-	tx.Errs.Go(func() error {
-		return m.UseSession(ctx, func(sctx mongo.SessionContext) error {
-			var err error
-			if err = sctx.StartTransaction(); err != nil {
+	go func() {
+		m.UseSession(ctx, func(sctx mongo.SessionContext) error {
+			globalSessionContext = sctx
+
+			// start the transaction, if there is an error break the go routine.
+			err := sctx.StartTransaction()
+			if err != nil {
 				tx.done <- err
 				return err
 			}
+
+			// listen for writes.
 			for fn := range tx.Ch {
-				if err := fn(sctx); err != nil {
-					tx.done <- err
-					return err
-				}
-			}
-			switch {
-			case <-tx.commit:
 				if err != nil {
-					break
+					continue
 				}
-				if err := sctx.CommitTransaction(sctx); err != nil {
+
+				// execute the write function. If there is an error, rollback the transaction.
+				if err = fn(sctx); err != nil {
+					tx.rollback <- true
 					tx.done <- err
 				}
-			case <-tx.rollback:
-				if err != nil {
-					break
-				}
-				sctx.AbortTransaction(sctx)
 			}
-			tx.done <- nil
 			return nil
 		})
-	})
+	}()
 	return *tx
 }
 
