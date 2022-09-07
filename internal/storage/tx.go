@@ -8,16 +8,14 @@ import (
 type Tx struct {
 	Ch chan func(context.Context) error
 
-	done     chan error
-	commit   chan bool
-	rollback chan bool
+	done   chan error
+	commit chan bool
 }
 
 // Commit will commit the transaction.
 func (tx Tx) Commit() error {
 	close(tx.Ch)
 	tx.commit <- true
-	tx.rollback <- false
 	return <-tx.done
 }
 
@@ -25,6 +23,5 @@ func (tx Tx) Commit() error {
 func (tx Tx) Rollback() error {
 	close(tx.Ch)
 	tx.commit <- false
-	tx.rollback <- true
 	return <-tx.done
 }

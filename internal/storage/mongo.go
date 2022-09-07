@@ -43,64 +43,17 @@ func (m *Mongo) Close() {
 	m.Close()
 }
 
-// ExecTx executes a function within a database transaction.
-func (m *Mongo) ExecTx(ctx context.Context, fn func(context.Context, tools.GenericStorage) (bool, error)) error {
-	return m.UseSession(ctx, func(sessionContext mongo.SessionContext) error {
-		// start the transactions
-		if err := sessionContext.StartTransaction(); err != nil {
-			return err
-		}
-
-		ok, err := fn(sessionContext, m)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			// rollback the transactions so the test db remains clean.
-			if err := sessionContext.AbortTransaction(sessionContext); err != nil {
-				return err
-			}
-			return nil
-		}
-
-		sessionContext.EndSession(ctx)
-		return nil
-	})
-}
-
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
 func (m *Mongo) StartTx(ctx context.Context) Tx {
 	tx := &Tx{
 		make(chan func(context.Context) error),
 		make(chan error, 1),
 		make(chan bool, 1),
-		make(chan bool, 1),
 	}
-
-	var globalSessionContext mongo.SessionContext
-
-	go func() {
-	DecisionLoop:
-		for {
-			switch {
-			case <-tx.rollback:
-				globalSessionContext.AbortTransaction(globalSessionContext)
-				break DecisionLoop
-			case <-tx.commit:
-				if err := globalSessionContext.CommitTransaction(globalSessionContext); err != nil {
-					tx.rollback <- true
-					tx.done <- err
-				}
-				break DecisionLoop
-			}
-		}
-		tx.done <- nil
-	}()
 
 	// Create a go routine that creates a session and listens for writes.
 	go func() {
 		m.UseSession(ctx, func(sctx mongo.SessionContext) error {
-			globalSessionContext = sctx
 
 			// start the transaction, if there is an error break the go routine.
 			err := sctx.StartTransaction()
@@ -117,10 +70,25 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 
 				// execute the write function. If there is an error, rollback the transaction.
 				if err = fn(sctx); err != nil {
-					tx.rollback <- true
+					tx.commit <- false
 					tx.done <- err
 				}
 			}
+
+		DecisionLoop:
+			for {
+				switch {
+				case <-tx.commit:
+					if err := sctx.CommitTransaction(sctx); err == nil {
+						break DecisionLoop
+					}
+					fallthrough
+				default:
+					sctx.AbortTransaction(sctx)
+					break DecisionLoop
+				}
+			}
+			tx.done <- nil
 			return nil
 		})
 	}()

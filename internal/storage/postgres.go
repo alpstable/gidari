@@ -123,10 +123,6 @@ func (pg *pgtransactor) Close() {
 	pg.Close()
 }
 
-func (pg *pgtransactor) ExecTx(ctx context.Context, fn func(context.Context, tools.GenericStorage) (bool, error)) error {
-	return nil
-}
-
 // ListColumns will set a complete list of available columns per table on the response.
 func (pg *pgtransactor) ListColumns(ctx context.Context, rsp *proto.ListColumnsResponse) error {
 	// return pg.exec(ctx, query.PostgresColumns, func(r *sql.Rows) error {

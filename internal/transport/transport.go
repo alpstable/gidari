@@ -411,9 +411,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		if err := tr.tx.Commit(); err != nil {
 			return err
 		}
-		if err := tr.tx.Errs.Wait(); err != nil {
-			return err
-		}
 	}
 
 	duration := time.Since(start)
