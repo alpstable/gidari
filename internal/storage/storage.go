@@ -16,11 +16,6 @@ const (
 	PostgresType
 )
 
-// Errors
-var (
-	ErrTransactionInProgress = fmt.Errorf("transaction is already in progress")
-)
-
 // Storage is an interface that defines the methods that a storage device should implement.
 type Storage interface {
 	Close()
@@ -33,6 +28,12 @@ type Storage interface {
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
 	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
 	Type() uint8
+}
+
+type Tx interface {
+	Commit() error
+	Rollback() error
+	Transact(func(context.Context) error)
 }
 
 // Scheme takes a byte and returns the associated DNS root database resource.

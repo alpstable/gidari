@@ -46,7 +46,7 @@ func (m *Mongo) Close() {
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
 func (m *Mongo) StartTx(ctx context.Context) Tx {
 	// Construct a transaction.
-	tx := &Tx{
+	tx := &tx{
 		make(chan func(context.Context) error),
 		make(chan error, 1),
 		make(chan bool, 1),
@@ -62,7 +62,7 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 			}
 
 			// listen for writes.
-			for fn := range tx.Ch {
+			for fn := range tx.ch {
 				// If an error has registered, do nothing.
 				if err != nil {
 					continue
@@ -86,7 +86,7 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 			return nil
 		})
 	}()
-	return *tx
+	return tx
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {

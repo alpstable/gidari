@@ -39,9 +39,9 @@ func TestStartTx(t *testing.T) {
 			}
 
 			var rsp proto.CreateResponse
-			tx.Ch <- func(sctx context.Context) error {
+			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
-			}
+			})
 
 			if err := tx.Commit(); err != nil {
 				t.Fatalf("failed to commit transaction: %v", err)
@@ -75,9 +75,9 @@ func TestStartTx(t *testing.T) {
 			}
 
 			var rsp proto.CreateResponse
-			tx.Ch <- func(sctx context.Context) error {
+			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
-			}
+			})
 
 			if err := tx.Rollback(); err != nil {
 				t.Fatalf("failed to rollback transaction: %v", err)
@@ -104,15 +104,14 @@ func TestStartTx(t *testing.T) {
 			req := new(proto.UpsertRequest)
 			req.Table = "rollback_err_test"
 
-			tx.Ch <- func(sctx context.Context) error {
+			tx.Transact(func(sctx context.Context) error {
 				return fmt.Errorf("test error")
-			}
+			})
 
-			tx.Ch <- func(sctx context.Context) error {
+			tx.Transact(func(sctx context.Context) error {
 				return nil
-			}
+			})
 
-			fmt.Println("before error")
 			if err := tx.Commit(); err == nil {
 				t.Fatalf("expected error, got nil")
 			}
