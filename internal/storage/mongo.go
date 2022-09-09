@@ -67,11 +67,11 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 				if err != nil {
 					continue
 				}
+				err = fn(sctx)
+			}
 
-				// Execute the write function. If there is an error, rollback the transaction.
-				if err = fn(sctx); err != nil {
-					tx.commit <- false
-				}
+			if err != nil {
+				return err
 			}
 
 			// Await the decision to commit or rollback.
@@ -83,7 +83,7 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 			default:
 				sctx.AbortTransaction(sctx)
 			}
-			return err
+			return nil
 		})
 	}()
 	return *tx
