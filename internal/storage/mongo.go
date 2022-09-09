@@ -45,6 +45,7 @@ func (m *Mongo) Close() {
 
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
 func (m *Mongo) StartTx(ctx context.Context) Tx {
+	// Construct a transaction.
 	tx := &Tx{
 		make(chan func(context.Context) error),
 		make(chan error, 1),
@@ -53,43 +54,36 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 
 	// Create a go routine that creates a session and listens for writes.
 	go func() {
-		m.UseSession(ctx, func(sctx mongo.SessionContext) error {
-
-			// start the transaction, if there is an error break the go routine.
+		tx.done <- m.UseSession(ctx, func(sctx mongo.SessionContext) error {
+			// Start the transaction, if there is an error break the go routine.
 			err := sctx.StartTransaction()
 			if err != nil {
-				tx.done <- err
 				return err
 			}
 
 			// listen for writes.
 			for fn := range tx.Ch {
+				// If an error has registered, do nothing.
 				if err != nil {
 					continue
 				}
 
-				// execute the write function. If there is an error, rollback the transaction.
+				// Execute the write function. If there is an error, rollback the transaction.
 				if err = fn(sctx); err != nil {
 					tx.commit <- false
-					tx.done <- err
 				}
 			}
 
-		DecisionLoop:
-			for {
-				switch {
-				case <-tx.commit:
-					if err := sctx.CommitTransaction(sctx); err == nil {
-						break DecisionLoop
-					}
-					fallthrough
-				default:
-					sctx.AbortTransaction(sctx)
-					break DecisionLoop
+			// Await the decision to commit or rollback.
+			switch {
+			case <-tx.commit:
+				if err := sctx.CommitTransaction(sctx); err == nil {
+					return err
 				}
+			default:
+				sctx.AbortTransaction(sctx)
 			}
-			tx.done <- nil
-			return nil
+			return err
 		})
 	}()
 	return *tx

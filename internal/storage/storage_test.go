@@ -112,6 +112,7 @@ func TestStartTx(t *testing.T) {
 				return nil
 			}
 
+			fmt.Println("before error")
 			if err := tx.Commit(); err == nil {
 				t.Fatalf("expected error, got nil")
 			}
