@@ -123,10 +123,6 @@ func (pg *pgtransactor) Close() {
 	pg.Close()
 }
 
-func (pg *pgtransactor) ExecTx(ctx context.Context, fn func(context.Context, tools.GenericStorage) (bool, error)) error {
-	return nil
-}
-
 // ListColumns will set a complete list of available columns per table on the response.
 func (pg *pgtransactor) ListColumns(ctx context.Context, rsp *proto.ListColumnsResponse) error {
 	// return pg.exec(ctx, query.PostgresColumns, func(r *sql.Rows) error {
@@ -360,4 +356,8 @@ func (pg *Postgres) ExecTx(ctx context.Context, fn func(context.Context, tools.G
 	// 	return fmt.Errorf("error committing transaction: %v", err)
 	// }
 	return nil
+}
+
+func (pg *Postgres) StartTx(ctx context.Context) Tx {
+	panic("StartTx not implemented for Postgres")
 }

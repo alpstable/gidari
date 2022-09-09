@@ -14,17 +14,29 @@ import (
 // Generic is the interface for the generic service.
 type Generic interface {
 	storage.Storage
+	storage.Tx
 
 	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
 }
 
 // GenericService is the implementation of the Generic service.
-type GenericService struct{ storage.Storage }
+type GenericService struct {
+	storage.Storage
+	storage.Tx
+}
 
 // New returns a new Generic service.
 func New(ctx context.Context, dns string) (Generic, error) {
 	stg, err := storage.New(ctx, dns)
-	return &GenericService{stg}, err
+	return &GenericService{stg, nil}, err
+}
+
+// NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
+// storage operations made by the repository layer.
+func NewTx(ctx context.Context, dns string) (Generic, error) {
+	stg, err := storage.New(ctx, dns)
+	return &GenericService{stg, stg.StartTx(ctx)}, err
+
 }
 
 // UpsertRawJSON upserts a raw json document into the database and writes the resulting document to a
