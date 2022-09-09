@@ -14,6 +14,7 @@ import (
 	"github.com/alpine-hodler/gidari/internal/web/auth"
 	"github.com/alpine-hodler/gidari/pkg/proto"
 	"github.com/alpine-hodler/gidari/pkg/repository"
+	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -215,20 +216,6 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 	return webcfg, nil
 }
 
-type workerInfo struct {
-	id       int
-	duration time.Duration
-	msg      string
-}
-
-func (info workerInfo) fmt() string {
-	// w: the worker id
-	// d: the duration of time it took to complete the job
-	// m: the message from the worker
-	return fmt.Sprintf("{w: %v, d: %v, msg: %s}", info.id, info.duration, info.msg)
-
-}
-
 type repoJob struct {
 	req   http.Request
 	b     []byte
@@ -268,12 +255,12 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			})
 
 			rt := repo.Type()
-			logInfo := workerInfo{
-				id:       id,
-				duration: time.Since(start),
-				msg:      fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
+			logInfo := tools.LogFormatter{
+				WorkerID: id,
+				Duration: time.Since(start),
+				Msg:      fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
 			}
-			cfg.logger.Infof(logInfo.fmt())
+			cfg.logger.Infof(logInfo.String())
 		}
 		cfg.done <- true
 	}
@@ -306,12 +293,12 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		}
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
-		logInfo := workerInfo{
-			id:       id,
-			duration: time.Since(start),
-			msg:      fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
+		logInfo := tools.LogFormatter{
+			WorkerID: id,
+			Duration: time.Since(start),
+			Msg:      fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
 		}
-		job.logger.Infof(logInfo.fmt())
+		job.logger.Infof(logInfo.String())
 	}
 }
 
@@ -325,7 +312,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("unable to connect to client: %v", err)
 	}
-	cfg.Logger.Info(workerInfo{msg: "connection establed"}.fmt())
+	cfg.Logger.Info(tools.LogFormatter{Msg: fmt.Sprintf("connection establed: %s", cfg.URL)}.String())
 
 	// ? how do we make this a limited buffer?
 	repoJobCh := make(chan *repoJob)
@@ -394,7 +381,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go repositoryWorker(ctx, id, repoWorkerCfg)
 	}
-	cfg.Logger.Info(workerInfo{msg: "repository workers started"}.fmt())
+	cfg.Logger.Info(tools.LogFormatter{Msg: "repository workers started"}.String())
 
 	webWorkerJobs := make(chan *webWorkerJob, len(cfg.Requests))
 
@@ -402,7 +389,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
-	cfg.Logger.Info(workerInfo{msg: "web workers started"}.fmt())
+	cfg.Logger.Info(tools.LogFormatter{Msg: "web workers started"}.String())
 
 	// Enqueue the worker jobs
 	for _, req := range flattenedRequests {
@@ -413,7 +400,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			logger:           cfg.Logger,
 		}
 	}
-	cfg.Logger.Info(workerInfo{msg: "web worker jobs enqueued"}.fmt())
+	cfg.Logger.Info(tools.LogFormatter{Msg: "web worker jobs enqueued"}.String())
 
 	// Wait for all of the data to flush.
 	for a := 1; a <= len(flattenedRequests); a++ {
@@ -428,6 +415,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	}
 
 	duration := time.Since(start)
-	cfg.Logger.Info(workerInfo{duration: duration, msg: "upsert completed"}.fmt())
+	cfg.Logger.Info(tools.LogFormatter{Duration: duration, Msg: "upsert completed"}.String())
 	return nil
 }
