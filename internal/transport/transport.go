@@ -215,6 +215,20 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 	return webcfg, nil
 }
 
+type workerInfo struct {
+	id       int
+	duration time.Duration
+	msg      string
+}
+
+func (info workerInfo) fmt() string {
+	// w: the worker id
+	// d: the duration of time it took to complete the job
+	// m: the message from the worker
+	return fmt.Sprintf("{w: %v, d: %v, msg: %s}", info.id, info.duration, info.msg)
+
+}
+
 type repoJob struct {
 	req   http.Request
 	b     []byte
@@ -253,9 +267,13 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 				return err
 			})
 
-			duration := time.Since(start)
-			cfg.logger.Infof("partial upsert completed (id=%v, t=%v): '%s.%s'", id, duration,
-				storage.Scheme(repo.Type()), raw.Table)
+			rt := repo.Type()
+			logInfo := workerInfo{
+				id:       id,
+				duration: time.Since(start),
+				msg:      fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
+			}
+			cfg.logger.Infof(logInfo.fmt())
 		}
 		cfg.done <- true
 	}
@@ -288,8 +306,12 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		}
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
-		duration := time.Since(start)
-		job.logger.Infof("web fetch completed (id=%v, t=%v): %s", id, duration, rsp.Request.URL.Path)
+		logInfo := workerInfo{
+			id:       id,
+			duration: time.Since(start),
+			msg:      fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
+		}
+		job.logger.Infof(logInfo.fmt())
 	}
 }
 
@@ -303,7 +325,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("unable to connect to client: %v", err)
 	}
-	cfg.Logger.Info("connection establed")
+	cfg.Logger.Info(workerInfo{msg: "connection establed"}.fmt())
 
 	// ? how do we make this a limited buffer?
 	repoJobCh := make(chan *repoJob)
@@ -372,7 +394,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go repositoryWorker(ctx, id, repoWorkerCfg)
 	}
-	cfg.Logger.Info("repository workers started")
+	cfg.Logger.Info(workerInfo{msg: "repository workers started"}.fmt())
 
 	webWorkerJobs := make(chan *webWorkerJob, len(cfg.Requests))
 
@@ -380,7 +402,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
-	cfg.Logger.Info("web workers started")
+	cfg.Logger.Info(workerInfo{msg: "web workers started"}.fmt())
 
 	// Enqueue the worker jobs
 	for _, req := range flattenedRequests {
@@ -391,8 +413,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			logger:           cfg.Logger,
 		}
 	}
-
-	cfg.Logger.Info("web worker jobs enqueued")
+	cfg.Logger.Info(workerInfo{msg: "web worker jobs enqueued"}.fmt())
 
 	// Wait for all of the data to flush.
 	for a := 1; a <= len(flattenedRequests); a++ {
@@ -407,6 +428,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	}
 
 	duration := time.Since(start)
-	cfg.Logger.Infof("upsert completed (t=%v)\n", duration)
+	cfg.Logger.Info(workerInfo{duration: duration, msg: "upsert completed"}.fmt())
 	return nil
 }
