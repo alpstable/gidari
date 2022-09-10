@@ -29,7 +29,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T00:00:00Z")
 		u.RawQuery = query.Encode()
 
-		chunks, err := ts.chunks(u)
+		err = ts.setChunks(u)
 		require.NoError(t, err, "error creating timeseries chunks: %v", err)
 
 		expChunks := [][2]time.Time{
@@ -54,7 +54,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, chunks)
+		require.Equal(t, expChunks, ts.chunks)
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
@@ -72,7 +72,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T01:00:00Z")
 		u.RawQuery = query.Encode()
 
-		chunks, err := ts.chunks(u)
+		err = ts.setChunks(u)
 		require.NoError(t, err, "error creating timeseries chunks: %v", err)
 
 		expChunks := [][2]time.Time{
@@ -97,7 +97,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, chunks)
+		require.Equal(t, expChunks, ts.chunks)
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T02:00:00Z")
 		u.RawQuery = query.Encode()
 
-		chunks, err := ts.chunks(u)
+		err = ts.setChunks(u)
 		require.NoError(t, err, "error creating timeseries chunks: %v", err)
 
 		expChunks := [][2]time.Time{
@@ -144,7 +144,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, chunks)
+		require.Equal(t, expChunks, ts.chunks)
 	})
 }
 
