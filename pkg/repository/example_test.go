@@ -48,7 +48,7 @@ func ExampleGenericService_UpsertRawJSON() {
 		Data:  []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 	}
 
-	rsp := new(proto.CreateResponse)
+	rsp := new(proto.UpsertResponse)
 	err = repo.UpsertRawJSON(ctx, raw, rsp)
 	if err != nil {
 		panic(err)

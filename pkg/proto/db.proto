@@ -17,9 +17,12 @@ message UpsertRequest {
 	repeated google.protobuf.Struct records = 2;
 }
 
-message CreateResponse {
-	// The id of the record (either specified or automatically created)
-	// string id = 1;
+message UpsertResponse {
+	// Number of records upserted
+	int32 upsertedCount = 1;
+
+	// Number of records matched
+	int32 matchedCount = 2;
 }
 
 message ListColumnsResponse {

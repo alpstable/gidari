@@ -38,7 +38,7 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to make records request: %v", err)
 			}
 
-			var rsp proto.CreateResponse
+			var rsp proto.UpsertResponse
 			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			})
@@ -74,7 +74,7 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to make records request: %v", err)
 			}
 
-			var rsp proto.CreateResponse
+			var rsp proto.UpsertResponse
 			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			})

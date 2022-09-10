@@ -26,7 +26,7 @@ type Storage interface {
 	// to the transaction.
 	StartTx(context.Context) Tx
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
-	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
+	Upsert(context.Context, *proto.UpsertRequest, *proto.UpsertResponse) error
 	Type() uint8
 }
 

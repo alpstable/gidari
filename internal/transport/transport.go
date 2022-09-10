@@ -246,24 +246,27 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 		}
 
 		for _, repo := range cfg.repos {
-			start := time.Now()
-			rsp := new(proto.CreateResponse)
 
 			// Put the data onto the transaction channel for storage.
 			repo.Transact(func(sctx context.Context) error {
+				start := time.Now()
+				rsp := new(proto.UpsertResponse)
 				if err := repo.UpsertRawJSON(sctx, raw, rsp); err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
+					return err
 				}
-				return err
+				rt := repo.Type()
+				logInfo := tools.LogFormatter{
+					WorkerID:      id,
+					Duration:      time.Since(start),
+					Msg:           fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
+					UpsertedCount: rsp.UpsertedCount,
+					MatchedCount:  rsp.MatchedCount,
+				}
+				cfg.logger.Infof(logInfo.String())
+				return nil
 			})
 
-			rt := repo.Type()
-			logInfo := tools.LogFormatter{
-				WorkerID: id,
-				Duration: time.Since(start),
-				Msg:      fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
-			}
-			cfg.logger.Infof(logInfo.String())
 		}
 		cfg.done <- true
 	}
