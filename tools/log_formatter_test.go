@@ -30,10 +30,22 @@ func TestLogFormatter(t *testing.T) {
 			t.Errorf("expected '{m:hello }', got '%s'", lf.String())
 		}
 	})
+	t.Run("upserted count", func(t *testing.T) {
+		lf := LogFormatter{UpsertedCount: 1}
+		if lf.String() != "{u:1}" {
+			t.Errorf("expected '{u:1}', got '%s'", lf.String())
+		}
+	})
+	t.Run("matched count", func(t *testing.T) {
+		lf := LogFormatter{MatchedCount: 1}
+		if lf.String() != "{c:1}" {
+			t.Errorf("expected '{c:1}', got '%s'", lf.String())
+		}
+	})
 	t.Run("all", func(t *testing.T) {
-		lf := LogFormatter{WorkerID: 1, Duration: time.Second, Msg: "hello"}
-		if lf.String() != "{w:1,d:1s,m:hello}" {
-			t.Errorf("expected '{w:1,d:1s,m:hello}', got '%s'", lf.String())
+		lf := LogFormatter{WorkerID: 1, Duration: time.Second, Msg: "hello", UpsertedCount: 1}
+		if lf.String() != "{w:1, d:1s, u:1, m:hello}" {
+			t.Errorf("expected '{w:1, d:1s, u:1, m:hello}', got '%s'", lf.String())
 		}
 	})
 }

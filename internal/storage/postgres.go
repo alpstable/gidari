@@ -188,7 +188,7 @@ func (pg *pgtransactor) TruncateTables(ctx context.Context, req *proto.TruncateT
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
-func (pg *pgtransactor) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.CreateResponse) error {
+func (pg *pgtransactor) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.UpsertResponse) error {
 	errID := "postgres.upsert"
 	if len(req.Records) == 0 {
 		return errors.BadRequest(errID, "missing records")

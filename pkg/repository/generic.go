@@ -16,7 +16,7 @@ type Generic interface {
 	storage.Storage
 	storage.Tx
 
-	UpsertRawJSON(context.Context, *Raw, *proto.CreateResponse) error
+	UpsertRawJSON(context.Context, *Raw, *proto.UpsertResponse) error
 }
 
 // GenericService is the implementation of the Generic service.
@@ -41,7 +41,7 @@ func NewTx(ctx context.Context, dns string) (Generic, error) {
 
 // UpsertRawJSON upserts a raw json document into the database and writes the resulting document to a
 // "proto.CreateResponse" object.
-func (svc *GenericService) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.CreateResponse) error {
+func (svc *GenericService) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *proto.UpsertResponse) error {
 	var records []*structpb.Struct
 	var data interface{}
 	if err := json.Unmarshal(raw.Data, &data); err != nil {

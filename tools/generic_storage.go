@@ -12,6 +12,6 @@ type GenericStorage interface {
 	ExecTx(context.Context, func(context.Context, GenericStorage) (bool, error)) error
 	Read(context.Context, *proto.ReadRequest, *proto.ReadResponse) error
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
-	Upsert(context.Context, *proto.UpsertRequest, *proto.CreateResponse) error
+	Upsert(context.Context, *proto.UpsertRequest, *proto.UpsertResponse) error
 	Type() uint8
 }

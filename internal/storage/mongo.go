@@ -142,7 +142,7 @@ func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Rea
 func (m *Mongo) TruncateTables(context.Context, *proto.TruncateTablesRequest) error { return nil }
 
 // UpsertCoinbaseProCandles60 will upsert candles to the 60-granularity Mongo DB collection for a given productID.
-func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.CreateResponse) error {
+func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.UpsertResponse) error {
 	models := []mongo.WriteModel{}
 	for _, record := range req.Records {
 		doc := bson.D{}
@@ -161,9 +161,11 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto
 	}
 
 	coll := m.Database(cs.Database).Collection(req.Table)
-	_, err = coll.BulkWrite(ctx, models)
+	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
 		return err
 	}
+	rsp.UpsertedCount = int32(bwr.UpsertedCount)
+	rsp.MatchedCount = int32(bwr.MatchedCount)
 	return nil
 }
