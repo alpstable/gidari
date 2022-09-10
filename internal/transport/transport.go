@@ -42,13 +42,15 @@ type timeseries struct {
 	// Layout is the time layout for parsing the "Start" and "End" values into "time.Time". The default is assumed
 	// to be RFC3339.
 	Layout *string `yaml:"layout"`
+
+	// chunks are the time ranges for which we can query the API. These are broken up into pieces for API requests
+	// that only return a limited number of results.
+	chunks [][2]time.Time
 }
 
-// chunks will attempt to use the query string of a URL to partition the timeseries into "chunks" of time for queying
+// setChunks will attempt to use the query string of a URL to partition the timeseries into "chunks" of time for queying
 // a web API.
-func (ts *timeseries) chunks(url *url.URL) ([][2]time.Time, error) {
-	chunks := [][2]time.Time{}
-
+func (ts *timeseries) setChunks(url *url.URL) error {
 	// If layout is not set, then default it to be RFC3339
 	if ts.Layout == nil {
 		str := time.RFC3339
@@ -58,34 +60,34 @@ func (ts *timeseries) chunks(url *url.URL) ([][2]time.Time, error) {
 	query := url.Query()
 	startSlice := query[ts.StartName]
 	if len(startSlice) != 1 {
-		return nil, fmt.Errorf("'startName' is required for timeseries data")
+		return fmt.Errorf("'startName' is required for timeseries data")
 	}
 
 	start, err := time.Parse(*ts.Layout, startSlice[0])
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	endSlice := query[ts.EndName]
 	if len(endSlice) != 1 {
-		return nil, fmt.Errorf("'endName' is required for timeseries data")
+		return fmt.Errorf("'endName' is required for timeseries data")
 	}
 
 	end, err := time.Parse(*ts.Layout, endSlice[0])
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for start.Before(end) {
 		next := start.Add(time.Second * time.Duration(ts.Period))
 		if next.Before(end) {
-			chunks = append(chunks, [2]time.Time{start, next})
+			ts.chunks = append(ts.chunks, [2]time.Time{start, next})
 		} else {
-			chunks = append(chunks, [2]time.Time{start, end})
+			ts.chunks = append(ts.chunks, [2]time.Time{start, end})
 		}
 		start = next
 	}
-	return chunks, nil
+	return nil
 }
 
 // Request is the information needed to query the web API for data to transport.
@@ -172,6 +174,7 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 	return repos, nil
 }
 
+// validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) validate() error {
 	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on transport.Config", field) }
 	if cfg.RateLimitConfig == nil {
@@ -303,6 +306,11 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 }
 
 // Upsert will use the configuration file to upsert data from the
+//
+// For each DNS entry in the configuration file, a repository will be created and used to upsert data. For each
+// repository, a transaction will be created and used to upsert data. The transaction will be committed at the end
+// of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
+// for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
 	start := time.Now()
 	if err := cfg.validate(); err != nil {
@@ -313,9 +321,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("unable to connect to client: %v", err)
 	}
 	cfg.Logger.Info(tools.LogFormatter{Msg: fmt.Sprintf("connection establed: %s", cfg.URL)}.String())
-
-	// ? how do we make this a limited buffer?
-	repoJobCh := make(chan *repoJob)
 
 	repos, err := cfg.repos(ctx)
 	if err != nil {
@@ -340,17 +345,17 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			return err
 		}
 
-		if timeseries := req.Timeseries; timeseries != nil {
+		if ts := req.Timeseries; ts != nil {
 			xurl := fetchConfig.URL
-			chunks, err := timeseries.chunks(xurl)
+			err = ts.setChunks(xurl)
 			if err != nil {
-				return fmt.Errorf("error getting timeseries chunks: %v", chunks)
+				return fmt.Errorf("error getting timeseries chunks: %v", ts.chunks)
 			}
-			for _, chunk := range chunks {
+			for _, chunk := range ts.chunks {
 				// copy the request and update it to reflect the partitioned timeseries
 				chunkReq := req
-				chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
-				chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
+				chunkReq.Query[ts.StartName] = chunk[0].Format(*ts.Layout)
+				chunkReq.Query[ts.EndName] = chunk[1].Format(*ts.Layout)
 
 				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client, rateLimiter)
 				if err != nil {
@@ -370,6 +375,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		}
 	}
 
+	// repoJobs is a channel that will be used to pass jobs to the repository workers. The repository workers will
+	// be responsible for upserting the data into the database.
+	repoJobCh := make(chan *repoJob, len(flattenedRequests)*len(repos))
+
 	repoWorkerCfg := &repoConfig{
 		repos:    repos,
 		logger:   cfg.Logger,
@@ -378,6 +387,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		truncate: cfg.Truncate,
 	}
 
+	// Start the repository workers.
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go repositoryWorker(ctx, id, repoWorkerCfg)
 	}
