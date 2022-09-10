@@ -330,34 +330,6 @@ func (pg *Postgres) setMaxOpenConns(db *sql.DB) {
 	db.SetMaxOpenConns(int(n))
 }
 
-// ExecTx executes a function within a database transaction.
-func (pg *Postgres) ExecTx(ctx context.Context, fn func(context.Context, tools.GenericStorage) (bool, error)) error {
-	// tx, err := pg.pgtx.(*sql.DB).BeginTx(ctx, nil)
-	// if err != nil {
-	// 	return fmt.Errorf("error beginning tx: %v", err)
-	// }
-
-	// q := newpgtransactor(tx)
-	// ok, err := fn(ctx, q)
-	// if err != nil {
-	// 	if rbErr := tx.Rollback(); rbErr != nil {
-	// 		return fmt.Errorf("tx err: %v, rb err: %v", err, rbErr)
-	// 	}
-	// 	return fmt.Errorf("error executing wrapper: %v", err)
-	// }
-	// if !ok {
-	// 	if err := tx.Rollback(); err != nil {
-	// 		return fmt.Errorf("error rolling back canceled transaction: %v", err)
-	// 	}
-	// 	return nil
-	// }
-
-	// if err := tx.Commit(); err != nil {
-	// 	return fmt.Errorf("error committing transaction: %v", err)
-	// }
-	return nil
-}
-
 func (pg *Postgres) StartTx(ctx context.Context) Tx {
 	panic("StartTx not implemented for Postgres")
 }
