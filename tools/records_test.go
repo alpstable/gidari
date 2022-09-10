@@ -1,10 +1,10 @@
 package tools
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/alpine-hodler/gidari/pkg/proto"
-	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -17,30 +17,42 @@ func TestAssignReadResponseRecords(t *testing.T) {
 		rsp := new(proto.ReadResponse)
 
 		r1, err := structpb.NewStruct(map[string]interface{}{"int": 1})
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("failed to create struct: %v", err)
+		}
 
 		rsp.Records = []*structpb.Struct{r1}
 
 		tc := []*testcase{}
 		err = AssignReadResponseRecords(rsp, &tc)
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("failed to assign records: %v", err)
+		}
 
 		expected := []*testcase{{1}}
-		require.Equal(t, expected, tc)
+		if !reflect.DeepEqual(tc, expected) {
+			t.Fatalf("expected %v, got %v", expected, tc)
+		}
 	})
 
 	assignSliceBenchmarkResponse := new(proto.ReadResponse)
 	assignSliceBenchmarkExpected := []*testcase{}
 	for i := 1; i <= 1e6; i++ {
 		r, err := structpb.NewStruct(map[string]interface{}{"int": i})
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("failed to create struct: %v", err)
+		}
 		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testcase{Int: i})
 		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, r)
 	}
 	t.Run("assign slice benchmark", func(t *testing.T) {
 		tc := []*testcase{}
 		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tc)
-		require.NoError(t, err)
-		require.Equal(t, assignSliceBenchmarkExpected, tc)
+		if err != nil {
+			t.Fatalf("failed to assign records: %v", err)
+		}
+		if !reflect.DeepEqual(tc, assignSliceBenchmarkExpected) {
+			t.Fatalf("expected %v, got %v", assignSliceBenchmarkExpected, tc)
+		}
 	})
 }

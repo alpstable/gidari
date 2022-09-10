@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -22,7 +22,9 @@ func TestTimeseries(t *testing.T) {
 		}
 
 		u, err := url.Parse("https//api.test.com/")
-		require.NoError(t, err, "error parsing url: %v", err)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
 
 		query := u.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
@@ -30,7 +32,9 @@ func TestTimeseries(t *testing.T) {
 		u.RawQuery = query.Encode()
 
 		err = ts.setChunks(u)
-		require.NoError(t, err, "error creating timeseries chunks: %v", err)
+		if err != nil {
+			t.Fatalf("error setting chunks: %v", err)
+		}
 
 		expChunks := [][2]time.Time{
 			{
@@ -54,7 +58,9 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, ts.chunks)
+		if !reflect.DeepEqual(expChunks, ts.chunks) {
+			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		}
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
@@ -65,7 +71,9 @@ func TestTimeseries(t *testing.T) {
 		}
 
 		u, err := url.Parse("https//api.test.com/")
-		require.NoError(t, err, "error parsing url: %v", err)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
 
 		query := u.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
@@ -73,7 +81,9 @@ func TestTimeseries(t *testing.T) {
 		u.RawQuery = query.Encode()
 
 		err = ts.setChunks(u)
-		require.NoError(t, err, "error creating timeseries chunks: %v", err)
+		if err != nil {
+			t.Fatalf("error setting chunks: %v", err)
+		}
 
 		expChunks := [][2]time.Time{
 			{
@@ -97,7 +107,9 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, ts.chunks)
+		if !reflect.DeepEqual(expChunks, ts.chunks) {
+			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		}
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
@@ -108,7 +120,9 @@ func TestTimeseries(t *testing.T) {
 		}
 
 		u, err := url.Parse("https//api.test.com/")
-		require.NoError(t, err, "error parsing url: %v", err)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
 
 		query := u.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
@@ -116,7 +130,9 @@ func TestTimeseries(t *testing.T) {
 		u.RawQuery = query.Encode()
 
 		err = ts.setChunks(u)
-		require.NoError(t, err, "error creating timeseries chunks: %v", err)
+		if err != nil {
+			t.Fatalf("error setting chunks: %v", err)
+		}
 
 		expChunks := [][2]time.Time{
 			{
@@ -144,7 +160,9 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
-		require.Equal(t, expChunks, ts.chunks)
+		if !reflect.DeepEqual(expChunks, ts.chunks) {
+			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		}
 	})
 }
 
