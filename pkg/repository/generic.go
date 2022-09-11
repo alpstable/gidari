@@ -35,7 +35,15 @@ func New(ctx context.Context, dns string) (Generic, error) {
 // storage operations made by the repository layer.
 func NewTx(ctx context.Context, dns string) (Generic, error) {
 	stg, err := storage.New(ctx, dns)
-	return &GenericService{stg, stg.StartTx(ctx)}, err
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := stg.StartTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &GenericService{stg, tx}, nil
 
 }
 

@@ -18,6 +18,7 @@ type storageTestCase struct {
 func TestStartTx(t *testing.T) {
 	testCases := []storageTestCase{
 		{context.Background(), "mongodb://mongo-coinbasepro:27017/coinbasepro"},
+		{context.Background(), "postgresql://postgres:@postgres-coinbasepro:5432/coinbasepro?sslmode=disable"},
 	}
 
 	for _, tc := range testCases {
@@ -27,12 +28,15 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to create client: %v", err)
 			}
 
-			tx := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tc.ctx)
+			if err != nil {
+				t.Fatalf("failed to start transaction: %v", err)
+			}
 
 			req := new(proto.UpsertRequest)
-			req.Table = "test"
+			req.Table = "tests"
 
-			data := map[string]interface{}{"test": "test"}
+			data := map[string]interface{}{"test_string": "test", "id": "1"}
 			err = tools.MakeRecordsRequest(data, &req.Records)
 			if err != nil {
 				t.Fatalf("failed to make records request: %v", err)
@@ -51,7 +55,7 @@ func TestStartTx(t *testing.T) {
 
 			// Truncate the test table
 			truncateReq := new(proto.TruncateTablesRequest)
-			truncateReq.Tables = []string{"test"}
+			truncateReq.Tables = []string{"tests"}
 			err = stg.TruncateTables(tc.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
@@ -63,12 +67,15 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to create client: %v", err)
 			}
 
-			tx := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tc.ctx)
+			if err != nil {
+				t.Fatalf("failed to start transaction: %v", err)
+			}
 
 			req := new(proto.UpsertRequest)
-			req.Table = "rollback_test"
+			req.Table = "tests"
 
-			data := map[string]interface{}{"test": "test"}
+			data := map[string]interface{}{"test_string": "test", "id": "1"}
 			err = tools.MakeRecordsRequest(data, &req.Records)
 			if err != nil {
 				t.Fatalf("failed to make records request: %v", err)
@@ -87,7 +94,7 @@ func TestStartTx(t *testing.T) {
 
 			// Truncate the test table
 			truncateReq := new(proto.TruncateTablesRequest)
-			truncateReq.Tables = []string{"rollback_test"}
+			truncateReq.Tables = []string{"tests"}
 			err = stg.TruncateTables(tc.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
@@ -99,10 +106,13 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to create client: %v", err)
 			}
 
-			tx := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tc.ctx)
+			if err != nil {
+				t.Fatalf("failed to start transaction: %v", err)
+			}
 
 			req := new(proto.UpsertRequest)
-			req.Table = "rollback_err_test"
+			req.Table = "tests"
 
 			tx.Transact(func(sctx context.Context) error {
 				return fmt.Errorf("test error")

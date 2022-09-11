@@ -24,7 +24,7 @@ type Storage interface {
 	// StartTx will start a transaction and return a "Tx" object that can be used to put operations on a channel,
 	// commit the result of all operations sent to the transaction, or rollback the result of all operations sent
 	// to the transaction.
-	StartTx(context.Context) Tx
+	StartTx(context.Context) (Tx, error)
 	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
 	Upsert(context.Context, *proto.UpsertRequest, *proto.UpsertResponse) error
 	Type() uint8
