@@ -4,9 +4,9 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd
               http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
-	  <changeSet id="tag_create_candles" author="system">
-      <tagDatabase tag="1.0" />
+	  <changeSet id="tag_migrate_bootstrap" author="system">
+      <tagDatabase tag="0.0" />
     </changeSet>
 
-		<include file="1.create_candle_minutes.sql" relativeToChangelogFile="true"/>
+		<include file="0_tests.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

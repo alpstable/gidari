@@ -3,6 +3,7 @@ module github.com/alpine-hodler/gidari
 go 1.18
 
 require (
+	github.com/google/uuid v1.1.2
 	github.com/lib/pq v1.10.6
 	github.com/micro/micro/v3 v3.11.0
 	github.com/sirupsen/logrus v1.9.0

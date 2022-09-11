@@ -44,7 +44,7 @@ func (m *Mongo) Close() {
 }
 
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
-func (m *Mongo) StartTx(ctx context.Context) Tx {
+func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a transaction.
 	tx := &tx{
 		make(chan func(context.Context) error),
@@ -86,7 +86,7 @@ func (m *Mongo) StartTx(ctx context.Context) Tx {
 			return nil
 		})
 	}()
-	return tx
+	return tx, nil
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {

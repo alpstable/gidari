@@ -169,6 +169,10 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
 		}
+		logInfo := tools.LogFormatter{
+			Msg: fmt.Sprintf("created repository for %q", dns),
+		}
+		cfg.Logger.Info(logInfo.String())
 		repos = append(repos, repo)
 	}
 	return repos, nil
@@ -246,11 +250,11 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 		}
 
 		for _, repo := range cfg.repos {
-
 			// Put the data onto the transaction channel for storage.
 			repo.Transact(func(sctx context.Context) error {
 				start := time.Now()
 				rsp := new(proto.UpsertResponse)
+
 				if err := repo.UpsertRawJSON(sctx, raw, rsp); err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
 					return err

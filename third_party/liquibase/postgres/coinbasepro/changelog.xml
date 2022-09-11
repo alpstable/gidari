@@ -3,6 +3,8 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
-    <include file="1.create_candles.xml" relativeToChangelogFile="true"/>
+	http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <include file="migrate_bootstrap.xml" relativeToChangelogFile="true"/>
+    <include file="migrate_coinbase_pro.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
