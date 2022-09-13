@@ -250,8 +250,7 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 		}
 
 		for _, repo := range cfg.repos {
-			// Put the data onto the transaction channel for storage.
-			repo.Transact(func(sctx context.Context) error {
+			txfn := func(sctx context.Context, repo repository.Generic) error {
 				start := time.Now()
 				rsp := new(proto.UpsertResponse)
 
@@ -269,7 +268,9 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 				}
 				cfg.logger.Infof(logInfo.String())
 				return nil
-			})
+			}
+			// Put the data onto the transaction channel for storage.
+			repo.Transact(txfn)
 
 		}
 		cfg.done <- true
