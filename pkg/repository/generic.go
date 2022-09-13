@@ -16,7 +16,6 @@ type Generic interface {
 	storage.Storage
 	storage.Tx
 
-	Transact(fn func(ctx context.Context, repo Generic) error)
 	UpsertRawJSON(context.Context, *Raw, *proto.UpsertResponse) error
 }
 
@@ -70,14 +69,4 @@ func (svc *GenericService) UpsertRawJSON(ctx context.Context, raw *Raw, rsp *pro
 	req.Table = raw.Table
 	req.Records = records
 	return svc.Storage.Upsert(ctx, req, rsp)
-}
-
-// Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If
-// svc is not a transaction, the function will be executed without executing.
-func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) error) {
-	if svc.Tx != nil {
-		svc.Send(func(ctx context.Context, stg storage.Storage) error {
-			return fn(ctx, svc)
-		})
-	}
 }

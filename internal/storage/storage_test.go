@@ -43,7 +43,7 @@ func TestStartTx(t *testing.T) {
 			}
 
 			var rsp proto.UpsertResponse
-			tx.Send(func(sctx context.Context, stg Storage) error {
+			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			})
 
@@ -82,7 +82,7 @@ func TestStartTx(t *testing.T) {
 			}
 
 			var rsp proto.UpsertResponse
-			tx.Send(func(sctx context.Context, stg Storage) error {
+			tx.Transact(func(sctx context.Context) error {
 				return stg.Upsert(sctx, req, &rsp)
 			})
 
@@ -114,11 +114,11 @@ func TestStartTx(t *testing.T) {
 			req := new(proto.UpsertRequest)
 			req.Table = "tests"
 
-			tx.Send(func(_ context.Context, _ Storage) error {
+			tx.Transact(func(sctx context.Context) error {
 				return fmt.Errorf("test error")
 			})
 
-			tx.Send(func(_ context.Context, _ Storage) error {
+			tx.Transact(func(sctx context.Context) error {
 				return nil
 			})
 

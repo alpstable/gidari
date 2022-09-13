@@ -340,12 +340,10 @@ func (pg *Postgres) setMaxOpenConns() {
 	pg.SetMaxOpenConns(int(n))
 }
 
-// StartTx will start a transaction on the Postgres connection. The transaction ID is returned and should be used
-// to commit or rollback the transaction.
 func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a gidari storage transaction.
 	tx := &tx{
-		make(chan TXChanFn),
+		make(chan func(context.Context) error),
 		make(chan error, 1),
 		make(chan bool, 1),
 	}
@@ -371,7 +369,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 			if err != nil {
 				continue
 			}
-			err = fn(pgCtx, pg)
+			err = fn(pgCtx)
 		}
 		if err != nil {
 			tx.done <- err

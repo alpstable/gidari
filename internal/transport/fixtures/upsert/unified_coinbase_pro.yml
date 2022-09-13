@@ -3,7 +3,7 @@ authentication:
   apiKey:
     passphrase: coinbaseProTest
 dnsList:
-  - mongodb://mongo-coinbasepro:27017/coinbasepro
+  #- mongodb://mongo-coinbasepro:27017/coinbasepro
   - postgresql://postgres:@postgres-coinbasepro:5432/coinbasepro?sslmode=disable
 rateLimit:
   burst: 5

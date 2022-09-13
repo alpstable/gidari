@@ -47,7 +47,7 @@ func (m *Mongo) Close() {
 func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a transaction.
 	tx := &tx{
-		make(chan TXChanFn),
+		make(chan func(context.Context) error),
 		make(chan error, 1),
 		make(chan bool, 1),
 	}
@@ -67,7 +67,7 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 				if err != nil {
 					continue
 				}
-				err = fn(sctx, m)
+				err = fn(sctx)
 			}
 
 			if err != nil {
