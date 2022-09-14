@@ -4,9 +4,12 @@ import (
 	"context"
 )
 
+// TXChanFn is a function that will be sent to the transaction channel.
+type TXChanFn func(context.Context, Storage) error
+
 // tx is a wrapper for a mongo session that can be used to perform CRUD operations on a mongo DB instance.
 type tx struct {
-	ch     chan func(context.Context) error
+	ch     chan TXChanFn
 	done   chan error
 	commit chan bool
 }
@@ -25,7 +28,7 @@ func (tx *tx) Rollback() error {
 	return <-tx.done
 }
 
-// Transact will send a function to the transaction channel.
-func (tx *tx) Transact(fn func(context.Context) error) {
+// Send will send a function to the transaction channel.
+func (tx *tx) Send(fn TXChanFn) {
 	tx.ch <- fn
 }

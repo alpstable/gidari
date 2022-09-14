@@ -30,10 +30,11 @@ type Storage interface {
 	Type() uint8
 }
 
+// Tx is an interface that defines the methods that a transaction object should implement.
 type Tx interface {
 	Commit() error
 	Rollback() error
-	Transact(func(context.Context) error)
+	Send(TXChanFn)
 }
 
 // Scheme takes a byte and returns the associated DNS root database resource.
