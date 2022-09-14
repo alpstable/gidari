@@ -1,7 +1,7 @@
 version: '3'
 
 networks:
-  mongodb_network:
+  mongo_network:
     driver: bridge
   postgres_coinbasepro_network:
     driver: bridge
@@ -10,49 +10,56 @@ networks:
 
 services:
   # MongoDB services for COINBASEP PRO
-  mongo-coinbasepro:
+  mongo:
     image: mongo
-    hostname: mongo-coinbasepro
+    hostname: mongo
     networks:
-      - mongodb_network
+      - mongo_network
     command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27017"]
     volumes:
-      - ./../../.db/mongo-coinbasepro-test-volume:/data/db
+      - ./../../.db/mongo-test-volume:/data/db
     ports:
       - 27017:27017
     healthcheck:
-      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongo-coinbasepro:27017\"},{_id:1,host:\"mongo-coinbasepro2:27018\"},{_id:2,host:\"mongo-coinbasepro3:27019\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
+      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongo:27017\"},{_id:1,host:\"mongo2:27018\"},{_id:2,host:\"mongo3:27019\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
       interval: 10s
       start_period: 30s
-  mongo-coinbasepro2:
+  mongo2:
     image: mongo
-    hostname: mongo-coinbasepro2
+    hostname: mongo2
     networks:
-      - mongodb_network
+      - mongo_network
     command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27018"]
     volumes:
-      - ./../../.db/mongo-coinbasepro2-test-volume:/data/db
+      - ./../../.db/mongo2-test-volume:/data/db
     ports:
       - 27018:27018
-  mongo-coinbasepro3:
+  mongo3:
     image: mongo
-    hostname: mongo-coinbasepro3
+    hostname: mongo3
     networks:
-      - mongodb_network
+      - mongo_network
     command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27019"]
     volumes:
-      - ./../../.db/mongo-coinbasepro3-test-volume:/data/db
+      - ./../../.db/mongo3-test-volume:/data/db
     ports:
       - 27019:27019
   liquibase-mongo-coinbasepro:
     networks:
-      - mongodb_network
+      - mongo_network
     build:
       context: ./../../third_party/docker
       dockerfile: liquibase-mongo.Dockerfile
     volumes:
       - ./../../third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
-
+  liquibase-mongo-polygon:
+    networks:
+      - mongo_network
+    build:
+      context: ./../../third_party/docker
+      dockerfile: liquibase-mongo.Dockerfile
+    volumes:
+      - ./../../third_party/liquibase/mongo/polygon:/liquibase/changelog
   # PostgreSQL services for COINBASE PRO
   postgres-coinbasepro:
     hostname: postgres-coinbasepro

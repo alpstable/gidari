@@ -202,7 +202,15 @@ func TestUpsert(t *testing.T) {
 			// Fill in the authentication details for the fixture.
 			cfgAuth := cfg.Authentication
 			if cfgAuth.APIKey != nil {
+				// The "passhprase" field in the fixture should be the name of the auth map entry. That
+				// is how we lookup which authentication details to use.
 				cfg.Authentication = auth[cfgAuth.APIKey.Passphrase]
+			}
+
+			if cfgAuth.Auth2 != nil {
+				// The "bearer" field in the fixture should be the name of the auth map entry. That
+				// is how we lookup which authentication details to use.
+				cfg.Authentication = auth[cfgAuth.Auth2.Bearer]
 			}
 
 			// Upsert the fixture.
