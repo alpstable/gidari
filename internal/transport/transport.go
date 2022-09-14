@@ -26,9 +26,15 @@ type APIKey struct {
 	Secret     string `yaml:"secret"`
 }
 
+// Auth2 is a struct that contains the authentication data for a web API that uses OAuth2.
+type Auth2 struct {
+	Bearer string `yaml:"bearer"`
+}
+
 // Authentication is the credential information to be used to construct an HTTP(s) transport for accessing the API.
 type Authentication struct {
 	APIKey *APIKey `yaml:"apiKey"`
+	Auth2  *Auth2  `yaml:"auth2"`
 }
 
 type timeseries struct {
@@ -157,6 +163,9 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 			SetKey(apiKey.Key).
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
+	}
+	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
+		return web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
 	}
 	return nil, nil
 }

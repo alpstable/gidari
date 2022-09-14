@@ -12,10 +12,27 @@ docker compose -f "third_party/docker/storage.docker-compose.yaml" down
 # prune containers
 docker system prune --force
 
-# re-create the storage containers
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build mongo-coinbasepro
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build mongo-coinbasepro2
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build mongo-coinbasepro3
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build postgres-coinbasepro
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build postgres-polygon
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d --force-recreate --build cache
+docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
+	--remove-orphans \
+	--force-recreate \
+	--build mongo
+
+docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
+	--remove-orphans \
+	--force-recreate \
+	--build mongo2
+
+docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
+	--remove-orphans \
+	--force-recreate \
+	--build mongo3
+
+docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
+	--remove-orphans \
+	--force-recreate \
+	--build postgres-coinbasepro
+
+docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
+	--remove-orphans \
+	--force-recreate \
+	--build postgres-polygon

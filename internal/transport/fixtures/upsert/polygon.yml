@@ -1,0 +1,18 @@
+url: https://api.polygon.io
+authentication:
+  auth2:
+    bearer: polygonTest
+dnsList:
+  - mongodb://mongo:27017/polygon
+rateLimit:
+  burst: 99
+  period: 1
+truncate: true
+requests:
+  - endpoint: "/v2/aggs/ticker/AAPL/range/1/day/2021-07-22/2021-07-22"
+    table: tickers
+    query:
+      adjusted: true
+      sort: asc
+      limit: 120
+
