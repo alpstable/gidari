@@ -26,12 +26,6 @@ jobs:
           docker_layer_caching: true
 
       - run:
-          name: Install OS Dependencies
-          command: |
-            apt update && apt upgrade
-            apt install sudo
-
-      - run:
           name: Install Docker CLI
           command: |
             # Install using the convenience script:
