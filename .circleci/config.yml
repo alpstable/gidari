@@ -31,7 +31,13 @@ jobs:
             apt update && apt upgrade
             apt install sudo
 
-            ulimit -n 10240
+            ulimit -u 10240
+            ulimit -n 8192     #This configuration is what we most needed
+            ulimit -d unlimited
+            ulimit -m unlimited
+            ulimit -s unlimited
+            ulimit -t unlimited
+            ulimit -v unlimited
 
       - run:
           name: Install Docker CLI
