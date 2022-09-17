@@ -38,7 +38,7 @@ jobs:
       - run:
           name: Start Docker
           command: |
-            sudo service docker start
+            sudo service docker start --privileged
 
             # Verify that Docker Engine is installed correctly.
             #
