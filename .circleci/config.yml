@@ -32,10 +32,10 @@ jobs:
       - run:
           name: Start Docker
           command: |
-            service docker start
+            sudo service docker start
 
             # Verify that Docker Engine is installed correctly.
-            docker run hello-world
+            sudo docker run hello-world
 
       - run:
           name: Make Docker Containers
