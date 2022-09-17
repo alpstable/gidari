@@ -23,10 +23,10 @@ jobs:
 
       # Install via apk on alpine based images
       - run:
-          name: Install Docker client
+          name: Install Docker CLI
           command: |
-             apt-get update
-             apt-get install docker-ce-cli
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            DRY_RUN=1 sh ./get-docker.sh
 
       - run:
           name: Make Docker Containers
