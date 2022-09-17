@@ -12,3 +12,6 @@ do
 		sudo -- sh -c -e "echo '127.0.0.1 $i' >> /etc/hosts"
 	fi
 done
+
+# Print the contents of the /etc/hosts file
+cat /etc/hosts
