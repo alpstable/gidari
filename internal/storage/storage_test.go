@@ -17,7 +17,7 @@ type storageTestCase struct {
 
 func TestStartTx(t *testing.T) {
 	testCases := []storageTestCase{
-		{context.Background(), "mongodb://mongo-coinbasepro:27017/coinbasepro"},
+		{context.Background(), "mongodb://mongo:27017/coinbasepro"},
 		{context.Background(), "postgresql://postgres:@postgres-coinbasepro:5432/coinbasepro?sslmode=disable"},
 	}
 
