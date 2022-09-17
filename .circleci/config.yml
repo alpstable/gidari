@@ -16,14 +16,26 @@ jobs:
     steps:
       - checkout
 
-      - setup_remote_docker:
-          version: 20.10.17
-
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
+
+      # Install via apk on alpine based images
+      - run:
+          name: Install Docker client
+          command: apk add docker-cli
+
+      - run:
+          name: Install Docker Compose
+          environment:
+              COMPOSE_VERSION: "2.10.2"
+          command: |
+              curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
+              chmod +x ~/docker-compose
+              mv ~/docker-compose /usr/local/bin/docker-compose
       - run:
           name: Make Docker Containers
+            #command: make containers
           command: docker --version
       - run:
           name: Install Dependencies
