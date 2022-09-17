@@ -41,7 +41,10 @@ jobs:
             sudo service docker start
 
             # Verify that Docker Engine is installed correctly.
-            sudo docker run hello-world
+            #
+            # Note that you have to run containers as "privileged" containers if you want to run docker inside a docker
+            # image, which is what is effectively being done with CircleCI.
+            sudo docker run --privileged hello-world
 
       - run:
           name: Make Docker Containers
