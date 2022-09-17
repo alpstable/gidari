@@ -10,7 +10,7 @@ containers:
 	#scripts/update-etc-hosts.sh
 	scripts/build-storage.sh
 
-	sleep 15 # need to sleep to allow mongodb topologies to come up
+	sleep 60 # need to sleep to allow mongodb topologies to come up
 	scripts/build-migrations.sh
 
 .PHONY: proto
