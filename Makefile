@@ -7,7 +7,7 @@ default:
 containers:
 	chmod +rwx scripts/*.sh
 
-	scripts/update-etc-hosts.sh
+	#scripts/update-etc-hosts.sh
 	scripts/build-storage.sh
 
 	sleep 15 # need to sleep to allow mongodb topologies to come up
