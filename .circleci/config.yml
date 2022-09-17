@@ -10,7 +10,7 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: golang:1.18
+      - image: cimg/go:1.18
 
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
@@ -25,38 +25,30 @@ jobs:
           version: 20.10.17
           docker_layer_caching: true
 
-      - run:
-          name: Install OS Dependencies
-          command: |
-            apt update && apt upgrade
-            apt install sudo
+            #- run:
+            #    name: Install OS Dependencies
+            #    command: |
+            #      apt update && apt upgrade
+            #      apt install sudo
 
-            ulimit -u 10240
-            ulimit -n 8192     #This configuration is what we most needed
-            ulimit -d unlimited
-            ulimit -m unlimited
-            ulimit -s unlimited
-            ulimit -t unlimited
-            ulimit -v unlimited
+            #- run:
+            #    name: Install Docker CLI
+            #    command: |
+            #      # Install using the convenience script:
+            #      # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
+            #      curl -fsSL https://get.docker.com -o get-docker.sh
+            #      sh get-docker.sh
 
-      - run:
-          name: Install Docker CLI
-          command: |
-            # Install using the convenience script:
-            # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
-            curl -fsSL https://get.docker.com -o get-docker.sh
-            sh get-docker.sh
+            #- run:
+            #    name: Start Docker
+            #    command: |
+            #      sudo service docker start
 
-      - run:
-          name: Start Docker
-          command: |
-            sudo service docker start
-
-            # Verify that Docker Engine is installed correctly.
-            #
-            # Note that you have to run containers as "privileged" containers if you want to run docker inside a docker
-            # image, which is what is effectively being done with CircleCI.
-            # sudo docker -v /var/run/docker.sock:/var/run/docker.sock hello-world
+            #      # Verify that Docker Engine is installed correctly.
+            #      #
+            #      # Note that you have to run containers as "privileged" containers if you want to run docker inside a docker
+            #      # image, which is what is effectively being done with CircleCI.
+            #      # sudo docker -v /var/run/docker.sock:/var/run/docker.sock hello-world
 
       - run:
           name: Make Docker Containers
