@@ -10,7 +10,7 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: golang:1.18
+      - image: golang:1.8.6-alpine
 
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
@@ -23,6 +23,7 @@ jobs:
 
       - setup_remote_docker:
           version: 20.10.17
+          docker_layer_caching: true
 
       - run:
           name: Install OS Dependencies
@@ -35,8 +36,9 @@ jobs:
           command: |
             # Install using the convenience script:
             # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
-            curl -fsSL https://get.docker.com -o get-docker.sh
-            sh get-docker.sh
+            #curl -fsSL https://get.docker.com -o get-docker.sh
+            #sh get-docker.sh
+            apk add docker-cli
 
       - run:
           name: Start Docker
