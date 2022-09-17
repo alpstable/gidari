@@ -21,14 +21,13 @@ jobs:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
 
-      # Install via apk on alpine based images
       - run:
           name: Install Docker CLI
           command: |
             # Install using the convenience script:
             # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
             curl -fsSL https://get.docker.com -o get-docker.sh
-            DRY_RUN=1 sh ./get-docker.sh
+            sh get-docker.sh
 
             # Verify that Docker Engine is installed correctly.
             docker run hello-world
