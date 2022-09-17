@@ -19,10 +19,19 @@ jobs:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
       - run:
-          name: Install Dependencies
+          name: Install Docker Compose
+          environment:
+            COMPOSE_VERSION: "2.10.2"
           command: |
-            make containers
-            go mod download
+            curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
+            chmod +x ~/docker-compose
+            sudo mv ~/docker-compose /usr/local/bin/docker-compose
+      - run:
+        name: Make Docker Containers
+        command: make containers
+      - run:
+          name: Install Dependencies
+          command: go mod download
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
