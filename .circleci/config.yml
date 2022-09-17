@@ -44,7 +44,7 @@ jobs:
             #
             # Note that you have to run containers as "privileged" containers if you want to run docker inside a docker
             # image, which is what is effectively being done with CircleCI.
-            sudo docker -v /var/run/docker.sock:/var/run/docker.sock hello-world
+            # sudo docker -v /var/run/docker.sock:/var/run/docker.sock hello-world
 
       - run:
           name: Make Docker Containers
