@@ -21,6 +21,9 @@ jobs:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
 
+      - setup_remote_docker:
+          version: 20.10.17
+
       - run:
           name: Install OS Dependencies
           command: |
@@ -38,7 +41,7 @@ jobs:
       - run:
           name: Start Docker
           command: |
-            sudo service docker start --privileged
+            sudo service docker start
 
             # Verify that Docker Engine is installed correctly.
             #
