@@ -11,6 +11,7 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
       - image: golang:1.18
+
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
@@ -23,7 +24,9 @@ jobs:
       # Install via apk on alpine based images
       - run:
           name: Install Docker client
-          command: apk add docker-cli
+          command: |
+             sudo apt-get update
+             sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
       - run:
           name: Install Docker Compose
@@ -33,6 +36,7 @@ jobs:
               curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
               chmod +x ~/docker-compose
               mv ~/docker-compose /usr/local/bin/docker-compose
+
       - run:
           name: Make Docker Containers
             #command: make containers
