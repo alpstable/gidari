@@ -25,8 +25,13 @@ jobs:
       - run:
           name: Install Docker CLI
           command: |
+            # Install using the convenience script:
+            # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
             curl -fsSL https://get.docker.com -o get-docker.sh
             DRY_RUN=1 sh ./get-docker.sh
+
+            # Verify that Docker Engine is installed correctly.
+            docker run hello-world
 
       - run:
           name: Make Docker Containers
