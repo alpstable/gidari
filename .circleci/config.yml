@@ -27,8 +27,8 @@ jobs:
             chmod +x ~/docker-compose
             sudo mv ~/docker-compose /usr/local/bin/docker-compose
       - run:
-        name: Make Docker Containers
-        command: make containers
+          name: Make Docker Containers
+          command: make containers
       - run:
           name: Install Dependencies
           command: go mod download
