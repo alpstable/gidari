@@ -30,7 +30,8 @@ jobs:
               #      mv ~/docker-compose /usr/local/bin/docker-compose
       - run:
           name: Make Docker Containers
-          command: make containers
+            #command: make containers
+          command: docker --version
       - run:
           name: Install Dependencies
           command: go mod download
