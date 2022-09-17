@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # declare an array of hosts to add to 127.0.0.1
 hosts=("mongo" "mongo1" "mongo2" "postgres-coinbasepro" "postgres-polyon" "redis1")

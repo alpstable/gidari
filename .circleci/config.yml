@@ -17,42 +17,16 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
+        #- restore_cache:
+        #    keys:
+        #      - go-mod-v4-{{ checksum "go.sum" }}
 
       - setup_remote_docker:
           version: 20.10.17
           docker_layer_caching: true
 
-            #- run:
-            #    name: Install OS Dependencies
-            #    command: |
-            #      apt update && apt upgrade
-            #      apt install sudo
-
-            #- run:
-            #    name: Install Docker CLI
-            #    command: |
-            #      # Install using the convenience script:
-            #      # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
-            #      curl -fsSL https://get.docker.com -o get-docker.sh
-            #      sh get-docker.sh
-
-            #- run:
-            #    name: Start Docker
-            #    command: |
-            #      sudo service docker start
-
-            #      # Verify that Docker Engine is installed correctly.
-            #      #
-            #      # Note that you have to run containers as "privileged" containers if you want to run docker inside a docker
-            #      # image, which is what is effectively being done with CircleCI.
-            #      # sudo docker -v /var/run/docker.sock:/var/run/docker.sock hello-world
-
       - run:
           name: Make Docker Containers
-            #command: make containers
           command: make containers
       - run:
           name: Install Dependencies
