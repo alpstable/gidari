@@ -53,7 +53,7 @@ jobs:
       - run:
           name: Make Docker Containers
             #command: make containers
-          command: docker --version
+          command: make containers
       - run:
           name: Install Dependencies
           command: go mod download
