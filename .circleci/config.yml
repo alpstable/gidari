@@ -26,16 +26,7 @@ jobs:
           name: Install Docker client
           command: |
              apt-get update
-             apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-      - run:
-          name: Install Docker Compose
-          environment:
-              COMPOSE_VERSION: "2.10.2"
-          command: |
-              curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
-              chmod +x ~/docker-compose
-              mv ~/docker-compose /usr/local/bin/docker-compose
+             apt-get install docker-ce-cli
 
       - run:
           name: Make Docker Containers
