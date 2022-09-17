@@ -32,7 +32,7 @@ jobs:
       - run:
           name: Start Docker
           command: |
-            systemctl start docker
+            service docker start
 
             # Verify that Docker Engine is installed correctly.
             docker run hello-world
