@@ -20,7 +20,9 @@ jobs:
             - go-mod-v4-{{ checksum "go.sum" }}
       - run:
           name: Install Dependencies
-          command: go mod download
+          command: |
+            go mod download
+            curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v0.3.1/gotestsum_0.3.1_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin gotestsum
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:

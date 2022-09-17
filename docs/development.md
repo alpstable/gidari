@@ -53,3 +53,7 @@ make
 - Update `meta.docker-compose.yaml` to include `- ./web/coinbasepro:/usr/src/yourexample` under `generate.volumes` and `test-generate.volumes`.
 - Run `make build-meta`
 - Then start adding your schemes to `scripts/meta/schema/your_example`.  To build the schemas run `make generate`.
+
+## CI/CID
+
+This repository uses CircleCI for it's CI/CD. See [the tag list for circleci/golang on Docker Hub](https://hub.docker.com/r/circleci/golang/tags?ordering=last_updated)
