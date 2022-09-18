@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Retrieve the secret and decode it to a file
         env:
-          CERTIFICATE_BASE64: ${{ secrets.integration-test.CBP_KEY }}
+          CERTIFICATE_BASE64: ${{ integration-test.CBP_KEY }}
         run: |
           echo $CERTIFICATE_BASE64
 
