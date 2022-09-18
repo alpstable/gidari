@@ -121,7 +121,7 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 
 	rsp, err := cfg.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request %+v: %v", req, err)
+		return nil, fmt.Errorf("error making request: %v", err)
 	}
 
 	if err := validateResponse(rsp); err != nil {
