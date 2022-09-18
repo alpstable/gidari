@@ -3,6 +3,7 @@ __debug_bin
 .auth.env
 .DS_Store
 .db
+.git
 bazel-bin
 bazel-out
 bazel-testlogs

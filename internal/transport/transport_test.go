@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -167,17 +168,6 @@ func TestTimeseries(t *testing.T) {
 }
 
 func TestUpsert(t *testing.T) {
-	// Create an auth map to fill in the authentication details for the fixture data.
-	credentials, err := ioutil.ReadFile("/etc/alpine-hodler/cred.yml")
-	if err != nil {
-		t.Fatalf("error reading auth config: %v", err)
-	}
-
-	auth := make(map[string]Authentication)
-	if err := yaml.Unmarshal(credentials, &auth); err != nil {
-		t.Fatalf("error unmarshaling auth config: %v", err)
-	}
-
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
 	fixtures, err := ioutil.ReadDir(fixtureRoot)
@@ -204,13 +194,23 @@ func TestUpsert(t *testing.T) {
 			if cfgAuth.APIKey != nil {
 				// The "passhprase" field in the fixture should be the name of the auth map entry. That
 				// is how we lookup which authentication details to use.
-				cfg.Authentication = auth[cfgAuth.APIKey.Passphrase]
+				cfg.Authentication = Authentication{
+					APIKey: &APIKey{
+						Key:        os.Getenv(cfgAuth.APIKey.Key),
+						Secret:     os.Getenv(cfgAuth.APIKey.Secret),
+						Passphrase: os.Getenv(cfgAuth.APIKey.Passphrase),
+					},
+				}
 			}
 
 			if cfgAuth.Auth2 != nil {
 				// The "bearer" field in the fixture should be the name of the auth map entry. That
 				// is how we lookup which authentication details to use.
-				cfg.Authentication = auth[cfgAuth.Auth2.Bearer]
+				cfg.Authentication = Authentication{
+					Auth2: &Auth2{
+						Bearer: os.Getenv(cfgAuth.Auth2.Bearer),
+					},
+				}
 			}
 
 			// Upsert the fixture.

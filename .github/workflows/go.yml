@@ -1,0 +1,29 @@
+name: Go
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Make Docker Containers
+      run: make containers
+
+    - name: Run Test
+      env:
+        CBP_KEY: ${{ secrets.CBP_KEY }}
+        CBP_PASSPHRASE: ${{ secrets.CBP_PASSPHRASE }}
+        CBP_SECRET: ${{ secrets.CBP_SECRET }}
+        POL_BEARER_TOKEN: ${{ secrets.POL_BEARER_TOKEN }}
+      run: make ci

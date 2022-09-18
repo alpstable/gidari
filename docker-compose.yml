@@ -1,0 +1,74 @@
+version: '3'
+
+networks:
+  mongo_network:
+    driver: bridge
+  postgres_network:
+    driver: bridge
+
+services:
+
+  # CI networking is straight up hot putrid trash, wrap the code and run tests.
+  ci:
+    build:
+      context: .
+      dockerfile: scripts/ci.Dockerfile
+    networks:
+      - mongo_network
+      - postgres_network
+
+  mongo1:
+    hostname: mongo1
+    image: mongo
+    ports:
+      - 27017:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+    networks:
+      - mongo_network
+    volumes:
+      - ./.db/mongo1:/data/db
+      - ./scripts/rs-init.sh:/scripts/rs-init.sh
+    links:
+      - mongo2
+      - mongo3
+
+  mongo2:
+    hostname: mongo2
+    image: mongo
+    ports:
+      - 27018:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+    networks:
+      - mongo_network
+    volumes:
+      - ./.db/mongo2:/data/db
+
+  mongo3:
+    hostname: mongo3
+    image: mongo
+    ports:
+      - 27019:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+    networks:
+      - mongo_network
+    volumes:
+      - ./.db/mongo3:/data/db
+
+  postgres1:
+    hostname: postgres1
+    networks:
+      - postgres_network
+    image: postgres:11.1
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: defaultdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.db/postgres1:/var/lib/postgresql/dat
+      - ./scripts/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    restart: "unless-stopped"
