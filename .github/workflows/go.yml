@@ -20,7 +20,7 @@ jobs:
       with:
         go-version: 1.19
 
-    - name: tell me a secret
+    - name: Tell
       run: echo "KEY: $CBP_KEY"
 
           #- name: Make Docker Containers
