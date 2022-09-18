@@ -73,7 +73,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./../../.db/postgres-coinbasepro-test-volume:/var/lib/postgresql/dat
+      - ./../../.db/postgres0:/var/lib/postgresql/dat
     restart: "unless-stopped"
 
   liquibase-postgres-coinbasepro:
