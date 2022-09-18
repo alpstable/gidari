@@ -5,7 +5,7 @@ hosts=("mongo" "mongo1" "mongo2" "postgres-coinbasepro" "postgres-polyon" "redis
 
 for i in "${hosts[@]}"
 do
-	if [ -n "$(grep $HOSTNAME /etc/hosts)" ]
+	if [ -n "$(grep $i /etc/hosts)" ]
 	then
 		echo "$i already exists: $(grep $i /etc/hosts)"
 	else
@@ -14,4 +14,5 @@ do
 done
 
 # Print the contents of the /etc/hosts file
+echo "Contents of /etc/hosts:"
 cat /etc/hosts
