@@ -1,7 +1,7 @@
 url: https://api.polygon.io
 authentication:
   auth2:
-    bearer: polygonTest
+    bearer: POL_BEARER_TOKEN
 dnsList:
   - mongodb://mongo1:27017/polygon
 rateLimit:

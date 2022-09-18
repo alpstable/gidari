@@ -32,6 +32,17 @@ Then run the tests:
 make test
 ```
 
+### Auth Env
+
+Add an environment configuration at `/etc/alpine-hodler/auth.env` with the test keys. It should look like this:
+
+```.env
+CBP_PASSPHRASE=
+CBP_KEY=
+CBP_SECRET=
+POL_BEARER_TOKEN=
+```
+
 ### CI/CD
 
 This repository uses [CircleCI](https://circleci.com/docs/executor-intro#docker) for it's CI/CD. To test the containerized integration test locally run `make containers` and then `make ctest-local`. Note that `make ctest` is not indended for local testing.

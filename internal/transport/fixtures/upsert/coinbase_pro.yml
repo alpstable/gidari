@@ -1,7 +1,9 @@
 url: https://api-public.sandbox.exchange.coinbase.com
 authentication:
   apiKey:
-    passphrase: coinbaseProTest
+    passphrase: CBP_PASSPHRASE
+    secret: CBP_SECRET
+    key: CBP_KEY
 dnsList:
   - mongodb://mongo1:27017/coinbasepro
 rateLimit:
