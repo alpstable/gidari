@@ -31,9 +31,11 @@ test:
 # This target is not intdeded to be run locally, for local use run `make test`
 .PHONY: ctest
 ctests:
-	docker compose -f "third_party/docker/storage.docker-compose.yaml" up -d --build
-	docker-compose -f "third_party/docker/storage.docker-compose.yaml" run ctests
+	#docker compose -f "third_party/docker/storage.docker-compose.yaml" up -d --build
+	#docker-compose -f "third_party/docker/storage.docker-compose.yaml" run ctests
 
+	chmod +rwx scripts/*.sh
+	./scripts/run-ctests.sh
 # ctest-local runs all of the application tests within a container, using the networking in the docker-compose file.
 # This is the same as `make ctest` but it will use the local docker-compose file.
 .PHONY: ctest-local
