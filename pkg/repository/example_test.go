@@ -17,7 +17,7 @@ type testCase struct {
 
 func TestExamples(t *testing.T) {
 	cases := []testCase{
-		{databaseURL: "mongodb://mongo-coinbasepro:27017/coinbasepro"},
+		{databaseURL: "mongodb://mongo1:27017/coinbasepro"},
 	}
 
 	for _, tc := range cases {

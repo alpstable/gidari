@@ -7,7 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -22,4 +21,9 @@ jobs:
       run: make containers
 
     - name: Run Test
-      run: make ctest
+      env:
+        CBP_KEY: ${{ secrets.CBP_KEY }}
+        CBP_PASSPHRASE: ${{ secrets.CBP_PASSPHRASE }}
+        CBP_SECRET: ${{ secrets.CBP_SECRET }}
+        POL_BEARER_TOKEN: ${{ secrets.POL_BEARER_TOKEN }}
+      run: make ci
