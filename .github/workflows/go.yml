@@ -15,10 +15,7 @@ jobs:
         env:
           CERTIFICATE_BASE64: ${{ secrets.CBP_KEY }}
         run: |
-          echo $CERTIFICATE_BASE64 | base64 --decode > cert.der
-      - name: Show certificate information
-        run: |
-          openssl x509 -in cert.der -inform DER -text -noout
+          echo $CERTIFICATE_BASE64
 
         #- name: Run Test
         #  run: make ctests
