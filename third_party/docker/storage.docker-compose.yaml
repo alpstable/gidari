@@ -9,6 +9,17 @@ networks:
     driver: bridge
 
 services:
+  ctests:
+    build:
+      context: ../../
+      dockerfile: third_party/docker/ctests.Dockerfile
+    volumes:
+      - /etc/alpine-hodler:/etc/alpine-hodler
+    networks:
+      - mongo_network
+      - postgres_coinbasepro_network
+      - postgres_polygon_network
+
   # MongoDB services for COINBASEP PRO
   mongo:
     image: mongo

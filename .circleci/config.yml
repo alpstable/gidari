@@ -28,20 +28,20 @@ jobs:
       - run:
           name: Make Docker Containers
           command: make containers
+
       - run:
           name: Install Dependencies
           command: go mod download
+
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
+
       - run:
           name: Run tests
           command: |
-            mkdir -p /tmp/test-reports
-            make test
-      - store_test_results:
-          path: /tmp/test-reports
+            make ctest
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
