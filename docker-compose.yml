@@ -9,7 +9,7 @@ networks:
 services:
   ctests:
     build:
-      context: /
+      context:
       dockerfile: scripts/ctests.Dockerfile
     networks:
       - mongo_network
