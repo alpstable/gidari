@@ -26,6 +26,12 @@ To test locally first build the containers for integration tests:
 make containers
 ```
 
+You will also need to sync your /etc/hosts file with the docker containers, you only need to do this once:
+
+```
+make hosts
+```
+
 Then run the tests:
 
 ```

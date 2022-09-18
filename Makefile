@@ -1,5 +1,3 @@
-PKGS=$(shell scripts/list_pkgs.sh ./pkg)
-
 default:
 	go build cmd/gidari.go
 
@@ -7,9 +5,13 @@ default:
 .PHONY: containers
 containers:
 	chmod +rwx scripts/*.sh
-	chmod +rwx third_party/docker/rs-init.sh
 
 	scripts/build-storage.sh
+
+# hosts sets up the hosts file for integration tests. This only needs to be run once.
+.PHONY: hosts
+hosts:
+	scripts/build-hosts.sh
 
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto

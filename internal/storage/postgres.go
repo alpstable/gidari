@@ -88,7 +88,7 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 
 	meta := pg.meta[table]
 	if meta == nil {
-		return nil, fmt.Errorf("pgmeta does not exist for table %q", table)
+		return nil, fmt.Errorf("table doesn't exist %q", table)
 	}
 	return meta, nil
 }

@@ -9,8 +9,8 @@ networks:
 services:
   ctests:
     build:
-      context: ../../
-      dockerfile: third_party/docker/ctests.Dockerfile
+      context: .
+      dockerfile: scripts/ctests.Dockerfile
     networks:
       - mongo_network
       - postgres_network
@@ -28,7 +28,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - ./../../.db/mongo1:/data/db
+      - ./.db/mongo1:/data/db
       - ./rs-init.sh:/scripts/rs-init.sh
     links:
       - mongo2
@@ -44,7 +44,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - ./../../.db/mongo2:/data/db
+      - ./.db/mongo2:/data/db
 
   mongo3:
     hostname: mongo3
@@ -56,7 +56,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - ./../../.db/mongo3:/data/db
+      - ./.db/mongo3:/data/db
 
   # PostgreSQL services for COINBASE PRO
   postgres1:
@@ -71,6 +71,6 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./../../.db/postgres0:/var/lib/postgresql/dat
-      - ./../../third_party/docker/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./.db/postgres0:/var/lib/postgresql/dat
+      - ./scripts/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"

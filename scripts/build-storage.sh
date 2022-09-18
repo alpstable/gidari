@@ -5,26 +5,23 @@ set -e
 # remove volumes
 rm -rf .db
 
-# grant permissions
-chmod +rwx ./third_party/docker/*.sh
-
 # drop existing containers
-docker compose -f "third_party/docker/docker-compose.yml" down
+docker compose -f "docker-compose.yml" down
 
 # prune containers
 docker system prune --force
 
-docker-compose -f "third_party/docker/docker-compose.yml" up -d \
+docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
 	--build mongo1
 
-docker-compose -f "third_party/docker/docker-compose.yml" up -d \
+docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
 	--build mongo2
 
-docker-compose -f "third_party/docker/docker-compose.yml" up -d \
+docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
 	--build mongo3
@@ -33,7 +30,7 @@ echo "Waiting for MongoDB to start..."
 sleep 5
 
 echo "Creating replica set..."
-docker-compose -f "third_party/docker/docker-compose.yml" exec -T mongo1 bash -c '
+docker-compose -f "docker-compose.yml" exec -T mongo1 bash -c '
 mongosh <<EOF
 var config = {
     "_id": "dbrs",
@@ -61,7 +58,7 @@ rs.status();
 EOF
 '
 
-docker-compose -f "third_party/docker/docker-compose.yml" up -d \
+docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
 	--build postgres1
