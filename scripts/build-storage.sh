@@ -7,7 +7,8 @@ rm -rf .db
 
 # remake .db
 mkdir .db
-chmod +rwx .db
+
+sudo chown -R $USER .db
 
 # drop existing containers
 docker compose -f "docker-compose.yml" down
