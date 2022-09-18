@@ -116,12 +116,12 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error waiting on rate limiter: %v", err)
+		return nil, fmt.Errorf("rate limiter timeout: %v", err)
 	}
 
 	rsp, err := cfg.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %v", err)
+		return nil, fmt.Errorf("failed to make request: %v", err)
 	}
 
 	if err := validateResponse(rsp); err != nil {
