@@ -4,10 +4,9 @@ default:
 # containers build the docker containers for performing integration tests.
 .PHONY: containers
 containers:
-	echo "KeyL $(CBP_KEY")"
-	#chmod +rwx scripts/*.sh
+	chmod +rwx scripts/*.sh
 
-	#scripts/build-storage.sh
+	scripts/build-storage.sh
 
 # hosts sets up the hosts file for integration tests. This only needs to be run once.
 .PHONY: hosts
