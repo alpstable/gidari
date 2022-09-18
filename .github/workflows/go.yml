@@ -15,7 +15,7 @@ jobs:
         env:
           CERTIFICATE_BASE64: ${{ secrets.integration-test.CBP_KEY }}
         run: |
-          echo ${{ secrets }}
+          echo ${{ secrets.CBP_KEY }}
 
         #- name: Run Test
         #  run: make ctests
