@@ -63,18 +63,18 @@ services:
     volumes:
       - ./../../.db/mongo3:/data/db
 
-        #mongosetup:
-        #  image: mongo
-        #  depends_on:
-        #    - mongo1
-        #    - mongo2
-        #    - mongo3
-        #  restart: "no"
-        #  volumes:
-        #    - ./rs-init.sh:/scripts/rs-init.sh
-        #  networks:
-        #    -mongo_network
-        #  command: /scripts/rs-init.sh
+  mongosetup:
+    image: mongo
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    restart: "no"
+    volumes:
+      - ./rs-init.sh:/scripts/rs-init.sh
+    networks:
+      - mongo_network
+    command: /scripts/rs-init.sh
 
   liquibase-mongo-coinbasepro:
     networks:

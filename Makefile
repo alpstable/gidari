@@ -9,7 +9,6 @@ containers:
 	chmod +rwx scripts/*.sh
 	chmod +rwx third_party/docker/rs-init.sh
 
-	scripts/update-etc-hosts.sh
 	scripts/build-storage.sh
 	scripts/build-migrations.sh
 
