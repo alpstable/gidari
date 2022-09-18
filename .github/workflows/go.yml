@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: integration-test
+    env:
+      CBP_KEY: secrets.GBP_KEY
     steps:
     - uses: actions/checkout@v3
 
@@ -18,8 +20,11 @@ jobs:
       with:
         go-version: 1.19
 
-    - name: Make Docker Containers
-      run: make containers
+    - name: tell me a secret
+      run: echo "KEY: $CBP_KEY"
 
-    - name: Run Test
-      run: make ctests
+          #- name: Make Docker Containers
+          #  run: make containers
+
+          #- name: Run Test
+          #  run: make ctests

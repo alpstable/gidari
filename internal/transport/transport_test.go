@@ -175,6 +175,8 @@ func TestUpsert(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error loading auth.env: %v", err)
 		}
+	} else {
+		t.Log("no auth.env found")
 	}
 
 	// Iterate over the fixtures/upsert directory and run each configuration file.
