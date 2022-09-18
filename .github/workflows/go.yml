@@ -22,4 +22,4 @@ jobs:
       run: make containers
 
     - name: Run Test
-      run: make ctest
+      run: make ctests
