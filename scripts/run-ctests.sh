@@ -5,7 +5,6 @@ docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
 	--force-recreate \
 	--build ctests
 
-echo "Meep: $MEEPMAN"
 docker-compose -f "third_party/docker/storage.docker-compose.yaml" run --rm \
 	-e "CBP_KEY=$CBP_KEY" \
 	-e "CBP_SECRET=$CBP_SECRET" \

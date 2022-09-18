@@ -171,6 +171,9 @@ func TestTimeseries(t *testing.T) {
 func TestUpsert(t *testing.T) {
 	meepman := os.Getenv("MEEPMAN")
 	fmt.Println("MEEPMAN:", meepman)
+	fmt.Println("PASSPHRASE:", os.Getenv("CBP_PASSPHRASE"))
+	fmt.Println("Key", os.Getenv("CBP_KEY"))
+	fmt.Println("Secret", os.Getenv("CBP_SECRET"))
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
 	fixtures, err := ioutil.ReadDir(fixtureRoot)

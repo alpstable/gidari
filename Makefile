@@ -26,7 +26,7 @@ test:
 # useful for testing the applicaiton in CI/CD environments.
 #
 # This target is not intdeded to be run locally, for local use run `make test`
-.PHONY: ctest
+.PHONY: ctests
 ctests:
 	chmod +rwx scripts/*.sh
 	./scripts/run-ctests.sh
