@@ -31,7 +31,7 @@ echo "Waiting for MongoDB to start..."
 sleep 15
 
 echo "Creating replica set..."
-docker exec docker-mongo1-1 /scripts/rs-init.sh
+sudo docker exec docker-mongo1-1 /scripts/rs-init.sh
 
 docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
 	--remove-orphans \
