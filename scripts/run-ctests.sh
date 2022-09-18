@@ -2,10 +2,7 @@
 
 set -e
 
-sudo chown -R $USER .db/mongo1
-sudo chown -R $USER .db/mongo2
-sudo chown -R $USER .db/mongo3
-sudo chown -R $USER .db/postgres1
+sudo chown -R $USER .db/*
 
 docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
