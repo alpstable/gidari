@@ -37,5 +37,6 @@ ctests:
 # ctest-local runs all of the application tests within a container, using the networking in the docker-compose file.
 # This is the same as `make ctest` but it will use the local docker-compose file.
 .PHONY: ctest-local
+ctest-local:
 	chmod +rwx scripts/*.sh
 	./scripts/run-ctests.sh
