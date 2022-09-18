@@ -3,7 +3,7 @@ authentication:
   apiKey:
     passphrase: coinbaseProTest
 dnsList:
-  - mongodb://mongo:27017/coinbasepro
+  - mongodb://mongo1:27017/coinbasepro
 rateLimit:
   burst: 5
   period: 1

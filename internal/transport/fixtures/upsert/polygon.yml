@@ -3,7 +3,7 @@ authentication:
   auth2:
     bearer: polygonTest
 dnsList:
-  - mongodb://mongo:27017/polygon
+  - mongodb://mongo1:27017/polygon
 rateLimit:
   burst: 99
   period: 1

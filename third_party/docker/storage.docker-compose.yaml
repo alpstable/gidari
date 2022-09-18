@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 networks:
   mongo_network:
@@ -20,41 +20,48 @@ services:
       - postgres_coinbasepro_network
       - postgres_polygon_network
 
-  # MongoDB services for COINBASEP PRO
-  mongo:
+# first, we define the three mongo servers that will act as replicas
+# here, we steup the hostname ports, and startup command
+# which is the same as discussed in the previous section
+  mongo1:
+    hostname: mongo1
     image: mongo
-    hostname: mongo
-    networks:
-      - mongo_network
-    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27017"]
-    volumes:
-      - ./../../.db/mongo-test-volume:/data/db
     ports:
       - 27017:27017
-    healthcheck:
-      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongo:27017\"},{_id:1,host:\"mongo2:27018\"},{_id:2,host:\"mongo3:27019\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
-      interval: 10s
-      start_period: 30s
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+    networks:
+      - mongo_network
+    volumes:
+      - ./../../.db/mongo1:/data/db
+      - ./rs-init.sh:/scripts/rs-init.sh
+    links:
+      - mongo2
+      - mongo3
+
   mongo2:
-    image: mongo
     hostname: mongo2
-    networks:
-      - mongo_network
-    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27018"]
-    volumes:
-      - ./../../.db/mongo2-test-volume:/data/db
-    ports:
-      - 27018:27018
-  mongo3:
     image: mongo
-    hostname: mongo3
+    ports:
+      - 27018:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
     networks:
       - mongo_network
-    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "27019"]
     volumes:
-      - ./../../.db/mongo3-test-volume:/data/db
+      - ./../../.db/mongo2:/data/db
+
+  mongo3:
+    hostname: mongo3
+    image: mongo
     ports:
-      - 27019:27019
+      - 27019:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+    networks:
+      - mongo_network
+    volumes:
+      - ./../../.db/mongo3:/data/db
 
   liquibase-mongo-coinbasepro:
     networks:
@@ -63,7 +70,7 @@ services:
       context: ../../
       dockerfile: third_party/docker/liquibase-mongo.Dockerfile
     volumes:
-      - ./third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
+      - ./../../third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
 
   liquibase-mongo-polygon:
     networks:
@@ -72,7 +79,7 @@ services:
       context: ../../
       dockerfile: third_party/docker/liquibase-mongo.Dockerfile
     volumes:
-      - ./third_party/liquibase/mongo/polygon:/liquibase/changelog
+      - ./../../third_party/liquibase/mongo/polygon:/liquibase/changelog
   # PostgreSQL services for COINBASE PRO
   postgres-coinbasepro:
     hostname: postgres-coinbasepro

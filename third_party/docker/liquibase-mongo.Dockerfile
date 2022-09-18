@@ -36,7 +36,7 @@ RUN wget -O /liquibase/lib/bson-${MDB_JAVA_DRIVER_VERSION}.jar https://repo1.mav
 RUN wget -O /liquibase/lib/mongodb-driver-core-${MDB_JAVA_DRIVER_VERSION}.jar https://repo1.maven.org/maven2/org/mongodb/mongodb-driver-core/${MDB_JAVA_DRIVER_VERSION}/mongodb-driver-core-${MDB_JAVA_DRIVER_VERSION}.jar
 RUN wget -O /liquibase/lib/mongodb-driver-sync-${MDB_JAVA_DRIVER_VERSION}.jar https://repo1.maven.org/maven2/org/mongodb/mongodb-driver-sync/${MDB_JAVA_DRIVER_VERSION}/mongodb-driver-sync-${MDB_JAVA_DRIVER_VERSION}.jar
 
-COPY liquibase-docker-entrypoint.sh /usr/local/bin/
+COPY third_party/docker/liquibase-docker-entrypoint.sh /usr/local/bin/
 
 ENTRYPOINT ["liquibase-docker-entrypoint.sh"]
 CMD ["--help"]

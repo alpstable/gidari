@@ -10,9 +10,6 @@ containers:
 
 	scripts/update-etc-hosts.sh
 	scripts/build-storage.sh
-
-	sleep 15 # need to sleep to allow mongodb topologies to come up
-
 	scripts/build-migrations.sh
 
 # proto is a phony target that will generate the protobuf files.
