@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -168,6 +169,8 @@ func TestTimeseries(t *testing.T) {
 }
 
 func TestUpsert(t *testing.T) {
+	meepman := os.Getenv("MEEPMAN")
+	fmt.Println("MEEPMAN:", meepman)
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
 	fixtures, err := ioutil.ReadDir(fixtureRoot)
