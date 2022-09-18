@@ -5,11 +5,6 @@ set -e
 # remove volumes
 rm -rf .db
 
-# remake .db
-mkdir .db
-
-sudo chown -R $USER .db
-
 # drop existing containers
 docker compose -f "docker-compose.yml" down
 

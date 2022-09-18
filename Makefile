@@ -21,10 +21,10 @@ proto:
 # test runs all of the application tests locally.
 .PHONY: tests
 tests:
-	go test ./... -v
+	godotenv -f /etc/alpine-hodler/auth.env go test ./... -v
 
-# ctests are the integration tests in CI/CD.
-.PHONY: ctests
-ctests:
+# ci are the integration tests in CI/CD.
+.PHONY: ci
+ci:
 	chmod +rwx scripts/*.sh
-	./scripts/run-ctests.sh
+	./scripts/run-ci-tests.sh

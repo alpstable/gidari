@@ -9,6 +9,7 @@ To develop locally you need to install the following dependencies:
 
 1. Docker: https://docs.docker.com/get-docker/
 2. Go: https://go.dev/doc/install
+3. `godotenv`: https://github.com/joho/godotenv#installation
 
 ## Build
 
@@ -32,15 +33,7 @@ You will also need to sync your /etc/hosts file with the docker containers, you 
 make hosts
 ```
 
-Then run the tests:
-
-```
-make test
-```
-
-### Auth Env
-
-Add an environment configuration at `/etc/alpine-hodler/auth.env` with the test keys. It should look like this:
+To use `make tests` you willl need to ndd an environment configuration at `/etc/alpine-hodler/auth.env` with the test keys. It should look like this:
 
 ```.env
 CBP_PASSPHRASE=
@@ -49,6 +42,3 @@ CBP_SECRET=
 POL_BEARER_TOKEN=
 ```
 
-### CI/CD
-
-This repository uses [CircleCI](https://circleci.com/docs/executor-intro#docker) for it's CI/CD. To test the containerized integration test locally run `make containers` and then `make ctest-local`. Note that `make ctest` is not indended for local testing.

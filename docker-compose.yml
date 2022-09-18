@@ -9,10 +9,10 @@ networks:
 services:
 
   # CI networking is straight up hot putrid trash, wrap the code and run tests.
-  ctests:
+  ci:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: scripts/ci.Dockerfile
     networks:
       - mongo_network
       - postgres_network
