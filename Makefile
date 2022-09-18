@@ -19,7 +19,7 @@ proto:
 	protoc --proto_path=pkg/proto --go_out=pkg/proto pkg/proto/db.proto
 
 # test runs all of the application tests locally.
-.PHONY: test
+.PHONY: tests
 test:
 	go test ./... -v
 
