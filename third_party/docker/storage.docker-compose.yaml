@@ -55,22 +55,24 @@ services:
       - ./../../.db/mongo3-test-volume:/data/db
     ports:
       - 27019:27019
+
   liquibase-mongo-coinbasepro:
     networks:
       - mongo_network
     build:
-      context: ./../../third_party/docker
-      dockerfile: liquibase-mongo.Dockerfile
+      context: ../../
+      dockerfile: third_party/docker/liquibase-mongo.Dockerfile
     volumes:
-      - ./../../third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
+      - ./third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
+
   liquibase-mongo-polygon:
     networks:
       - mongo_network
     build:
-      context: ./../../third_party/docker
-      dockerfile: liquibase-mongo.Dockerfile
+      context: ../../
+      dockerfile: third_party/docker/liquibase-mongo.Dockerfile
     volumes:
-      - ./../../third_party/liquibase/mongo/polygon:/liquibase/changelog
+      - ./third_party/liquibase/mongo/polygon:/liquibase/changelog
   # PostgreSQL services for COINBASE PRO
   postgres-coinbasepro:
     hostname: postgres-coinbasepro
@@ -85,6 +87,7 @@ services:
     volumes:
       - ./../../.db/postgres-coinbasepro-test-volume:/var/lib/postgresql/dat
     restart: "unless-stopped"
+
   liquibase-postgres-coinbasepro:
     networks:
       - postgres_coinbasepro_network
