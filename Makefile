@@ -20,7 +20,7 @@ proto:
 
 # test runs all of the application tests locally.
 .PHONY: tests
-test:
+tests:
 	go test ./... -v
 
 # ctests are the integration tests in CI/CD.
