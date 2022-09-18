@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3'
 
 networks:
   mongo_network:
@@ -9,6 +9,7 @@ networks:
 services:
   ctests:
     build:
+      context: ./
       dockerfile: scripts/ctests.Dockerfile
     networks:
       - mongo_network
@@ -28,7 +29,7 @@ services:
       - mongo_network
     volumes:
       - .db/mongo1:/data/db
-      - ./rs-init.sh:/scripts/rs-init.sh
+      - ./scripts/rs-init.sh:/scripts/rs-init.sh
     links:
       - mongo2
       - mongo3
