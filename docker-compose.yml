@@ -7,7 +7,8 @@ networks:
     driver: bridge
 
 services:
-  # CI networking is hot putrid trash, wrap the code and run tests. All you can do.
+
+  # CI networking is straight up hot putrid trash, wrap the code and run tests.
   ctests:
     build:
       context: .
@@ -26,7 +27,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - .db/mongo1:/data/db
+      - ./.db/mongo1:/data/db
       - ./scripts/rs-init.sh:/scripts/rs-init.sh
     links:
       - mongo2
@@ -42,7 +43,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - .db/mongo2:/data/db
+      - ./.db/mongo2:/data/db
 
   mongo3:
     hostname: mongo3
@@ -54,7 +55,7 @@ services:
     networks:
       - mongo_network
     volumes:
-      - .db/mongo3:/data/db
+      - ./.db/mongo3:/data/db
 
   postgres1:
     hostname: postgres1
@@ -68,6 +69,6 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - .db/postgres1:/var/lib/postgresql/dat
+      - ./.db/postgres1:/var/lib/postgresql/dat
       - ./scripts/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"
