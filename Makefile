@@ -3,14 +3,26 @@ PKGS=$(shell scripts/list_pkgs.sh ./pkg)
 default:
 	go build cmd/gidari.go
 
-# containers build the docker containers for performing integration tests.
-.PHONY: containers
-containers:
+# storage will build the storage containers for integration testing (postgres, redis, etc)
+.PHONY: storage
+storage:
 	chmod +rwx scripts/*.sh
 	chmod +rwx third_party/docker/rs-init.sh
 
 	scripts/build-storage.sh
+
+# migrations will run the liquibase migrations on the storage containers.
+.PHONY: migrations
+migrations:
+	chmod +rwx scripts/*.sh
+
 	scripts/build-migrations.sh
+
+# containers build the docker containers for performing integration tests.
+.PHONY: containers
+containers:
+	make storage
+	make migrations
 
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto

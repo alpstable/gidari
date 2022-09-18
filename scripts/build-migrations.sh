@@ -1,10 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-docker-compose -f "third_party/docker/storage.docker-compose.yaml" run liquibase-mongo-coinbasepro \
-	--changelog-file=/changelog/changelog.xml \
-	--headless=true \
-	--url=mongodb://mongo1:27017/coinbasepro \
-	--log-level=debug update
+set -e
 
 docker-compose -f "third_party/docker/storage.docker-compose.yaml" run liquibase-postgres-coinbasepro \
 	--changelog-file=/changelog/changelog.xml \

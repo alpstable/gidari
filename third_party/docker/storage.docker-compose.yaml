@@ -61,36 +61,6 @@ services:
     volumes:
       - ./../../.db/mongo3:/data/db
 
-  mongosetup:
-    image: mongo
-    depends_on:
-      - mongo1
-      - mongo2
-      - mongo3
-    restart: "no"
-    volumes:
-      - ./rs-init.sh:/scripts/rs-init.sh
-    networks:
-      - mongo_network
-    command: /scripts/rs-init.sh
-
-  liquibase-mongo-coinbasepro:
-    networks:
-      - mongo_network
-    build:
-      context: ../../
-      dockerfile: third_party/docker/liquibase-mongo.Dockerfile
-    volumes:
-      - ./../../third_party/liquibase/mongo/coinbasepro:/liquibase/changelog
-
-  liquibase-mongo-polygon:
-    networks:
-      - mongo_network
-    build:
-      context: ../../
-      dockerfile: third_party/docker/liquibase-mongo.Dockerfile
-    volumes:
-      - ./../../third_party/liquibase/mongo/polygon:/liquibase/changelog
   # PostgreSQL services for COINBASE PRO
   postgres-coinbasepro:
     hostname: postgres-coinbasepro
@@ -113,20 +83,6 @@ services:
     volumes:
       - ./../../third_party/liquibase/postgres/coinbasepro:/liquibase/changelog
 
-  # PostgreSQL services for POLYGON
-  postgres-polygon:
-    hostname: postgres-polygon
-    networks:
-      - postgres_polygon_network
-    image: postgres:11.1
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: polygon
-    ports:
-      - "5433:5432"
-    volumes:
-      - ./../../.db/postgres-polygon-test-volume:/var/lib/postgresql/dat
-    restart: "unless-stopped"
   liquibase-postgres-polygon:
     networks:
       - postgres_polygon_network

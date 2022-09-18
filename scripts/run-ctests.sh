@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 docker-compose -f "third_party/docker/storage.docker-compose.yaml" up -d \
 	--remove-orphans \
 	--force-recreate \
