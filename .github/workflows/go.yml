@@ -7,21 +7,18 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  decode-secret:
     runs-on: ubuntu-latest
-    environment: integration-test
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
-
-    - name: Make Docker Containers
-      env:
-        CBP_KEY: ${{ secrets.CBP_KEY }}
-      run: make containers
+      - uses: actions/checkout@v3
+      - name: Retrieve the secret and decode it to a file
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.CBP_KEY }}
+        run: |
+          echo $CERTIFICATE_BASE64 | base64 --decode > cert.der
+      - name: Show certificate information
+        run: |
+          openssl x509 -in cert.der -inform DER -text -noout
 
         #- name: Run Test
         #  run: make ctests
