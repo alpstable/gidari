@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -168,6 +169,14 @@ func TestTimeseries(t *testing.T) {
 }
 
 func TestUpsert(t *testing.T) {
+	// if /etc/alpine-hodler/auth.env exists, load it
+	if _, err := os.Stat("/etc/alpine-hodler/auth.env"); err == nil {
+		err := godotenv.Load("/etc/alpine-hodler/auth.env")
+		if err != nil {
+			t.Fatalf("error loading auth.env: %v", err)
+		}
+	}
+
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
 	fixtures, err := ioutil.ReadDir(fixtureRoot)

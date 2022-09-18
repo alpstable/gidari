@@ -6,7 +6,7 @@ authentication:
     key: CBP_KEY
 dnsList:
   - mongodb://mongo1:27017/coinbasepro
-  - postgresql://postgres:@postgres-coinbasepro:5432/coinbasepro?sslmode=disable
+  - postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable
 rateLimit:
   burst: 5
   period: 1

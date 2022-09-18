@@ -3,9 +3,7 @@ version: '3.8'
 networks:
   mongo_network:
     driver: bridge
-  postgres_coinbasepro_network:
-    driver: bridge
-  postgres_polygon_network:
+  postgres_network:
     driver: bridge
 
 services:
@@ -15,8 +13,7 @@ services:
       dockerfile: third_party/docker/ctests.Dockerfile
     networks:
       - mongo_network
-      - postgres_coinbasepro_network
-      - postgres_polygon_network
+      - postgres_network
 
 # first, we define the three mongo servers that will act as replicas
 # here, we steup the hostname ports, and startup command
@@ -62,30 +59,18 @@ services:
       - ./../../.db/mongo3:/data/db
 
   # PostgreSQL services for COINBASE PRO
-  postgres-coinbasepro:
-    hostname: postgres-coinbasepro
+  postgres1:
+    hostname: postgres1
     networks:
-      - postgres_coinbasepro_network
+      - postgres_network
     image: postgres:11.1
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: coinbasepro
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: defaultdb
     ports:
       - "5432:5432"
     volumes:
       - ./../../.db/postgres0:/var/lib/postgresql/dat
+      - ./../../third_party/docker/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"
-
-  liquibase-postgres-coinbasepro:
-    networks:
-      - postgres_coinbasepro_network
-    image: liquibase/liquibase
-    volumes:
-      - ./../../third_party/liquibase/postgres/coinbasepro:/liquibase/changelog
-
-  liquibase-postgres-polygon:
-    networks:
-      - postgres_polygon_network
-    image: liquibase/liquibase
-    volumes:
-      - ./../../third_party/liquibase/postgres/polygon:/liquibase/changelog
