@@ -7,13 +7,12 @@ networks:
     driver: bridge
 
 services:
-  #ctests:
-  #  build:
-  #    context: .
-  #    dockerfile: scripts/ctests.Dockerfile
-  #  networks:
-  #    - mongo_network
-  #    - postgres_network
+  ctests:
+    build:
+      dockerfile: scripts/ctests.Dockerfile
+    networks:
+      - mongo_network
+      - postgres_network
 
 # first, we define the three mongo servers that will act as replicas
 # here, we steup the hostname ports, and startup command
