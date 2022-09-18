@@ -13,7 +13,7 @@ containers:
 	sleep 60 # need to sleep to allow mongodb topologies to come up
 
 	echo "check if mongodb is up"
-	nc -zvv localhost 27017
+	nc -zvv mongo 27017
 
 	scripts/build-migrations.sh
 
