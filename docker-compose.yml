@@ -11,7 +11,7 @@ services:
   ctests:
     build:
       context: .
-      dockerfile: scripts/ctests.Dockerfile
+      dockerfile: Dockerfile
     networks:
       - mongo_network
       - postgres_network

@@ -2,8 +2,6 @@
 
 set -e
 
-sudo chown -R $USER .db/*
-
 docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
