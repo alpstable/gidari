@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: integration-test
     steps:
     - uses: actions/checkout@v3
 
@@ -20,6 +21,7 @@ jobs:
     - name: Make Docker Containers
       env:
         CBP_KEY: ${{ secrets.CBP_KEY }}
+      run: make containers
 
-    - name: Test printing your secret (Remove this step in production)
-      run: echo "key: $CBP_KEY"
+        #- name: Run Test
+        #  run: make ctests
