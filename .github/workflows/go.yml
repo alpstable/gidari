@@ -20,11 +20,5 @@ jobs:
       with:
         go-version: 1.19
 
-    - name: Tell
-      run: echo "KEY: $CBP_KEY"
-
-          #- name: Make Docker Containers
-          #  run: make containers
-
-          #- name: Run Test
-          #  run: make ctests
+    - name: Make Docker Containers
+      run: make containers
