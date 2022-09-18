@@ -7,15 +7,23 @@ on:
     branches: [ "main" ]
 
 jobs:
-  decode-secret:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Retrieve the secret and decode it to a file
-        env:
-          CERTIFICATE_BASE64: ${{ secrets.CBP_KEY }}
-        run: |
-          echo $CERTIFICATE_BASE64
+    - uses: actions/checkout@v3
 
-        #- name: Run Test
-        #  run: make ctests
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Make Docker Containers
+      run: make containers
+
+    - name: Run Test
+      env:
+        CBP_KEY: {{ $secrets.CBP_KEY }}
+        CBP_PASSPHRASE: {{ $secrets.CBP_PASSPHRASE }}
+        CBP_SECRET: {{ $secrets.CBP_SECRET }}
+        POL_BEARER_TOKEN: {{ $secrets.POL_BEARER_TOKEN }}
+      run: make ctests
