@@ -29,6 +29,8 @@ test:
 # useful for testing the applicaiton in CI/CD environments.
 .PHONY: ctests
 ctests:
-	chmod +rwx scripts/*.sh
-	./scripts/run-ctests.sh
+	#chmod +rwx scripts/*.sh
+	#./scripts/run-ctests.sh
+	docker-compose -f "third_party/docker/storage.docker-compose.yaml" up
+	docker-compose -f "third_party/docker/storage.docker-compose.yaml" run ctests
 
