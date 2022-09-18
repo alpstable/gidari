@@ -26,10 +26,6 @@ jobs:
           docker_layer_caching: true
 
       - run:
-          name: Make Docker Containers
-          command: make containers
-
-      - run:
           name: Install Dependencies
           command: go mod download
 
