@@ -28,5 +28,6 @@ test:
 # This target is not intdeded to be run locally, for local use run `make test`
 .PHONY: ctest
 ctests:
-	chmod +rwx scripts/*.sh
-	./scripts/run-ctests.sh
+	echo "Meepman: $(MEEPMAN)"
+	#chmod +rwx scripts/*.sh
+	#./scripts/run-ctests.sh
