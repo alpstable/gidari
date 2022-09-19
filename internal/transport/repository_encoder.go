@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/alpine-hodler/gidari/internal/web/coinbasepro"
-	"github.com/alpine-hodler/gidari/pkg/repository"
+	"github.com/alpine-hodler/gidari/repository"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
 )

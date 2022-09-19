@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 )
 

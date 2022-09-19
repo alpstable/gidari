@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/alpine-hodler/gidari/internal/transport"
-	"github.com/alpine-hodler/gidari/pkg/repository"
+	"github.com/alpine-hodler/gidari/repository"
 )
 
 type CustomRepositoryEncoder struct{}

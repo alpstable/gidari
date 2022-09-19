@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

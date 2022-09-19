@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
