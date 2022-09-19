@@ -270,6 +270,7 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 				rt := repo.Type()
 				logInfo := tools.LogFormatter{
 					WorkerID:      id,
+					WorkerName:    "repository",
 					Duration:      time.Since(start),
 					Msg:           fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
 					UpsertedCount: rsp.UpsertedCount,
@@ -314,9 +315,10 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
 		logInfo := tools.LogFormatter{
-			WorkerID: id,
-			Duration: time.Since(start),
-			Msg:      fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
+			WorkerID:   id,
+			WorkerName: "web",
+			Duration:   time.Since(start),
+			Msg:        fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
 		}
 		job.logger.Infof(logInfo.String())
 	}

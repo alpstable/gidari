@@ -18,6 +18,12 @@ func TestLogFormatter(t *testing.T) {
 			t.Errorf("expected '{w:1}', got '%s'", lf.String())
 		}
 	})
+	t.Run("worker name", func(t *testing.T) {
+		lf := LogFormatter{WorkerName: "worker"}
+		if lf.String() != "{worker:worker}" {
+			t.Errorf("expected '{worker:worker}', got '%s'", lf.String())
+		}
+	})
 	t.Run("duration", func(t *testing.T) {
 		lf := LogFormatter{Duration: time.Second}
 		if lf.String() != "{d:1s}" {
@@ -43,9 +49,9 @@ func TestLogFormatter(t *testing.T) {
 		}
 	})
 	t.Run("all", func(t *testing.T) {
-		lf := LogFormatter{WorkerID: 1, Duration: time.Second, Msg: "hello", UpsertedCount: 1}
-		if lf.String() != "{w:1, d:1s, u:1, m:hello}" {
-			t.Errorf("expected '{w:1, d:1s, u:1, m:hello}', got '%s'", lf.String())
+		lf := LogFormatter{WorkerID: 1, WorkerName: "worker", Duration: time.Second, Msg: "hello", UpsertedCount: 1}
+		if lf.String() != "{w:1, worker:worker, d:1s, u:1, m:hello}" {
+			t.Errorf("expected '{w:1, worker:worker, d:1s, u:1, m:hello}', got '%s'", lf.String())
 		}
 	})
 }

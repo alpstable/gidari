@@ -9,6 +9,7 @@ import (
 // LogFormatter encapsulates data that is used to format a log message.
 type LogFormatter struct {
 	WorkerID      int
+	WorkerName    string
 	Duration      time.Duration
 	Msg           string
 	UpsertedCount int32
@@ -18,6 +19,9 @@ type LogFormatter struct {
 const (
 	// LogFormatterWorkerID the label of the worker id.
 	LogFormatterWorkerID = "w"
+
+	// LogFormatterWorkerName the label of the worker name.
+	LogFormatterWorkerName = "worker"
 
 	// LogFormatterDuration the label of the duration.
 	LogFormatterDuration = "d"
@@ -37,6 +41,9 @@ func (lf LogFormatter) String() string {
 	var sb strings.Builder
 	if lf.WorkerID > 0 {
 		sb.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterWorkerID, lf.WorkerID))
+	}
+	if lf.WorkerName != "" {
+		sb.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterWorkerName, lf.WorkerName))
 	}
 	if lf.Duration > 0 {
 		sb.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterDuration, lf.Duration))
