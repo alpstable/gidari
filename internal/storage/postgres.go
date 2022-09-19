@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alpine-hodler/gidari/pkg/proto"
+	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
