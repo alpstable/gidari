@@ -121,7 +121,6 @@ func (pg *Postgres) ListColumns(ctx context.Context, rsp *proto.ListColumnsRespo
 	return pg.exec(ctx, pgColumns, func(r *sql.Rows) error {
 		return tools.AssignStructs(r, &rsp.Records)
 	})
-	return nil
 }
 
 // ListTables will set a complete list of available tables on the response.
@@ -129,7 +128,6 @@ func (pg *Postgres) ListTables(ctx context.Context, rsp *proto.ListTablesRespons
 	return pg.exec(ctx, pgTables, func(r *sql.Rows) error {
 		return tools.AssignStructs(r, &rsp.Records)
 	})
-	return nil
 }
 
 // Read read will attempt to assign a reader buidler based on the request, assinging the resuling rows to the response
@@ -166,6 +164,11 @@ func (pg *Postgres) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto
 
 // Truncate will truncate a table.
 func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
+	// If the table is not specified, return an error.
+	if len(req.Tables) == 0 {
+		return &proto.TruncateResponse{}, nil
+	}
+
 	tables := req.GetTables()
 	if len(tables) == 0 {
 		return nil, errors.BadRequest("storage.postgres", "no tables provided")

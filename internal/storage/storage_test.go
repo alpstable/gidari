@@ -21,6 +21,17 @@ func TestTruncate(t *testing.T) {
 		{context.Background(), "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
 	}
 	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("empty case: %s", tc.dns), func(t *testing.T) {
+			s, err := New(tc.ctx, tc.dns)
+			if err != nil {
+				t.Fatalf("failed to create storage: %v", err)
+			}
+			defer s.Close()
+
+			if _, err := s.Truncate(tc.ctx, &proto.TruncateRequest{}); err != nil {
+				t.Fatalf("failed to truncate storage: %v", err)
+			}
+		})
 		t.Run(tc.dns, func(t *testing.T) {
 			stg, err := New(tc.ctx, tc.dns)
 			if err != nil {

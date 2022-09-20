@@ -141,6 +141,11 @@ func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Rea
 
 // Truncate will delete all records in a collection.
 func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
+	// If there are no collections to truncate, return.
+	if len(req.Tables) == 0 {
+		return &proto.TruncateResponse{}, nil
+	}
+
 	cs, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
 		return nil, err
