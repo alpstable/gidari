@@ -11,18 +11,17 @@ service Db {
 
 // Create a record in the database. Optionally include an "id" field otherwise it's set automatically.
 message UpsertRequest {
-	// Optional table name. Defaults to 'default'
 	string table = 1;
-	// JSON encoded record or records (can be array or object)
-	repeated google.protobuf.Struct records = 2;
+	int32 dataType = 3;
+	bytes data = 4;
 }
 
 message UpsertResponse {
 	// Number of records upserted
-	int32 upsertedCount = 1;
+	int64 upsertedCount = 1;
 
 	// Number of records matched
-	int32 matchedCount = 2;
+	int64 matchedCount = 2;
 }
 
 message ListColumnsResponse {

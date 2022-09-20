@@ -5,12 +5,12 @@ import (
 	"net/url"
 
 	"github.com/alpine-hodler/gidari/internal/transport"
-	"github.com/alpine-hodler/gidari/repository"
+	"github.com/alpine-hodler/gidari/proto"
 )
 
 type CustomRepositoryEncoder struct{}
 
-func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) (*repository.Raw, error) {
+func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) (*proto.UpsertRequest, error) {
 	// Do something with the request and data to create a repository.Raw object.
 	return nil, nil
 }

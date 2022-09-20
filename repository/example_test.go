@@ -8,6 +8,7 @@ import (
 
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/repository"
+	"github.com/alpine-hodler/gidari/tools"
 )
 
 // testCase is the configuration for the example test.
@@ -16,6 +17,8 @@ type testCase struct {
 }
 
 func TestExamples(t *testing.T) {
+	defer tools.Quiet()()
+
 	cases := []testCase{
 		{databaseURL: "mongodb://mongo1:27017/coinbasepro"},
 	}
@@ -28,13 +31,13 @@ func TestExamples(t *testing.T) {
 
 		t.Run(fmt.Sprintf("ExampleGenericService_UpsertRawJSON databaseURL=%s", tc.databaseURL),
 			func(t *testing.T) {
-				ExampleGenericService_UpsertRawJSON()
+				ExampleGenericService_Upsert()
 			})
 	}
 
 }
 
-func ExampleGenericService_UpsertRawJSON() {
+func ExampleGenericService_Upsert() {
 	ctx := context.Background()
 	dns := os.Getenv("DATABASE_URL")
 
@@ -43,14 +46,14 @@ func ExampleGenericService_UpsertRawJSON() {
 		panic(err)
 	}
 
-	raw := &repository.Raw{
+	req := &proto.UpsertRequest{
 		Table: "accounts",
 		Data:  []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 	}
 
-	rsp := new(proto.UpsertResponse)
-	err = repo.UpsertRawJSON(ctx, raw, rsp)
+	rsp, err := repo.Upsert(ctx, req)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("upserted %d rows\n", rsp.UpsertedCount)
 }

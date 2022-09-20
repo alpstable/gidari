@@ -249,27 +249,26 @@ type repoConfig struct {
 
 func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		raw, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
+		req, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
 			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
 
 		// If a table is defined for the job, then replace the table name in the raw data.
 		if table := job.table; table != nil {
-			raw.Table = *table
+			req.Table = *table
 		}
 
 		for _, repo := range cfg.repos {
 			txfn := func(sctx context.Context, repo repository.Generic) error {
 				start := time.Now()
-				rsp := new(proto.UpsertResponse)
-
-				if err := repo.UpsertRawJSON(sctx, raw, rsp); err != nil {
+				rsp, err := repo.Upsert(sctx, req)
+				if err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
 					return err
 				}
 				rt := repo.Type()
-				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table)
+				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
 				logInfo := tools.LogFormatter{
 					WorkerID:      id,
 					WorkerName:    "repository",

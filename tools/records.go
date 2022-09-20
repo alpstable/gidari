@@ -176,6 +176,32 @@ func MakeRecordsRequest(data interface{}, records *[]*structpb.Struct) error {
 	return nil
 }
 
+// UpsertDataType are the supported types for decoding upsert records.
+type UpsertDataType uint8
+
+const (
+	// UpsertDataJSON is the default upsert data type.
+	UpsertDataJSON UpsertDataType = iota
+)
+
+// DecodeUpsertRecords will decode the records from the upsert request into a slice of structs.
+func DecodeUpsertRecords(req *proto.UpsertRequest) ([]*structpb.Struct, error) {
+	switch UpsertDataType(req.DataType) {
+	case UpsertDataJSON:
+		var records []*structpb.Struct
+		var data interface{}
+		if err := json.Unmarshal(req.Data, &data); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal raw data: %w", err)
+		}
+
+		if err := MakeRecordsRequest(data, &records); err != nil {
+			return nil, fmt.Errorf("error making records request: %v", err)
+		}
+		return records, nil
+	}
+	return nil, fmt.Errorf("unsupported data type: %v", req.DataType)
+}
+
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to
 // comply with insert requirements.
 func PartitionStructs(n int, slice []*structpb.Struct) [][]*structpb.Struct {
