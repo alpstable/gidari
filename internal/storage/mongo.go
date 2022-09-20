@@ -40,7 +40,7 @@ func (m *Mongo) Type() uint8 {
 
 // Close will close the mongo client.
 func (m *Mongo) Close() {
-	m.Close()
+	m.Client.Disconnect(context.Background())
 }
 
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
@@ -139,7 +139,22 @@ func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Rea
 	return nil
 }
 
-func (m *Mongo) TruncateTables(context.Context, *proto.TruncateTablesRequest) error { return nil }
+// Truncate will delete all records in a collection.
+func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
+	cs, err := connstring.ParseAndValidate(m.dns)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, collection := range req.GetTables() {
+		coll := m.Database(cs.Database).Collection(collection)
+		_, err = coll.DeleteMany(ctx, bson.M{})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &proto.TruncateResponse{}, nil
+}
 
 // UpsertCoinbaseProCandles60 will upsert candles to the 60-granularity Mongo DB collection for a given productID.
 func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.UpsertResponse) error {

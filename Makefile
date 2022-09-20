@@ -16,15 +16,17 @@ hosts:
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:
-	protoc --proto_path=pkg/proto --go_out=pkg/proto pkg/proto/db.proto
+	protoc --proto_path=proto --go_out=proto proto/db.proto
 
 # test runs all of the application tests locally.
 .PHONY: tests
 tests:
+	go clean -testcache
 	godotenv -f /etc/alpine-hodler/auth.env go test ./... -v
 
 # ci are the integration tests in CI/CD.
 .PHONY: ci
 ci:
+	go clean -testcache
 	chmod +rwx scripts/*.sh
 	./scripts/run-ci-tests.sh

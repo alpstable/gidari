@@ -25,7 +25,7 @@ type Storage interface {
 	// commit the result of all operations sent to the transaction, or rollback the result of all operations sent
 	// to the transaction.
 	StartTx(context.Context) (Tx, error)
-	TruncateTables(context.Context, *proto.TruncateTablesRequest) error
+	Truncate(context.Context, *proto.TruncateRequest) (*proto.TruncateResponse, error)
 	Upsert(context.Context, *proto.UpsertRequest, *proto.UpsertResponse) error
 	Type() uint8
 }

@@ -260,6 +260,14 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 
 		for _, repo := range cfg.repos {
 			txfn := func(sctx context.Context, repo repository.Generic) error {
+				if cfg.truncate {
+					req := &proto.TruncateRequest{
+						Tables: []string{raw.Table},
+					}
+					if _, err := repo.Truncate(sctx, req); err != nil {
+						return fmt.Errorf("error truncating table %q: %w", raw.Table, err)
+					}
+				}
 				start := time.Now()
 				rsp := new(proto.UpsertResponse)
 

@@ -111,7 +111,9 @@ func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.R
 
 // Close will close the underlying database / transaction.
 func (pg *Postgres) Close() {
-	pg.Close()
+	if pg.DB != nil {
+		pg.DB.Close()
+	}
 }
 
 // ListColumns will set a complete list of available columns per table on the response.
@@ -162,18 +164,14 @@ func (pg *Postgres) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto
 	return nil
 }
 
-// TruncateTables will attempt to truncate all tables from the request.
-func (pg *Postgres) TruncateTables(ctx context.Context, req *proto.TruncateTablesRequest) error {
+// Truncate will truncate a table.
+func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
 	tables := req.GetTables()
 	if len(tables) == 0 {
-		return nil
+		return nil, errors.BadRequest("storage.postgres", "no tables provided")
 	}
-
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
-	return pg.exec(ctx, []byte(query), func(r *sql.Rows) error {
-		return nil
-	})
-	return nil
+	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
 }
 
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
