@@ -56,7 +56,9 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 		t.Run("should return the encoder when one is registered", func(t *testing.T) {
 			registry := RepositoryEncoderRegistry{}
 			u, _ := url.Parse("http://test")
-			registry.Register(u, new(DefaultRepositoryEncoder))
+			if err := registry.Register(u, new(DefaultRepositoryEncoder)); err != nil {
+				t.Errorf("expected error to be nil, got %v", err)
+			}
 
 			encoder := registry.Lookup(u)
 			if encoder == nil {

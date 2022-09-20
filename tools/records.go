@@ -92,6 +92,9 @@ func AssignReadRequired(req *proto.ReadRequest, key string, val interface{}) err
 	m := req.Required.AsMap()
 	m[key] = val
 	req.Required, err = structpb.NewStruct(m)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -30,7 +30,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -155,7 +155,7 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 	}
 	if req.Body != nil && req.Header.Get(contentType) == formContentType {
 		// reads data to a []byte, draining req.Body
-		b, err := ioutil.ReadAll(req.Body)
+		b, err := io.ReadAll(req.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +168,7 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 			params[key] = value[0]
 		}
 		// reinitialize Body with ReadCloser over the []byte
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	for key, value := range oauthParams {
 		params[key] = value
@@ -187,7 +187,9 @@ func hmacSign(consumerSecret, tokenSecret, message string, algo func() hash.Hash
 // nonce provides a random nonce string.
 func nonce() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
 	return base64.StdEncoding.EncodeToString(b)
 }
 

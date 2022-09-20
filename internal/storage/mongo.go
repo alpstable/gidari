@@ -6,6 +6,7 @@ import (
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
@@ -40,7 +41,9 @@ func (m *Mongo) Type() uint8 {
 
 // Close will close the mongo client.
 func (m *Mongo) Close() {
-	m.Client.Disconnect(context.Background())
+	if err := m.Client.Disconnect(context.Background()); err != nil {
+		panic(err)
+	}
 }
 
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
@@ -54,7 +57,7 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 
 	// Create a go routine that creates a session and listens for writes.
 	go func() {
-		tx.done <- m.UseSession(ctx, func(sctx mongo.SessionContext) error {
+		tx.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 			// Start the transaction, if there is an error break the go routine.
 			err := sctx.StartTransaction()
 			if err != nil {
@@ -81,7 +84,9 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 					return err
 				}
 			default:
-				sctx.AbortTransaction(sctx)
+				if err := sctx.AbortTransaction(sctx); err == nil {
+					return err
+				}
 			}
 			return nil
 		})
@@ -152,7 +157,7 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 	}
 
 	for _, collection := range req.GetTables() {
-		coll := m.Database(cs.Database).Collection(collection)
+		coll := m.Client.Database(cs.Database).Collection(collection)
 		_, err = coll.DeleteMany(ctx, bson.M{})
 		if err != nil {
 			return nil, err
@@ -181,7 +186,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 		}
 		models = append(models, mongo.NewUpdateOneModel().
 			SetFilter(doc).
-			SetUpdate(bson.D{{"$set", doc}}).
+			SetUpdate(bson.D{primitive.E{Key: "$set", Value: doc}}).
 			SetUpsert(true))
 	}
 
@@ -190,7 +195,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 		return nil, err
 	}
 
-	coll := m.Database(cs.Database).Collection(req.Table)
+	coll := m.Client.Database(cs.Database).Collection(req.Table)
 	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
 		return nil, err

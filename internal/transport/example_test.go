@@ -19,5 +19,7 @@ func ExampleRepositoryEncoderRegistry() {
 	// If necessary, you can register your own RepositoryEncoder for a specific host. Of course, this would require
 	// a custom build of the Gidari library.
 	u, _ := url.Parse("http://test")
-	transport.RepositoryEncoders.Register(u, new(CustomRepositoryEncoder))
+	if err := transport.RepositoryEncoders.Register(u, new(CustomRepositoryEncoder)); err != nil {
+		panic(err)
+	}
 }

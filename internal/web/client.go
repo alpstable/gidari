@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -13,13 +12,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// CoinbaseProClient is a wrapper for http.Client that can be used to make HTTP Requests to the Coinbase Pro API.
+// Client is a wrapper around the http.Client that will handle authentication and rate limiting.
 type Client struct{ http.Client }
 
+// NewClient will return a new client with the given options.
 func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) {
-	client := new(Client)
-	client.Transport = roundtripper
-	return client, nil
+	c := new(Client)
+	c.Client.Transport = roundtripper
+	return c, nil
 }
 
 // newHTTPRequest will return a new request.  If the options are set, this function will encode a body if possible.
@@ -29,7 +29,7 @@ func newHTTPRequest(method string, u *url.URL) (*http.Request, error) {
 
 // parseErrorMessage takes a response and a status and builder an error message to send to the server.
 func parseErrorMessage(resp *http.Response) error {
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func validateResponse(res *http.Response) (err error) {
 }
 
 type FetchConfig struct {
-	Client      *Client
+	C           *Client
 	Method      string
 	URL         *url.URL
 	RateLimiter *rate.Limiter
@@ -64,7 +64,7 @@ type FetchConfig struct {
 
 func (cfg *FetchConfig) validate() error {
 	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on web.FetchConfig", field) }
-	if cfg.Client == nil {
+	if cfg.C == nil {
 		return wrapper("Client")
 	}
 	if cfg.Method == "" {
@@ -108,7 +108,9 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	}
 
 	// If the rate limiter is not set, set it with defaults.
-	ratelimiter.Wait(ctx)
+	if err := ratelimiter.Wait(ctx); err != nil {
+		return nil, err
+	}
 
 	req, err := newHTTPRequest(cfg.Method, cfg.URL)
 	if err != nil {
@@ -119,7 +121,7 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 		return nil, fmt.Errorf("rate limiter timeout: %v", err)
 	}
 
-	rsp, err := cfg.Client.Do(req)
+	rsp, err := cfg.C.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %v", err)
 	}

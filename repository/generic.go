@@ -46,11 +46,9 @@ func NewTx(ctx context.Context, dns string) (Generic, error) {
 // Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If
 // svc is not a transaction, the function will be executed without executing.
 func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) error) {
-	if svc.Tx != nil {
-		svc.Send(func(ctx context.Context, stg storage.Storage) error {
-			return fn(ctx, svc)
-		})
-	}
+	svc.Tx.Send(func(ctx context.Context, stg storage.Storage) error {
+		return fn(ctx, svc)
+	})
 }
 
 // Truncate truncates a table.

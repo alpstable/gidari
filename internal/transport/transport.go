@@ -224,7 +224,7 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 	}
 
 	webcfg := &web.FetchConfig{
-		Client:      client,
+		C:           client,
 		Method:      req.Method,
 		URL:         u,
 		RateLimiter: rl,

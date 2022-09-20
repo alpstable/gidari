@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"github.com/alpine-hodler/gidari/internal/transport"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -22,7 +21,7 @@ func main() {
 		Run: func(_ *cobra.Command, _ []string) {
 			ctx := context.Background()
 
-			bytes, err := ioutil.ReadFile(configFilepath)
+			bytes, err := os.ReadFile(configFilepath)
 			if err != nil {
 				log.Fatalf("error reading config file  %s: %v", configFilepath, err)
 			}
@@ -105,7 +104,9 @@ func main() {
 	cmd.Flags().StringVar(&configFilepath, "config", "c", "path to configuration")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "print log data as the binary executes")
 
-	cmd.MarkFlagRequired("config")
+	if err := cmd.MarkFlagRequired("config"); err != nil {
+		logrus.Fatalf("error marking flag as required: %v", err)
+	}
 
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)

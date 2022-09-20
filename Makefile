@@ -30,3 +30,8 @@ ci:
 	go clean -testcache
 	chmod +rwx scripts/*.sh
 	./scripts/run-ci-tests.sh
+
+# lint runs the linter.
+.PHONY: lint
+lint:
+	golangci-lint run

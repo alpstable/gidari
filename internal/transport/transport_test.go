@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -11,7 +10,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -170,7 +169,7 @@ func TestTimeseries(t *testing.T) {
 func TestUpsert(t *testing.T) {
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
-	fixtures, err := ioutil.ReadDir(fixtureRoot)
+	fixtures, err := os.ReadDir(fixtureRoot)
 	if err != nil {
 		t.Fatalf("error reading fixtures: %v", err)
 	}
@@ -178,7 +177,7 @@ func TestUpsert(t *testing.T) {
 		t.Run(fixture.Name(), func(t *testing.T) {
 			path := filepath.Join(fixtureRoot, fixture.Name())
 
-			bytes, err := ioutil.ReadFile(path)
+			bytes, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("error reading fixture: %v", err)
 			}

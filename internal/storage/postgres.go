@@ -29,10 +29,6 @@ type pgmeta struct {
 	columns []string
 }
 
-func newpgmeta() *pgmeta {
-	return &pgmeta{}
-}
-
 func (meta *pgmeta) addColumn(pk string) {
 	meta.columns = append(meta.columns, pk)
 }
@@ -44,15 +40,6 @@ func (meta *pgmeta) addPK(pk string) {
 func (meta *pgmeta) isPK(name string) bool {
 	for _, pk := range meta.pk {
 		if pk == name {
-			return true
-		}
-	}
-	return false
-}
-
-func (meta *pgmeta) isColumn(name string) bool {
-	for _, col := range meta.columns {
-		if col == name {
 			return true
 		}
 	}
@@ -96,7 +83,7 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 // exec executes a query that requires no input, passing the resulting rows into a user-defined teardown
 // function.
 func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.Rows) error) error {
-	stmt, err := pg.PrepareContext(ctx, string(query))
+	stmt, err := pg.DB.PrepareContext(ctx, string(query))
 	if err != nil {
 		return err
 	}
@@ -255,7 +242,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 				}
 			}
 		} else {
-			stmt, err = pg.PrepareContext(ctx, query)
+			stmt, err = pg.DB.PrepareContext(ctx, query)
 			if err != nil {
 				return nil, errors.BadRequest(errID, err.Error())
 			}
@@ -311,29 +298,27 @@ func (pg *Postgres) setMaxOpenConns() {
 	numCores := runtime.NumCPU()
 
 	// parallel_io_limit is the number of concurrent I/O requests your storage subsystem can handle.
-	var parallelIOLimit int
+	var parallelIOLimit int = 115
 	// if pg.opts != nil && pg.opts.ParallelIOLimit != nil {
 	// 	parallelIOLimit = *pg.opts.ParallelIOLimit
 	// } else {
 	// At provision, Databases for PostgreSQL sets the maximum number of connections to your PostgreSQL database to 115.
 	// 15 connections are reserved for the superuser to maintain the state and integrity of your database, and 100
 	// connections are available for you and your applications. https://tinyurl.com/3yyu6eaf
-	parallelIOLimit = 115
 	// }
 
 	// session_busy_ratio is the fraction of time that the connection is active executing a statement in the database.
 	// If your workload consists of big analytical queries, session_busy_ratio can be up to 1.
-	var sessionBusyRatio float64
+	var sessionBusyRatio float64 = 1.0
 	// if pg.opts != nil && pg.opts.SessionBusyRatio != nil {
 	// 	sessionBusyRatio = *pg.opts.SessionBusyRatio
 	// } else {
 	// These queries for this db are typically expected to be 1-1 with upserting and finding records definied in the
 	// alpine-hodler/web API. That is, they should be extremely simple and devoid of business logic, and so the default
 	// value for this ratio is 1.
-	sessionBusyRatio = 1.0
 	// }
 
-	var avgParallelism float64
+	var avgParallelism float64 = 1.0
 	// if pg.opts != nil && pg.opts.AvgParallelism != nil {
 	// 	avgParallelism = *pg.opts.AvgParallelism
 	// } else {
@@ -341,10 +326,9 @@ func (pg *Postgres) setMaxOpenConns() {
 	// alpine-hodler/web API. That is, they should be extremely simple and devoid of business logic, and so the default
 	// value for this average is one. We expect that the average number of backend processes working on a SINGLE query
 	// to be 1.
-	avgParallelism = 1.0
 	// }
 	n := (math.Max(float64(numCores), float64(parallelIOLimit))) / (sessionBusyRatio * avgParallelism)
-	pg.SetMaxOpenConns(int(n))
+	pg.DB.SetMaxOpenConns(int(n))
 }
 
 // StartTx will start a transaction on the Postgres connection. The transaction ID is returned and should be used
@@ -359,7 +343,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 
 	// Instantiate a new transaction on the Postgres connection and store it in the activeTx map.
 	id := uuid.New().String()
-	pgtx, err := pg.BeginTx(ctx, nil)
+	pgtx, err := pg.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return tx, err
 	}
