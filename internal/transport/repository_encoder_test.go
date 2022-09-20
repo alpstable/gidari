@@ -8,8 +8,8 @@ import (
 func TestRepositoryEncoderRegistry(t *testing.T) {
 	t.Run("RepositoryEncoderKey", func(t *testing.T) {
 		t.Run("NewRepositoryEncoderKey", func(t *testing.T) {
-			u, _ := url.Parse("https://api.pro.coinbase.com")
-			key := NewRepositoryEncoderKey(u)
+			testURL, _ := url.Parse("https://api.pro.coinbase.com")
+			key := NewRepositoryEncoderKey(testURL)
 			if key.host != "api.pro.coinbase.com" {
 				t.Errorf("expected key.host to be %s, got %s", "api.pro.coinbase.com", key.host)
 			}
@@ -30,8 +30,8 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 				key := RepositoryEncoderKey{host: "test"}
 				registry[key] = new(DefaultRepositoryEncoder)
 
-				u, _ := url.Parse("http://test")
-				err := registry.Register(u, new(DefaultRepositoryEncoder))
+				testURL, _ := url.Parse("http://test")
+				err := registry.Register(testURL, new(DefaultRepositoryEncoder))
 				if err != ErrRepositoryEncoderExists {
 					t.Errorf("expected error %v, got %v", ErrRepositoryEncoderExists, err)
 				}
@@ -39,13 +39,13 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 
 		t.Run("should register an encoder when one does not already exist", func(t *testing.T) {
 			registry := RepositoryEncoderRegistry{}
-			u, _ := url.Parse("http://test")
-			err := registry.Register(u, new(DefaultRepositoryEncoder))
+			testURL, _ := url.Parse("http://test")
+			err := registry.Register(testURL, new(DefaultRepositoryEncoder))
 			if err != nil {
 				t.Errorf("expected error to be nil, got %v", err)
 			}
 
-			key := NewRepositoryEncoderKey(u)
+			key := NewRepositoryEncoderKey(testURL)
 			if registry[key] == nil {
 				t.Error("expected encoder to be registered, got nil")
 			}
@@ -55,20 +55,20 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 	t.Run("Lookup", func(t *testing.T) {
 		t.Run("should return the encoder when one is registered", func(t *testing.T) {
 			registry := RepositoryEncoderRegistry{}
-			u, _ := url.Parse("http://test")
-			if err := registry.Register(u, new(DefaultRepositoryEncoder)); err != nil {
+			testURL, _ := url.Parse("http://test")
+			if err := registry.Register(testURL, new(DefaultRepositoryEncoder)); err != nil {
 				t.Errorf("expected error to be nil, got %v", err)
 			}
 
-			encoder := registry.Lookup(u)
+			encoder := registry.Lookup(testURL)
 			if encoder == nil {
 				t.Error("expected encoder to be registered, got nil")
 			}
 		})
 
 		t.Run("should return the default encoder when one is not registered", func(t *testing.T) {
-			u, _ := url.Parse("http://test")
-			encoder := RepositoryEncoders.Lookup(u)
+			testURL, _ := url.Parse("http://test")
+			encoder := RepositoryEncoders.Lookup(testURL)
 			if encoder == nil {
 				t.Error("expected encoder to be registered, got nil")
 			}

@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type testcase struct {
+type testCase struct {
 	Int int `json:"int"`
 }
 
@@ -23,30 +23,30 @@ func TestAssignReadResponseRecords(t *testing.T) {
 
 		rsp.Records = []*structpb.Struct{r1}
 
-		tc := []*testcase{}
-		err = AssignReadResponseRecords(rsp, &tc)
+		tcase := []*testCase{}
+		err = AssignReadResponseRecords(rsp, &tcase)
 		if err != nil {
 			t.Fatalf("failed to assign records: %v", err)
 		}
 
-		expected := []*testcase{{1}}
-		if !reflect.DeepEqual(tc, expected) {
-			t.Fatalf("expected %v, got %v", expected, tc)
+		expected := []*testCase{{1}}
+		if !reflect.DeepEqual(tcase, expected) {
+			t.Fatalf("expected %v, got %v", expected, tcase)
 		}
 	})
 
 	assignSliceBenchmarkResponse := new(proto.ReadResponse)
-	assignSliceBenchmarkExpected := []*testcase{}
+	assignSliceBenchmarkExpected := []*testCase{}
 	for i := 1; i <= 1e6; i++ {
 		r, err := structpb.NewStruct(map[string]interface{}{"int": i})
 		if err != nil {
 			t.Fatalf("failed to create struct: %v", err)
 		}
-		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testcase{Int: i})
+		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testCase{Int: i})
 		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, r)
 	}
 	t.Run("assign slice benchmark", func(t *testing.T) {
-		tc := []*testcase{}
+		tc := []*testCase{}
 		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tc)
 		if err != nil {
 			t.Fatalf("failed to assign records: %v", err)

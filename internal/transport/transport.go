@@ -38,6 +38,7 @@ type Authentication struct {
 	Auth2  *Auth2  `yaml:"auth2"`
 }
 
+// timeseries is a struct that contains the information needed to query a web API for timeseries data.
 type timeseries struct {
 	StartName string `yaml:"startName"`
 	EndName   string `yaml:"endName"`
@@ -72,7 +73,7 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 
 	start, err := time.Parse(*ts.Layout, startSlice[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse start time: %w", err)
 	}
 
 	endSlice := query[ts.EndName]
@@ -82,7 +83,7 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 
 	end, err := time.Parse(*ts.Layout, endSlice[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse end time: %w", err)
 	}
 
 	for start.Before(end) {
@@ -159,14 +160,22 @@ type Config struct {
 // authentication data, this method will exhuast every transport option in the "Authentication" struct.
 func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	if apiKey := cfg.Authentication.APIKey; apiKey != nil {
-		return web.NewClient(ctx, auth.NewAPIKey().
+		client, err := web.NewClient(ctx, auth.NewAPIKey().
 			SetURL(cfg.URL).
 			SetKey(apiKey.Key).
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create web client with API key: %w", err)
+		}
+		return client, nil
 	}
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
-		return web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
+		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create web client with Auth2: %w", err)
+		}
+		return client, nil
 	}
 	return nil, nil
 }
@@ -209,24 +218,24 @@ func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.
 		return nil, fmt.Errorf("error joining url %q to endpoint %q: %v", cfg.URL, req.Endpoint, err)
 	}
 
-	u, err := url.Parse(rawURL)
+	uri, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing raw url %q: %v", rawURL, err)
 	}
 
 	// Apply the query parameters if they are on the request.
 	if req.Query != nil {
-		query := u.Query()
+		query := uri.Query()
 		for n, v := range req.Query {
 			query.Set(n, v)
 		}
-		u.RawQuery = query.Encode()
+		uri.RawQuery = query.Encode()
 	}
 
 	webcfg := &web.FetchConfig{
 		C:           client,
 		Method:      req.Method,
-		URL:         u,
+		URL:         uri,
 		RateLimiter: rl,
 	}
 
@@ -302,7 +311,7 @@ type webWorkerJob struct {
 	logger   *logrus.Logger
 }
 
-func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
+func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
 		start := time.Now()
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
@@ -316,7 +325,7 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
 		logInfo := tools.LogFormatter{
-			WorkerID:   id,
+			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
 			Msg:        fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
@@ -366,17 +375,17 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			return err
 		}
 
-		if ts := req.Timeseries; ts != nil {
+		if timeseries := req.Timeseries; timeseries != nil {
 			xurl := fetchConfig.URL
-			err = ts.setChunks(xurl)
+			err = timeseries.setChunks(xurl)
 			if err != nil {
-				return fmt.Errorf("error getting timeseries chunks: %v", ts.chunks)
+				return fmt.Errorf("error getting timeseries chunks: %v", timeseries.chunks)
 			}
-			for _, chunk := range ts.chunks {
+			for _, chunk := range timeseries.chunks {
 				// copy the request and update it to reflect the partitioned timeseries
 				chunkReq := req
-				chunkReq.Query[ts.StartName] = chunk[0].Format(*ts.Layout)
-				chunkReq.Query[ts.EndName] = chunk[1].Format(*ts.Layout)
+				chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
+				chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
 
 				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client, rateLimiter)
 				if err != nil {
@@ -465,7 +474,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Commit the transactions and check for errors.
 	for _, repo := range repos {
 		if err := repo.Commit(); err != nil {
-			return err
+			return fmt.Errorf("unable to commit transaction: %v", err)
 		}
 	}
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
@@ -25,7 +26,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error connecting to mongo: %v", err)
 	}
 	mdb := new(Mongo)
 	mdb.Client = client
@@ -49,7 +50,7 @@ func (m *Mongo) Close() {
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
 func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a transaction.
-	tx := &tx{
+	txn := &tx{
 		make(chan TXChanFn),
 		make(chan error, 1),
 		make(chan bool, 1),
@@ -57,15 +58,15 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 
 	// Create a go routine that creates a session and listens for writes.
 	go func() {
-		tx.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
+		txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 			// Start the transaction, if there is an error break the go routine.
 			err := sctx.StartTransaction()
 			if err != nil {
-				return err
+				return fmt.Errorf("error starting transaction: %v", err)
 			}
 
 			// listen for writes.
-			for fn := range tx.ch {
+			for fn := range txn.ch {
 				// If an error has registered, do nothing.
 				if err != nil {
 					continue
@@ -74,24 +75,24 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 			}
 
 			if err != nil {
-				return err
+				return fmt.Errorf("error in transaction: %v", err)
 			}
 
 			// Await the decision to commit or rollback.
 			switch {
-			case <-tx.commit:
-				if err := sctx.CommitTransaction(sctx); err == nil {
-					return err
+			case <-txn.commit:
+				if err := sctx.CommitTransaction(sctx); err != nil {
+					return fmt.Errorf("commit transaction: %v", err)
 				}
 			default:
-				if err := sctx.AbortTransaction(sctx); err == nil {
-					return err
+				if err := sctx.AbortTransaction(sctx); err != nil {
+					return fmt.Errorf("transaction aborted")
 				}
 			}
 			return nil
 		})
 	}()
-	return tx, nil
+	return txn, nil
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
@@ -153,14 +154,14 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 
 	cs, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse connstring: %v", err)
 	}
 
 	for _, collection := range req.GetTables() {
 		coll := m.Client.Database(cs.Database).Collection(collection)
 		_, err = coll.DeleteMany(ctx, bson.M{})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error truncating collection %s: %v", collection, err)
 		}
 	}
 	return &proto.TruncateResponse{}, nil
@@ -170,7 +171,7 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode records: %v", err)
 	}
 
 	// If there are no records to upsert, return.
@@ -182,7 +183,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	for _, record := range records {
 		doc := bson.D{}
 		if err := tools.AssingRecordBSONDocument(record, &doc); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to assign record to bson document: %v", err)
 		}
 		models = append(models, mongo.NewUpdateOneModel().
 			SetFilter(doc).
@@ -192,13 +193,13 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 
 	cs, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse connection string: %v", err)
 	}
 
 	coll := m.Client.Database(cs.Database).Collection(req.Table)
 	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bulk write error: %v", err)
 	}
 
 	rsp := &proto.UpsertResponse{

@@ -21,26 +21,26 @@ func TestTruncate(t *testing.T) {
 		{context.Background(), "mongodb://mongo1:27017/coinbasepro"},
 		{context.Background(), "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
 	}
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("empty case: %s", tc.dns), func(t *testing.T) {
-			s, err := New(tc.ctx, tc.dns)
+	for _, tcase := range testCases {
+		t.Run(fmt.Sprintf("empty case: %s", tcase.dns), func(t *testing.T) {
+			s, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create storage: %v", err)
 			}
 			defer s.Close()
 
-			if _, err := s.Truncate(tc.ctx, &proto.TruncateRequest{}); err != nil {
+			if _, err := s.Truncate(tcase.ctx, &proto.TruncateRequest{}); err != nil {
 				t.Fatalf("failed to truncate storage: %v", err)
 			}
 		})
-		t.Run(tc.dns, func(t *testing.T) {
-			stg, err := New(tc.ctx, tc.dns)
+		t.Run(tcase.dns, func(t *testing.T) {
+			stg, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create new storage service: %v", err)
 			}
 			defer stg.Close()
 
-			rsp, err := stg.Truncate(tc.ctx, &proto.TruncateRequest{Tables: []string{"tests"}})
+			rsp, err := stg.Truncate(tcase.ctx, &proto.TruncateRequest{Tables: []string{"tests"}})
 			if err != nil {
 				t.Fatalf("failed to truncate collection: %v", err)
 			}

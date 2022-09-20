@@ -38,24 +38,24 @@ const (
 
 // String uses the data from the LogFormatter object to build a log message.
 func (lf LogFormatter) String() string {
-	var sb strings.Builder
+	var bldr strings.Builder
 	if lf.WorkerID > 0 {
-		sb.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterWorkerID, lf.WorkerID))
+		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterWorkerID, lf.WorkerID))
 	}
 	if lf.WorkerName != "" {
-		sb.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterWorkerName, lf.WorkerName))
+		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterWorkerName, lf.WorkerName))
 	}
 	if lf.Duration > 0 {
-		sb.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterDuration, lf.Duration))
+		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterDuration, lf.Duration))
 	}
 	if lf.UpsertedCount > 0 {
-		sb.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterUpsertedCount, lf.UpsertedCount))
+		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterUpsertedCount, lf.UpsertedCount))
 	}
 	if lf.MatchedCount > 0 {
-		sb.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterMatchedCount, lf.MatchedCount))
+		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterMatchedCount, lf.MatchedCount))
 	}
 	if lf.Msg != "" {
-		sb.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterMsg, lf.Msg))
+		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterMsg, lf.Msg))
 	}
-	return fmt.Sprintf("{%s}", strings.TrimSuffix(sb.String(), ", "))
+	return fmt.Sprintf("{%s}", strings.TrimSuffix(bldr.String(), ", "))
 }

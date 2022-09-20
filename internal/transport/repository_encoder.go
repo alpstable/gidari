@@ -70,14 +70,14 @@ var RepositoryEncoders = make(RepositoryEncoderRegistry)
 
 func init() {
 	// Register the default case
-	u, _ := url.Parse("")
-	if err := RepositoryEncoders.Register(u, new(DefaultRepositoryEncoder)); err != nil {
+	uri, _ := url.Parse("")
+	if err := RepositoryEncoders.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
 		logrus.Fatalf("error registering default encoder: %v", err)
 	}
 
 	// Register the CoinbasePro Sandbox Candles case
-	u, _ = url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
-	if err := RepositoryEncoders.Register(u, new(CBPSandboxEncoder)); err != nil {
+	uri, _ = url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
+	if err := RepositoryEncoders.Register(uri, new(CBPSandboxEncoder)); err != nil {
 		logrus.Fatalf("error registering Coinbase Pro Sandbox Candles encoder: %v", err)
 	}
 }
@@ -88,14 +88,14 @@ type DefaultRepositoryEncoder struct{}
 
 // Encode will transform the data from arbitrary web API requests into a byte slice that can be passed to repository
 // upsert methods.
-func (dre *DefaultRepositoryEncoder) Encode(req http.Request, b []byte) (*proto.UpsertRequest, error) {
+func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting table from request: %v", err)
 	}
 	return &proto.UpsertRequest{
 		Table:    table,
-		Data:     b,
+		Data:     bytes,
 		DataType: int32(tools.UpsertDataJSON),
 	}, nil
 
@@ -107,10 +107,10 @@ type CBPSandboxEncoder struct{}
 
 // Encode will transform the data from Coinbase Pro Sandbox web requests into a byte slice that can be passed to
 // repository.
-func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*proto.UpsertRequest, error) {
+func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting table from request: %v", err)
 	}
 
 	switch table {
@@ -123,8 +123,8 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*proto.Upsert
 
 		productID := tools.SplitURLPath(req)[1]
 		var candles coinbasepro.Candles
-		if err := json.Unmarshal(b, &candles); err != nil {
-			return nil, err
+		if err := json.Unmarshal(bytes, &candles); err != nil {
+			return nil, fmt.Errorf("error unmarshaling candles: %v", err)
 		}
 		for _, candle := range candles {
 			candle.ProductID = productID
@@ -133,7 +133,7 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*proto.Upsert
 		var err error
 		updatedBytes, err := json.Marshal(candles)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error marshaling candles: %v", err)
 		}
 		return &proto.UpsertRequest{
 			Table:    table,
@@ -142,6 +142,6 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*proto.Upsert
 		}, nil
 	default:
 		u, _ := url.Parse("")
-		return RepositoryEncoders.Lookup(u).Encode(req, b)
+		return RepositoryEncoders.Lookup(u).Encode(req, bytes)
 	}
 }

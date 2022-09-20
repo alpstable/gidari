@@ -12,8 +12,7 @@ import (
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
-	"github.com/micro/micro/v3/service/errors"
+	_ "github.com/lib/pq" // postgres driver
 )
 
 // postgresTxType is a type alias for the postgres transaction type.
@@ -49,9 +48,9 @@ func (meta *pgmeta) isPK(name string) bool {
 // getMeta will get postgres database metadata for processing generalized functionality, such as upsert.
 func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) {
 	if len(pg.meta) == 0 {
-		columns := new(proto.ListColumnsResponse)
-		if err := pg.ListColumns(ctx, columns); err != nil {
-			return nil, err
+		columns, err := pg.ListColumns(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error getting postgres metadata: %v", err)
 		}
 
 		pg.meta = make(map[string]*pgmeta)
@@ -85,12 +84,12 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.Rows) error) error {
 	stmt, err := pg.DB.PrepareContext(ctx, string(query))
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to prepare statement: %v", err)
 	}
 
 	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to query: %v", err)
 	}
 	defer rows.Close()
 	return teardown(rows)
@@ -104,17 +103,45 @@ func (pg *Postgres) Close() {
 }
 
 // ListColumns will set a complete list of available columns per table on the response.
-func (pg *Postgres) ListColumns(ctx context.Context, rsp *proto.ListColumnsResponse) error {
-	return pg.exec(ctx, pgColumns, func(r *sql.Rows) error {
-		return tools.AssignStructs(r, &rsp.Records)
-	})
+func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse, error) {
+	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare statement: %v", err)
+	}
+
+	rows, err := stmt.QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query: %v", err)
+	}
+	defer rows.Close()
+
+	var rsp proto.ListColumnsResponse
+	err = tools.AssignStructs(rows, &rsp.Records)
+	if err != nil {
+		return nil, fmt.Errorf("unable to assign structs: %v", err)
+	}
+	return &rsp, nil
 }
 
 // ListTables will set a complete list of available tables on the response.
-func (pg *Postgres) ListTables(ctx context.Context, rsp *proto.ListTablesResponse) error {
-	return pg.exec(ctx, pgTables, func(r *sql.Rows) error {
-		return tools.AssignStructs(r, &rsp.Records)
-	})
+func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
+	stmt, err := pg.DB.PrepareContext(ctx, string(pgTables))
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare statement: %v", err)
+	}
+
+	rows, err := stmt.QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query: %v", err)
+	}
+	defer rows.Close()
+
+	var rsp proto.ListTablesResponse
+	err = tools.AssignStructs(rows, &rsp.Records)
+	if err != nil {
+		return nil, fmt.Errorf("unable to assign structs: %v", err)
+	}
+	return &rsp, nil
 }
 
 // Read read will attempt to assign a reader buidler based on the request, assinging the resuling rows to the response
@@ -158,7 +185,7 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 
 	tables := req.GetTables()
 	if len(tables) == 0 {
-		return nil, errors.BadRequest("storage.postgres", "no tables provided")
+		return nil, fmt.Errorf("no tables specified")
 	}
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
 	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
@@ -168,10 +195,9 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
 func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
-	errID := "postgres.upsert"
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
-		return nil, errors.BadRequest(errID, err.Error())
+		return nil, fmt.Errorf("unable to decode records: %v", err)
 	}
 
 	// Do nothing if there are no records.
@@ -181,7 +207,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 
 	meta, err := pg.getMeta(ctx, req.Table)
 	if err != nil {
-		return nil, errors.BadRequest(errID, err.Error())
+		return nil, fmt.Errorf("table %q does not exist", req.Table)
 	}
 
 	exclusTemplate := "\"%s\" = EXCLUDED.\"%s\""
@@ -238,19 +264,19 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 				tx := probablyTX.(*sql.Tx)
 				stmt, err = tx.PrepareContext(ctx, query)
 				if err != nil {
-					return nil, errors.BadRequest(errID, err.Error())
+					return nil, fmt.Errorf("unable to prepare statement: %v", err)
 				}
 			}
 		} else {
 			stmt, err = pg.DB.PrepareContext(ctx, query)
 			if err != nil {
-				return nil, errors.BadRequest(errID, err.Error())
+				return nil, fmt.Errorf("unable to prepare statement: %v", err)
 			}
 		}
 
 		// Execute upsert.
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
-			return nil, errors.BadRequest(errID, err.Error())
+			return nil, fmt.Errorf("unable to execute upsert: %v", err)
 		}
 	}
 	return &proto.UpsertResponse{}, nil
@@ -272,19 +298,19 @@ type Postgres struct {
 
 // NewPostgres will return a new Postgres option for querying data through a Postgres DB.
 func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
-	pg := new(Postgres)
+	postgres := new(Postgres)
 
 	var err error
-	pg.DB, err = sql.Open("postgres", connectionURL)
+	postgres.DB, err = sql.Open("postgres", connectionURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to connect to postgres: %v", err)
 	}
 
-	pg.setMaxOpenConns()
-	pg.meta = make(map[string]*pgmeta)
-	pg.activeTx = sync.Map{}
+	postgres.setMaxOpenConns()
+	postgres.meta = make(map[string]*pgmeta)
+	postgres.activeTx = sync.Map{}
 
-	return pg, nil
+	return postgres, nil
 }
 
 // Type implements the storage interface.
@@ -298,7 +324,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	numCores := runtime.NumCPU()
 
 	// parallel_io_limit is the number of concurrent I/O requests your storage subsystem can handle.
-	var parallelIOLimit int = 115
+	var parallelIOLimit = 115
 	// if pg.opts != nil && pg.opts.ParallelIOLimit != nil {
 	// 	parallelIOLimit = *pg.opts.ParallelIOLimit
 	// } else {
@@ -309,7 +335,7 @@ func (pg *Postgres) setMaxOpenConns() {
 
 	// session_busy_ratio is the fraction of time that the connection is active executing a statement in the database.
 	// If your workload consists of big analytical queries, session_busy_ratio can be up to 1.
-	var sessionBusyRatio float64 = 1.0
+	var sessionBusyRatio = 1.0
 	// if pg.opts != nil && pg.opts.SessionBusyRatio != nil {
 	// 	sessionBusyRatio = *pg.opts.SessionBusyRatio
 	// } else {
@@ -318,7 +344,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	// value for this ratio is 1.
 	// }
 
-	var avgParallelism float64 = 1.0
+	var avgParallelism = 1.0
 	// if pg.opts != nil && pg.opts.AvgParallelism != nil {
 	// 	avgParallelism = *pg.opts.AvgParallelism
 	// } else {
@@ -345,7 +371,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 	id := uuid.New().String()
 	pgtx, err := pg.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return tx, err
+		return tx, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	pg.activeTx.Store(id, pgtx)
 

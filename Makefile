@@ -34,4 +34,4 @@ ci:
 # lint runs the linter.
 .PHONY: lint
 lint:
-	golangci-lint run
+	golangci-lint run --config .golangci.yml

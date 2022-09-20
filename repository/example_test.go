@@ -17,20 +17,23 @@ type testCase struct {
 }
 
 func TestExamples(t *testing.T) {
-	defer tools.Quiet()()
+	t.Cleanup(tools.Quiet())
+
+	t.Parallel()
 
 	cases := []testCase{
 		{databaseURL: "mongodb://mongo1:27017/coinbasepro"},
 	}
 
-	for _, tc := range cases {
-		err := os.Setenv("DATABASE_URL", tc.databaseURL)
+	for _, tcase := range cases {
+		err := os.Setenv("DATABASE_URL", tcase.databaseURL)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
 		}
 
-		t.Run(fmt.Sprintf("ExampleGenericService_UpsertRawJSON databaseURL=%s", tc.databaseURL),
+		t.Run(fmt.Sprintf("ExampleGenericService_UpsertRawJSON databaseURL=%s", tcase.databaseURL),
 			func(t *testing.T) {
+				t.Parallel()
 				ExampleGenericService_Upsert()
 			})
 	}

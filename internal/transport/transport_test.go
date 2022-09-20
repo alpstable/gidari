@@ -21,17 +21,17 @@ func TestTimeseries(t *testing.T) {
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T00:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = ts.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -70,17 +70,17 @@ func TestTimeseries(t *testing.T) {
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T01:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = ts.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -119,17 +119,17 @@ func TestTimeseries(t *testing.T) {
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T02:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = ts.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
