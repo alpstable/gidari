@@ -12,8 +12,8 @@ type LogFormatter struct {
 	WorkerName    string
 	Duration      time.Duration
 	Msg           string
-	UpsertedCount int32
-	MatchedCount  int32
+	UpsertedCount int64
+	MatchedCount  int64
 }
 
 const (

@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/alpine-hodler/gidari/internal/web/coinbasepro"
-	"github.com/alpine-hodler/gidari/repository"
+	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
 )
@@ -36,7 +36,7 @@ func NewDefaultRepositoryEncoderKey() RepositoryEncoderKey {
 type RepositoryEncoder interface {
 	// Encode will transform the data from a web request into a byte slice that can be passed to repository upsert
 	// methods.
-	Encode(http.Request, []byte) (*repository.Raw, error)
+	Encode(http.Request, []byte) (*proto.UpsertRequest, error)
 }
 
 // RepositoryEncoderRegistry is a map of registered repository encoders.
@@ -88,14 +88,17 @@ type DefaultRepositoryEncoder struct{}
 
 // Encode will transform the data from arbitrary web API requests into a byte slice that can be passed to repository
 // upsert methods.
-func (dre *DefaultRepositoryEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
+func (dre *DefaultRepositoryEncoder) Encode(req http.Request, b []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting table from request: %v", err)
 	}
+	return &proto.UpsertRequest{
+		Table:    table,
+		Data:     b,
+		DataType: int32(tools.UpsertDataJSON),
+	}, nil
 
-	raw := repository.NewRaw(table, b)
-	return &raw, nil
 }
 
 // CBPSandboxEncoder is the encoder used to transform data from Coinbase Pro Sandbox web requests into bytes that
@@ -104,7 +107,7 @@ type CBPSandboxEncoder struct{}
 
 // Encode will transform the data from Coinbase Pro Sandbox web requests into a byte slice that can be passed to
 // repository.
-func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*repository.Raw, error) {
+func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, err
@@ -132,9 +135,11 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, b []byte) (*repository.R
 		if err != nil {
 			return nil, err
 		}
-
-		raw := repository.NewRaw(table, updatedBytes)
-		return &raw, nil
+		return &proto.UpsertRequest{
+			Table:    table,
+			Data:     updatedBytes,
+			DataType: int32(tools.UpsertDataJSON),
+		}, nil
 	default:
 		u, _ := url.Parse("")
 		return RepositoryEncoders.Lookup(u).Encode(req, b)

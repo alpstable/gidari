@@ -180,15 +180,21 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
-func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.UpsertResponse) error {
+func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
 	errID := "postgres.upsert"
-	if len(req.Records) == 0 {
-		return errors.BadRequest(errID, "missing records")
+	records, err := tools.DecodeUpsertRecords(req)
+	if err != nil {
+		return nil, errors.BadRequest(errID, err.Error())
+	}
+
+	// Do nothing if there are no records.
+	if len(records) == 0 {
+		return &proto.UpsertResponse{}, nil
 	}
 
 	meta, err := pg.getMeta(ctx, req.Table)
 	if err != nil {
-		return err
+		return nil, errors.BadRequest(errID, err.Error())
 	}
 
 	exclusTemplate := "\"%s\" = EXCLUDED.\"%s\""
@@ -210,11 +216,11 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *p
 	upsertTemplate := fmt.Sprintf(upsertQuery, meta.table, clstr, "%s", pkstr, exstr)
 
 	// Get record-specific metadata from a sample record.
-	sample := req.Records[0]
+	sample := records[0]
 	recordSize := len(sample.Fields)
 
 	// Upsert 1000 records at a time.
-	for _, partition := range tools.PartitionStructs(1000, req.Records) {
+	for _, partition := range tools.PartitionStructs(1000, records) {
 		volume := len(partition)
 		placeholders := make([]string, 0, volume)
 		arguments := make([]interface{}, 0, recordSize*volume)
@@ -245,22 +251,22 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *p
 				tx := probablyTX.(*sql.Tx)
 				stmt, err = tx.PrepareContext(ctx, query)
 				if err != nil {
-					return errors.BadRequest(errID, err.Error())
+					return nil, errors.BadRequest(errID, err.Error())
 				}
 			}
 		} else {
 			stmt, err = pg.PrepareContext(ctx, query)
 			if err != nil {
-				return errors.BadRequest(errID, err.Error())
+				return nil, errors.BadRequest(errID, err.Error())
 			}
 		}
 
 		// Execute upsert.
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
-			return errors.BadRequest(errID, err.Error())
+			return nil, errors.BadRequest(errID, err.Error())
 		}
 	}
-	return nil
+	return &proto.UpsertResponse{}, nil
 }
 
 // Postgres is a wrapper around the sql.DB object.

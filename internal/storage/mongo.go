@@ -161,13 +161,23 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 	return &proto.TruncateResponse{}, nil
 }
 
-// UpsertCoinbaseProCandles60 will upsert candles to the 60-granularity Mongo DB collection for a given productID.
-func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto.UpsertResponse) error {
+// Upsert will insert or update a record in a collection.
+func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
+	records, err := tools.DecodeUpsertRecords(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// If there are no records to upsert, return.
+	if len(records) == 0 {
+		return &proto.UpsertResponse{}, nil
+	}
+
 	models := []mongo.WriteModel{}
-	for _, record := range req.Records {
+	for _, record := range records {
 		doc := bson.D{}
 		if err := tools.AssingRecordBSONDocument(record, &doc); err != nil {
-			return err
+			return nil, err
 		}
 		models = append(models, mongo.NewUpdateOneModel().
 			SetFilter(doc).
@@ -177,15 +187,18 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest, rsp *proto
 
 	cs, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	coll := m.Database(cs.Database).Collection(req.Table)
 	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rsp.UpsertedCount = int32(bwr.UpsertedCount)
-	rsp.MatchedCount = int32(bwr.MatchedCount)
-	return nil
+
+	rsp := &proto.UpsertResponse{
+		MatchedCount:  bwr.MatchedCount,
+		UpsertedCount: bwr.UpsertedCount,
+	}
+	return rsp, nil
 }

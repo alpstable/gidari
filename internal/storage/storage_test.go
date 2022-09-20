@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -71,18 +72,21 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to start transaction: %v", err)
 			}
 
-			req := new(proto.UpsertRequest)
-			req.Table = "tests"
-
+			// Encode some JSON data to test with.
 			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			err = tools.MakeRecordsRequest(data, &req.Records)
+			b, err := json.Marshal(data)
 			if err != nil {
-				t.Fatalf("failed to make records request: %v", err)
+				t.Fatalf("failed to marshal data: %v", err)
 			}
 
-			var rsp proto.UpsertResponse
+			// Insert some data.
 			tx.Send(func(sctx context.Context, stg Storage) error {
-				return stg.Upsert(sctx, req, &rsp)
+				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+					Table:    "tests",
+					Data:     b,
+					DataType: int32(tools.UpsertDataJSON),
+				})
+				return err
 			})
 
 			if err := tx.Commit(); err != nil {
@@ -111,18 +115,21 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to start transaction: %v", err)
 			}
 
-			req := new(proto.UpsertRequest)
-			req.Table = "tests"
-
+			// Encode some JSON data to test with.
 			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			err = tools.MakeRecordsRequest(data, &req.Records)
+			b, err := json.Marshal(data)
 			if err != nil {
-				t.Fatalf("failed to make records request: %v", err)
+				t.Fatalf("failed to marshal data: %v", err)
 			}
 
-			var rsp proto.UpsertResponse
+			// Insert some data.
 			tx.Send(func(sctx context.Context, stg Storage) error {
-				return stg.Upsert(sctx, req, &rsp)
+				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+					Table:    "tests",
+					Data:     b,
+					DataType: int32(tools.UpsertDataJSON),
+				})
+				return err
 			})
 
 			if err := tx.Rollback(); err != nil {
@@ -150,9 +157,6 @@ func TestStartTx(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to start transaction: %v", err)
 			}
-
-			req := new(proto.UpsertRequest)
-			req.Table = "tests"
 
 			tx.Send(func(_ context.Context, _ Storage) error {
 				return fmt.Errorf("test error")
