@@ -55,6 +55,12 @@ message ReadResponse {
 	repeated google.protobuf.Struct  records = 1;
 }
 
-message TruncateTablesRequest {
+message TruncateRequest {
+	// Optional table name. Defaults to 'default'
 	repeated string tables = 1;
+}
+
+message TruncateResponse {
+	// Number of records deleted
+	int32 deletedCount = 1;
 }

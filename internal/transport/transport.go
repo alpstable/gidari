@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/alpine-hodler/gidari/internal/storage"
@@ -268,11 +269,12 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 					return err
 				}
 				rt := repo.Type()
+				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table)
 				logInfo := tools.LogFormatter{
 					WorkerID:      id,
 					WorkerName:    "repository",
 					Duration:      time.Since(start),
-					Msg:           fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), raw.Table),
+					Msg:           msg,
 					UpsertedCount: rsp.UpsertedCount,
 					MatchedCount:  rsp.MatchedCount,
 				}
@@ -353,6 +355,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
+	truncateRequest := new(proto.TruncateRequest)
 	for _, req := range cfg.Requests {
 		// Get is the implicit default method.
 		if req.Method == "" {
@@ -391,6 +394,30 @@ func Upsert(ctx context.Context, cfg *Config) error {
 				fetchConfig: fetchConfig,
 				table:       req.Table,
 			})
+		}
+
+		// Add the table to the list of tables to truncate.
+		if table := req.Table; table != nil {
+			truncateRequest.Tables = append(truncateRequest.Tables, *table)
+		}
+	}
+
+	// Truncate the tables before upserting data.
+	if cfg.Truncate {
+		for _, repo := range repos {
+			start := time.Now()
+			if _, err := repo.Truncate(ctx, truncateRequest); err != nil {
+				return fmt.Errorf("unable to truncate tables: %v", err)
+			}
+
+			rt := repo.Type()
+			tables := strings.Join(truncateRequest.Tables, ", ")
+			msg := fmt.Sprintf("truncated tables on %q: %v", storage.Scheme(rt), tables)
+			logInfo := tools.LogFormatter{
+				Duration: time.Since(start),
+				Msg:      msg,
+			}
+			cfg.Logger.Infof(logInfo.String())
 		}
 	}
 

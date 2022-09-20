@@ -15,6 +15,43 @@ type storageTestCase struct {
 	dns string
 }
 
+func TestTruncate(t *testing.T) {
+	testCases := []storageTestCase{
+		{context.Background(), "mongodb://mongo1:27017/coinbasepro"},
+		{context.Background(), "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("empty case: %s", tc.dns), func(t *testing.T) {
+			s, err := New(tc.ctx, tc.dns)
+			if err != nil {
+				t.Fatalf("failed to create storage: %v", err)
+			}
+			defer s.Close()
+
+			if _, err := s.Truncate(tc.ctx, &proto.TruncateRequest{}); err != nil {
+				t.Fatalf("failed to truncate storage: %v", err)
+			}
+		})
+		t.Run(tc.dns, func(t *testing.T) {
+			stg, err := New(tc.ctx, tc.dns)
+			if err != nil {
+				t.Fatalf("failed to create new storage service: %v", err)
+			}
+			defer stg.Close()
+
+			rsp, err := stg.Truncate(tc.ctx, &proto.TruncateRequest{Tables: []string{"tests"}})
+			if err != nil {
+				t.Fatalf("failed to truncate collection: %v", err)
+			}
+			if rsp == nil {
+				t.Fatalf("truncate response is nil")
+			}
+
+			// TODO use a read to make sure this actually worked.
+		})
+	}
+}
+
 func TestStartTx(t *testing.T) {
 	testCases := []storageTestCase{
 		{context.Background(), "mongodb://mongo1:27017/coinbasepro"},
@@ -27,6 +64,7 @@ func TestStartTx(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
+			defer stg.Close()
 
 			tx, err := stg.StartTx(tc.ctx)
 			if err != nil {
@@ -54,9 +92,9 @@ func TestStartTx(t *testing.T) {
 			// TODO: check if the data was actually inserted
 
 			// Truncate the test table
-			truncateReq := new(proto.TruncateTablesRequest)
+			truncateReq := new(proto.TruncateRequest)
 			truncateReq.Tables = []string{"tests"}
-			err = stg.TruncateTables(tc.ctx, truncateReq)
+			_, err = stg.Truncate(tc.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
@@ -66,6 +104,7 @@ func TestStartTx(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
+			defer stg.Close()
 
 			tx, err := stg.StartTx(tc.ctx)
 			if err != nil {
@@ -93,9 +132,9 @@ func TestStartTx(t *testing.T) {
 			// TODO: check if the data was actually inserted
 
 			// Truncate the test table
-			truncateReq := new(proto.TruncateTablesRequest)
+			truncateReq := new(proto.TruncateRequest)
 			truncateReq.Tables = []string{"tests"}
-			err = stg.TruncateTables(tc.ctx, truncateReq)
+			_, err = stg.Truncate(tc.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
@@ -105,6 +144,7 @@ func TestStartTx(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
+			defer stg.Close()
 
 			tx, err := stg.StartTx(tc.ctx)
 			if err != nil {

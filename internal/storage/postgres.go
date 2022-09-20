@@ -111,7 +111,9 @@ func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.R
 
 // Close will close the underlying database / transaction.
 func (pg *Postgres) Close() {
-	pg.Close()
+	if pg.DB != nil {
+		pg.DB.Close()
+	}
 }
 
 // ListColumns will set a complete list of available columns per table on the response.
@@ -119,7 +121,6 @@ func (pg *Postgres) ListColumns(ctx context.Context, rsp *proto.ListColumnsRespo
 	return pg.exec(ctx, pgColumns, func(r *sql.Rows) error {
 		return tools.AssignStructs(r, &rsp.Records)
 	})
-	return nil
 }
 
 // ListTables will set a complete list of available tables on the response.
@@ -127,7 +128,6 @@ func (pg *Postgres) ListTables(ctx context.Context, rsp *proto.ListTablesRespons
 	return pg.exec(ctx, pgTables, func(r *sql.Rows) error {
 		return tools.AssignStructs(r, &rsp.Records)
 	})
-	return nil
 }
 
 // Read read will attempt to assign a reader buidler based on the request, assinging the resuling rows to the response
@@ -162,18 +162,19 @@ func (pg *Postgres) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto
 	return nil
 }
 
-// TruncateTables will attempt to truncate all tables from the request.
-func (pg *Postgres) TruncateTables(ctx context.Context, req *proto.TruncateTablesRequest) error {
-	tables := req.GetTables()
-	if len(tables) == 0 {
-		return nil
+// Truncate will truncate a table.
+func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
+	// If the table is not specified, return an error.
+	if len(req.Tables) == 0 {
+		return &proto.TruncateResponse{}, nil
 	}
 
+	tables := req.GetTables()
+	if len(tables) == 0 {
+		return nil, errors.BadRequest("storage.postgres", "no tables provided")
+	}
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
-	return pg.exec(ctx, []byte(query), func(r *sql.Rows) error {
-		return nil
-	})
-	return nil
+	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
 }
 
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the

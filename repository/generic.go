@@ -81,3 +81,8 @@ func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) e
 		})
 	}
 }
+
+// Truncate truncates a table.
+func (svc *GenericService) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
+	return svc.Storage.Truncate(ctx, req)
+}
