@@ -20,6 +20,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var (
+	// ErrSettingTimeseriesChunks is returned when the timeseries is unable to set the chunks.
+	ErrSettingTimeseriesChunks = fmt.Errorf("error setting timeseries chunks")
+
+	// ErrFetchingTimeseriesChunks is returned when the timeseries is unable to fetch the chunks.
+	ErrFetchingTimeseriesChunks = fmt.Errorf("error fetching timeseries chunks")
+)
+
 // APIKey is one method of HTTP(s) transport that requires a passphrase, key, and secret.
 type APIKey struct {
 	Passphrase string `yaml:"passphrase"`
@@ -131,14 +139,11 @@ type RateLimitConfig struct {
 }
 
 func (rl RateLimitConfig) validate() error {
-	wrapper := func(field string) error {
-		return fmt.Errorf("%q is a required field on transport.RateLimitConfig", field)
-	}
 	if rl.Burst == nil {
-		return wrapper("Burst")
+		return fmt.Errorf("rate limit burst is required")
 	}
 	if rl.Period == nil {
-		return wrapper("Period")
+		return fmt.Errorf("rate limit period is required")
 	}
 	return nil
 }
@@ -199,12 +204,11 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 
 // validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) validate() error {
-	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on transport.Config", field) }
 	if cfg.RateLimitConfig == nil {
-		return wrapper("RateLimitConfig")
+		return fmt.Errorf("rate limit config is required")
 	}
 	if err := cfg.RateLimitConfig.validate(); err != nil {
-		return err
+		return fmt.Errorf("rate limit config is invalid: %w", err)
 	}
 	return nil
 }
@@ -379,7 +383,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			xurl := fetchConfig.URL
 			err = timeseries.setChunks(xurl)
 			if err != nil {
-				return fmt.Errorf("error getting timeseries chunks: %v", timeseries.chunks)
+				return ErrSettingTimeseriesChunks
 			}
 			for _, chunk := range timeseries.chunks {
 				// copy the request and update it to reflect the partitioned timeseries
@@ -389,7 +393,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client, rateLimiter)
 				if err != nil {
-					return err
+					return ErrFetchingTimeseriesChunks
 				}
 				flattenedRequests = append(flattenedRequests, &flattenedRequest{
 					fetchConfig: chunkedFetchConfig,

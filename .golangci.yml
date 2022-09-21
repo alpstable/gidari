@@ -1,4 +1,18 @@
 linters:
   enable-all: true
   disable:
+    # exhaustivestruct will enforce that every field of an imported struct is set. This is overkill, we can rely on
+    # implicitly set data.
+    - exhaustivestruct
+
+    # nosnakecase will prevent a user from defining functionality with snake case. This is good, in general, but some
+    # native go functionality requires this, such as test examples.
+    - nosnakecase
+
+    # tagliatelle enforces camel case for json tags. We can't control how web APIs setup their json responses so this
+    # is not practical.
+    - tagliatelle
+
+    # testpackage requires that all tests be written in their own package. I.e. if you're testing in package "a", this
+    # linter wants the tests to be written in "a_test". This doesn't work for unit testing unexported data, however.
     - testpackage

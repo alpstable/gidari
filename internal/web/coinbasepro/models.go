@@ -1,6 +1,9 @@
 package coinbasepro
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Candle represents the historic rate for a product at a point in time.
 type Candle struct {
@@ -35,7 +38,7 @@ type Candles []*Candle
 func (candles *Candles) UnmarshalJSON(bytes []byte) error {
 	var raw [][]float64
 	if err := json.Unmarshal(bytes, &raw); err != nil {
-		return err
+		return fmt.Errorf("error unmarshaling candles: %w", err)
 	}
 	for _, r := range raw {
 		candle := new(Candle)

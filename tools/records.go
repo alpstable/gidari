@@ -133,7 +133,7 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 			case []byte:
 				// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse
 				// these values into strings.
-				f, err := strconv.ParseFloat(string((*val).([]byte)), 64)
+				f, err := strconv.ParseFloat(string((*val).([]byte)), strconv.IntSize)
 				if err != nil {
 					return fmt.Errorf("unable to parse float64 from []byte: %v", err)
 				}

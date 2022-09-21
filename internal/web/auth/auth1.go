@@ -155,20 +155,20 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 	}
 	if req.Body != nil && req.Header.Get(contentType) == formContentType {
 		// reads data to a []byte, draining req.Body
-		b, err := io.ReadAll(req.Body)
+		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error reading request body: %v", err)
 		}
-		values, err := url.ParseQuery(string(b))
+		values, err := url.ParseQuery(string(bodyBytes))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing request body: %v", err)
 		}
 		for key, value := range values {
 			// not supporting params with duplicate keys
 			params[key] = value[0]
 		}
 		// reinitialize Body with ReadCloser over the []byte
-		req.Body = io.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 	for key, value := range oauthParams {
 		params[key] = value

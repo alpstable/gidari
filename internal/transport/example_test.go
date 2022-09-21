@@ -11,8 +11,7 @@ import (
 type CustomRepositoryEncoder struct{}
 
 func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) (*proto.UpsertRequest, error) {
-	// Do something with the request and data to create a repository.Raw object.
-	return nil, nil
+	return new(proto.UpsertRequest), nil
 }
 
 func ExampleRepositoryEncoderRegistry() {

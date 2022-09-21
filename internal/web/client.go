@@ -23,12 +23,12 @@ func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) 
 }
 
 // newHTTPRequest will return a new request.  If the options are set, this function will encode a body if possible.
-func newHTTPRequest(method string, u *url.URL) (*http.Request, error) {
-	return http.NewRequest(method, u.String(), nil)
+func newHTTPRequest(ctx context.Context, method string, u *url.URL) (*http.Request, error) {
+	return http.NewRequestWithContext(ctx, method, u.String(), nil)
 }
 
-// parseErrorMessage takes a response and a status and builder an error message to send to the server.
-func parseErrorMessage(resp *http.Response) error {
+// ResponseError takes a response and a status and builder an error message to send to the server.
+func ResponseError(resp *http.Response) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -37,9 +37,9 @@ func parseErrorMessage(resp *http.Response) error {
 }
 
 // validateResponse is a switch condition that parses an error response
-func validateResponse(res *http.Response) (err error) {
+func validateResponse(res *http.Response) error {
 	if res == nil {
-		err = fmt.Errorf("no response, check request and env file")
+		return fmt.Errorf("no response, check request and env file")
 	} else {
 		switch res.StatusCode {
 		case
@@ -49,10 +49,10 @@ func validateResponse(res *http.Response) (err error) {
 			http.StatusNotFound,
 			http.StatusTooManyRequests,
 			http.StatusForbidden:
-			err = parseErrorMessage(res)
+			return ResponseError(res)
 		}
 	}
-	return
+	return nil
 }
 
 type FetchConfig struct {
@@ -104,17 +104,17 @@ func newFetchResponse(req *http.Request, body io.ReadCloser) *FetchResponse {
 // Fetch will make an HTTP request using the underlying client and endpoint.
 func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	if err := cfg.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	// If the rate limiter is not set, set it with defaults.
 	if err := ratelimiter.Wait(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rate limiter error: %w", err)
 	}
 
-	req, err := newHTTPRequest(cfg.Method, cfg.URL)
+	req, err := newHTTPRequest(ctx, cfg.Method, cfg.URL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	if err != nil {
@@ -128,7 +128,7 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 
 	if err := validateResponse(rsp); err != nil {
 		rsp.Body.Close()
-		return nil, err
+		return nil, fmt.Errorf("error validating response: %w", err)
 	}
 
 	return newFetchResponse(req, rsp.Body), nil

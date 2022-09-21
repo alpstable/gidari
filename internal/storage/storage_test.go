@@ -17,12 +17,13 @@ type storageTestCase struct {
 }
 
 func TestTruncate(t *testing.T) {
-	testCases := []storageTestCase{
+	t.Parallel()
+	for _, tcase := range []storageTestCase{
 		{context.Background(), "mongodb://mongo1:27017/coinbasepro"},
 		{context.Background(), "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	}
-	for _, tcase := range testCases {
+	} {
 		t.Run(fmt.Sprintf("empty case: %s", tcase.dns), func(t *testing.T) {
+			t.Parallel()
 			s, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create storage: %v", err)
@@ -34,6 +35,7 @@ func TestTruncate(t *testing.T) {
 			}
 		})
 		t.Run(tcase.dns, func(t *testing.T) {
+			t.Parallel()
 			stg, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create new storage service: %v", err)
@@ -54,27 +56,27 @@ func TestTruncate(t *testing.T) {
 }
 
 func TestStartTx(t *testing.T) {
-	testCases := []storageTestCase{
+	t.Parallel()
+	for _, tcase := range []storageTestCase{
 		{context.Background(), "mongodb://mongo1:27017/coinbasepro"},
 		{context.Background(), "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("tx should commit %s", tc.dns), func(t *testing.T) {
-			stg, err := New(tc.ctx, tc.dns)
+	} {
+		t.Run(fmt.Sprintf("tx should commit %s", tcase.dns), func(t *testing.T) {
+			t.Parallel()
+			stg, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
 			defer stg.Close()
 
-			tx, err := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tcase.ctx)
 			if err != nil {
 				t.Fatalf("failed to start transaction: %v", err)
 			}
 
 			// Encode some JSON data to test with.
 			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			b, err := json.Marshal(data)
+			bytes, err := json.Marshal(data)
 			if err != nil {
 				t.Fatalf("failed to marshal data: %v", err)
 			}
@@ -83,7 +85,7 @@ func TestStartTx(t *testing.T) {
 			tx.Send(func(sctx context.Context, stg Storage) error {
 				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
 					Table:    "tests",
-					Data:     b,
+					Data:     bytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
 				return err
@@ -98,26 +100,27 @@ func TestStartTx(t *testing.T) {
 			// Truncate the test table
 			truncateReq := new(proto.TruncateRequest)
 			truncateReq.Tables = []string{"tests"}
-			_, err = stg.Truncate(tc.ctx, truncateReq)
+			_, err = stg.Truncate(tcase.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
 		})
-		t.Run(fmt.Sprintf("tx should rollback %s", tc.dns), func(t *testing.T) {
-			stg, err := New(tc.ctx, tc.dns)
+		t.Run(fmt.Sprintf("tx should rollback %s", tcase.dns), func(t *testing.T) {
+			t.Parallel()
+			stg, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
 			defer stg.Close()
 
-			tx, err := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tcase.ctx)
 			if err != nil {
 				t.Fatalf("failed to start transaction: %v", err)
 			}
 
 			// Encode some JSON data to test with.
 			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			b, err := json.Marshal(data)
+			dataBytes, err := json.Marshal(data)
 			if err != nil {
 				t.Fatalf("failed to marshal data: %v", err)
 			}
@@ -126,7 +129,7 @@ func TestStartTx(t *testing.T) {
 			tx.Send(func(sctx context.Context, stg Storage) error {
 				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
 					Table:    "tests",
-					Data:     b,
+					Data:     dataBytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
 				return err
@@ -141,19 +144,20 @@ func TestStartTx(t *testing.T) {
 			// Truncate the test table
 			truncateReq := new(proto.TruncateRequest)
 			truncateReq.Tables = []string{"tests"}
-			_, err = stg.Truncate(tc.ctx, truncateReq)
+			_, err = stg.Truncate(tcase.ctx, truncateReq)
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
 		})
-		t.Run(fmt.Sprintf("tx should rollback on error %s", tc.dns), func(t *testing.T) {
-			stg, err := New(tc.ctx, tc.dns)
+		t.Run(fmt.Sprintf("tx should rollback on error %s", tcase.dns), func(t *testing.T) {
+			t.Parallel()
+			stg, err := New(tcase.ctx, tcase.dns)
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
 			defer stg.Close()
 
-			tx, err := stg.StartTx(tc.ctx)
+			tx, err := stg.StartTx(tcase.ctx)
 			if err != nil {
 				t.Fatalf("failed to start transaction: %v", err)
 			}

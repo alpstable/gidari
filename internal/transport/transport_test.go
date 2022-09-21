@@ -15,6 +15,8 @@ import (
 
 func TestTimeseries(t *testing.T) {
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
+		t.Parallel()
+
 		ts := &timeseries{
 			StartName: "start",
 			EndName:   "end",
@@ -64,6 +66,8 @@ func TestTimeseries(t *testing.T) {
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
+		t.Parallel()
+
 		ts := &timeseries{
 			StartName: "start",
 			EndName:   "end",
@@ -113,6 +117,7 @@ func TestTimeseries(t *testing.T) {
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
+		t.Parallel()
 		ts := &timeseries{
 			StartName: "start",
 			EndName:   "end",
@@ -167,6 +172,8 @@ func TestTimeseries(t *testing.T) {
 }
 
 func TestUpsert(t *testing.T) {
+	t.Parallel()
+
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
 	fixtures, err := os.ReadDir(fixtureRoot)
@@ -175,6 +182,8 @@ func TestUpsert(t *testing.T) {
 	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name(), func(t *testing.T) {
+			t.Parallel()
+
 			path := filepath.Join(fixtureRoot, fixture.Name())
 
 			bytes, err := os.ReadFile(path)

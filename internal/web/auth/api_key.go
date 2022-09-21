@@ -61,13 +61,13 @@ func (auth *APIKey) SetURL(u string) *APIKey {
 func (auth *APIKey) generateSig(message string) (string, error) {
 	key, err := base64.StdEncoding.DecodeString(auth.secret)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error decoding secret: %w", err)
 	}
 
 	signature := hmac.New(sha256.New, key)
 	_, err = signature.Write([]byte(message))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error writing signature: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
@@ -118,5 +118,9 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("cb-access-sign", sig)
 	req.Header.Add("cb-access-timestamp", timestamp)
 
-	return http.DefaultTransport.RoundTrip(req)
+	rsp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	return rsp, nil
 }

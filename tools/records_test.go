@@ -13,7 +13,10 @@ type testCase struct {
 }
 
 func TestAssignReadResponseRecords(t *testing.T) {
+	t.Parallel()
+
 	t.Run("assign slice", func(t *testing.T) {
+		t.Parallel()
 		rsp := new(proto.ReadResponse)
 
 		r1, err := structpb.NewStruct(map[string]interface{}{"int": 1})
@@ -46,13 +49,15 @@ func TestAssignReadResponseRecords(t *testing.T) {
 		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, r)
 	}
 	t.Run("assign slice benchmark", func(t *testing.T) {
-		tc := []*testCase{}
-		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tc)
+		t.Parallel()
+
+		tcase := []*testCase{}
+		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tcase)
 		if err != nil {
 			t.Fatalf("failed to assign records: %v", err)
 		}
-		if !reflect.DeepEqual(tc, assignSliceBenchmarkExpected) {
-			t.Fatalf("expected %v, got %v", assignSliceBenchmarkExpected, tc)
+		if !reflect.DeepEqual(tcase, assignSliceBenchmarkExpected) {
+			t.Fatalf("expected %v, got %v", assignSliceBenchmarkExpected, tcase)
 		}
 	})
 }

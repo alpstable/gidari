@@ -6,18 +6,32 @@ import (
 	"os"
 
 	"github.com/alpine-hodler/gidari/internal/transport"
+	"github.com/alpine-hodler/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
+
+	_ "embed" // Embed external data.
 )
+
+//go:embed bash-completion.sh
+var bashCompletion string
 
 func main() {
 	var configFilepath string
 	var verbose bool
 
 	cmd := &cobra.Command{
-		Use:   "gidari",
-		Short: "gidari is an ETL executable for storing web data for analysis",
+		Long: "Gidari is a tool for querying web APIs and persisting resultant data onto local storage\n" +
+			"using a configuration file.",
+
+		Use:                    "gidari",
+		Short:                  "Persisted data from the web to your database",
+		Example:                "gidari -c config.yaml -v",
+		BashCompletionFunction: bashCompletion,
+		Deprecated:             "",
+		Version:                version.Gidari,
+
 		Run: func(_ *cobra.Command, _ []string) {
 			ctx := context.Background()
 

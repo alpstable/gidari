@@ -15,6 +15,10 @@ import (
 	_ "github.com/lib/pq" // postgres driver
 )
 
+const (
+	postgresPartitionSize = 1000
+)
+
 // postgresTxType is a type alias for the postgres transaction type.
 type postgresTxType uint8
 
@@ -233,7 +237,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 	recordSize := len(sample.Fields)
 
 	// Upsert 1000 records at a time.
-	for _, partition := range tools.PartitionStructs(1000, records) {
+	for _, partition := range tools.PartitionStructs(postgresPartitionSize, records) {
 		volume := len(partition)
 		placeholders := make([]string, 0, volume)
 		arguments := make([]interface{}, 0, recordSize*volume)
@@ -361,47 +365,47 @@ func (pg *Postgres) setMaxOpenConns() {
 // to commit or rollback the transaction.
 func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a gidari storage transaction.
-	tx := &tx{
+	txn := &tx{
 		make(chan TXChanFn),
 		make(chan error, 1),
 		make(chan bool, 1),
 	}
 
 	// Instantiate a new transaction on the Postgres connection and store it in the activeTx map.
-	id := uuid.New().String()
+	txnID := uuid.New().String()
 	pgtx, err := pg.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return tx, fmt.Errorf("failed to start transaction: %w", err)
+		return txn, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	pg.activeTx.Store(id, pgtx)
+	pg.activeTx.Store(txnID, pgtx)
 
 	// Add the transaction ID to the context.
-	pgCtx := context.WithValue(ctx, basicPostgressTxID, id)
+	pgCtx := context.WithValue(ctx, basicPostgressTxID, txnID)
 
 	go func() {
 		defer func() {
 			// Remove the transaction from the activeTx map.
-			pg.activeTx.Delete(id)
+			pg.activeTx.Delete(txnID)
 		}()
 
-		for fn := range tx.ch {
+		for fn := range txn.ch {
 			if err != nil {
 				continue
 			}
 			err = fn(pgCtx, pg)
 		}
 		if err != nil {
-			tx.done <- err
+			txn.done <- err
 			return
 		}
 
 		// Await the decision to commit or rollback.
 		select {
-		case <-tx.commit:
-			tx.done <- pgtx.Commit()
+		case <-txn.commit:
+			txn.done <- pgtx.Commit()
 		default:
-			tx.done <- pgtx.Rollback()
+			txn.done <- pgtx.Rollback()
 		}
 	}()
-	return tx, nil
+	return txn, nil
 }

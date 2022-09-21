@@ -7,8 +7,12 @@ import (
 )
 
 func TestURLHelpers(t *testing.T) {
+	t.Parallel()
 	t.Run("ParseDBTableFromURL", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("should return the table name from the request", func(t *testing.T) {
+			t.Parallel()
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
 			table, err := ParseDBTableFromURL(req)
@@ -21,6 +25,7 @@ func TestURLHelpers(t *testing.T) {
 		})
 
 		t.Run("should return an error when the table name is not present", func(t *testing.T) {
+			t.Parallel()
 			u, _ := url.Parse("http://test")
 			req := http.Request{URL: u}
 			_, err := ParseDBTableFromURL(req)
@@ -31,6 +36,7 @@ func TestURLHelpers(t *testing.T) {
 	})
 
 	t.Run("SplitURLPath", func(t *testing.T) {
+		t.Parallel()
 		t.Run("should return the parts of the endpoint", func(t *testing.T) {
 			u, _ := url.Parse("http://test.com/v1/tables/test")
 			req := http.Request{URL: u}
@@ -47,6 +53,7 @@ func TestURLHelpers(t *testing.T) {
 		})
 
 		t.Run("should return an empty slice when the endpoint is not present", func(t *testing.T) {
+			t.Parallel()
 			u, _ := url.Parse("http://test")
 			req := http.Request{URL: u}
 			parts := SplitURLPath(req)

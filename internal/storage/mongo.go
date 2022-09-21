@@ -152,13 +152,13 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 		return &proto.TruncateResponse{}, nil
 	}
 
-	cs, err := connstring.ParseAndValidate(m.dns)
+	connString, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse connstring: %v", err)
 	}
 
 	for _, collection := range req.GetTables() {
-		coll := m.Client.Database(cs.Database).Collection(collection)
+		coll := m.Client.Database(connString.Database).Collection(collection)
 		_, err = coll.DeleteMany(ctx, bson.M{})
 		if err != nil {
 			return nil, fmt.Errorf("error truncating collection %s: %v", collection, err)
