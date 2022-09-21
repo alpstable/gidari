@@ -37,7 +37,6 @@ func TestExamples(t *testing.T) {
 				ExampleGenericService_Upsert()
 			})
 	}
-
 }
 
 func ExampleGenericService_Upsert() {

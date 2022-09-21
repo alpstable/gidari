@@ -59,7 +59,10 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 
 		pg.meta = make(map[string]*pgmeta)
 		for _, record := range columns.Records {
-			table := record.AsMap()["table_name"].(string)
+			table, ok := record.AsMap()["table_name"].(string)
+			if !ok {
+				return nil, fmt.Errorf("error getting postgres metadata: %v", err)
+			}
 
 			// Initialize the table pgmeta if it does not exist.
 			if pg.meta[table] == nil {
@@ -68,7 +71,10 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 
 			// Add PK and general column data to the pgmeta table object.
 			meta := pg.meta[table]
-			columnName := record.AsMap()["column_name"].(string)
+			columnName, okCol := record.AsMap()["column_name"].(string)
+			if !okCol {
+				return nil, fmt.Errorf("error getting postgres metadata: column_name is not a string")
+			}
 			if record.AsMap()["primary_key"].(float64) == 1.0 {
 				meta.addPK(columnName)
 			}
@@ -151,32 +157,6 @@ func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, 
 // Read read will attempt to assign a reader buidler based on the request, assinging the resuling rows to the response
 // in-memory.
 func (pg *Postgres) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	// bldr, err := query.GetReadBuilder(query.ReadBuilderType(req.ReaderBuilder[0]))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// query, err := bldr.ReaderQuery(query.PostgresStorage)
-	// if err != nil {
-	// 	return err
-	// }
-	// stmt, err := pg.PrepareContext(ctx, string(query))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// args, err := bldr.ReaderArgs(req)
-	// if err != nil {
-	// 	return err
-	// }
-	// rows, err := stmt.QueryContext(ctx, args...)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if err := tools.AssignStructs(rows, &rsp.Records); err != nil {
-	// 	return err
-	// }
 	return nil
 }
 
@@ -265,7 +245,11 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		// If the context has a transaction ID set get it and then lookup the transaction from the activxTx map.
 		if txID, ok := ctx.Value(basicPostgressTxID).(string); ok {
 			if probablyTX, ok := pg.activeTx.Load(txID); ok {
-				tx := probablyTX.(*sql.Tx)
+				tx, ok := probablyTX.(*sql.Tx)
+				if !ok {
+					return nil, fmt.Errorf("unable to cast transaction to *sql.Tx")
+				}
+
 				stmt, err = tx.PrepareContext(ctx, query)
 				if err != nil {
 					return nil, fmt.Errorf("unable to prepare statement: %v", err)
@@ -323,7 +307,6 @@ func (pg *Postgres) Type() uint8 { return PostgresType }
 // pgMaxConnectionsUpperLimit will return the most ideal upper limit for the maximum number of connections for a
 // Postgres DB. https://tinyurl.com/57kyjtwd
 func (pg *Postgres) setMaxOpenConns() {
-
 	// num_cores is the number of cores available
 	numCores := runtime.NumCPU()
 

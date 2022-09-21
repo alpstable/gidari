@@ -37,6 +37,9 @@ func main() {
 
 		Run: func(_ *cobra.Command, _ []string) {
 			ctx := context.Background()
+			if err := transport.RegisterCustomEncoders(); err != nil {
+				log.Fatalf("error registering custom encoders: %v", err)
+			}
 
 			bytes, err := os.ReadFile(configFilepath)
 			if err != nil {

@@ -9,6 +9,8 @@ linters:
     # TODO these need to be removed with refactors
     - ireturn # Issue #72
     - gochecknoglobals # Issue #71
+    - goerr113 # Issue #73
+    - cyclop # Issue #74
 
     # nosnakecase will prevent a user from defining functionality with snake case. This is good, in general, but some
     # native go functionality requires this, such as test examples.

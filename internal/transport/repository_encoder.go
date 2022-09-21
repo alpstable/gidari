@@ -9,7 +9,6 @@ import (
 	"github.com/alpine-hodler/gidari/internal/web/coinbasepro"
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrRepositoryEncoderExists indicates that an encoder has already been registered for the given url and table.
@@ -68,18 +67,20 @@ func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
 // in the init function, and (3) allow for the possibility of having multiple registries.
 var RepositoryEncoders = make(RepositoryEncoderRegistry)
 
-func init() {
+// RegisterCustomEncoders will register custom encoder specific to the default project.
+func RegisterCustomEncoders() error {
 	// Register the default case
 	uri, _ := url.Parse("")
 	if err := RepositoryEncoders.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
-		logrus.Fatalf("error registering default encoder: %v", err)
+		return err
 	}
 
 	// Register the CoinbasePro Sandbox Candles case
 	uri, _ = url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
 	if err := RepositoryEncoders.Register(uri, new(CBPSandboxEncoder)); err != nil {
-		logrus.Fatalf("error registering Coinbase Pro Sandbox Candles encoder: %v", err)
+		return err
 	}
+	return nil
 }
 
 // DefaultRepositoryEncoder is the encoder used when no other encoder can be found for the registry. It will assume
@@ -98,7 +99,6 @@ func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) (*pr
 		Data:     bytes,
 		DataType: int32(tools.UpsertDataJSON),
 	}, nil
-
 }
 
 // CBPSandboxEncoder is the encoder used to transform data from Coinbase Pro Sandbox web requests into bytes that
@@ -113,11 +113,12 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		return nil, fmt.Errorf("error getting table from request: %v", err)
 	}
 
+	const candleMinutesGranularity = "60"
+
 	switch table {
 	case "candles":
 		granularity := req.URL.Query()["granularity"][0]
-		switch granularity {
-		case "60":
+		if granularity == candleMinutesGranularity {
 			table = "candle_minutes"
 		}
 

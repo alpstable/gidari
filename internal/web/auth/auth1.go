@@ -117,10 +117,7 @@ func (auth *Auth1) setRequestAuthHeader(req *http.Request) error {
 		return err
 	}
 	signatureBase := signatureBase(req, params)
-	signature, err := hmacSign(auth.consumerSecret, auth.accessTokenSecret, signatureBase, sha1.New)
-	if err != nil {
-		return err
-	}
+	signature := hmacSign(auth.consumerSecret, auth.accessTokenSecret, signatureBase, sha1.New)
 	oauthParams[oauthSignatureParam] = signature
 	req.Header.Set(authorizationHeaderParam, authHeaderValue(oauthParams))
 	return nil
@@ -165,11 +162,11 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 		// reads data to a []byte, draining req.Body
 		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
-			return nil, fmt.Errorf("error reading request body: %v", err)
+			return nil, fmt.Errorf("error reading request body: %w", err)
 		}
 		values, err := url.ParseQuery(string(bodyBytes))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing request body: %v", err)
+			return nil, fmt.Errorf("error parsing request body: %w", err)
 		}
 		for key, value := range values {
 			// not supporting params with duplicate keys
@@ -184,12 +181,12 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 	return params, nil
 }
 
-func hmacSign(consumerSecret, tokenSecret, message string, algo func() hash.Hash) (string, error) {
+func hmacSign(consumerSecret, tokenSecret, message string, algo func() hash.Hash) string {
 	signingKey := strings.Join([]string{consumerSecret, tokenSecret}, "&")
 	mac := hmac.New(algo, []byte(signingKey))
 	mac.Write([]byte(message))
 	signatureBytes := mac.Sum(nil)
-	return base64.StdEncoding.EncodeToString(signatureBytes), nil
+	return base64.StdEncoding.EncodeToString(signatureBytes)
 }
 
 // nonce provides a random nonce string.
@@ -208,6 +205,7 @@ func shouldEscape(c byte) bool {
 	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
 		return false
 	}
+
 	switch c {
 	case '-', '.', '_', '~':
 		return false

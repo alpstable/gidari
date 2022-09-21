@@ -77,7 +77,11 @@ func AssignReadResponseRecords(rsp *proto.ReadResponse, dest interface{}) error 
 			result.Index(idx).Set(reflect.ValueOf(model))
 		}
 		reflect.ValueOf(dest).Elem().Set(result)
-	default:
+	case reflect.Array, reflect.Bool, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Float32,
+		reflect.Float64, reflect.Func, reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
+		reflect.Interface, reflect.Invalid, reflect.Map, reflect.Pointer, reflect.String, reflect.Struct,
+		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8, reflect.Uintptr,
+		reflect.UnsafePointer:
 		return fmt.Errorf("assign read response does not support type %T", elem)
 	}
 	return nil
@@ -128,7 +132,10 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 		// storing it in the map with the name of the column as the key.
 		colVal := make(map[string]interface{})
 		for i, colName := range cols {
-			val := columnPointers[i].(*interface{})
+			val, ok := columnPointers[i].(*interface{})
+			if !ok {
+				return fmt.Errorf("failed to assert interface")
+			}
 			switch (*val).(type) {
 			case []byte:
 				// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse
@@ -143,7 +150,11 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 		}
 
 		// Encoded the data and append it to the response tables.
-		encodedData, _ := json.Marshal(colVal)
+		encodedData, err := json.Marshal(colVal)
+		if err != nil {
+			return fmt.Errorf("failed to marshal json: %v", err)
+		}
+
 		pbstruct := &structpb.Struct{}
 		if err = pbstruct.UnmarshalJSON(encodedData); err != nil {
 			return fmt.Errorf("failed to unmarshal json: %v", err)
@@ -171,9 +182,13 @@ func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 
 	records := make([]*structpb.Struct, 0)
 	for _, r := range out {
-		record, _ := json.Marshal(r)
+		record, err := json.Marshal(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal json: %v", err)
+		}
+
 		rec := new(structpb.Struct)
-		err := rec.UnmarshalJSON(record)
+		err = rec.UnmarshalJSON(record)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal json: %v", err)
 		}

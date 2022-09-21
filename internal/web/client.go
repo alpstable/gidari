@@ -63,8 +63,8 @@ func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) 
 }
 
 // newHTTPRequest will return a new request.  If the options are set, this function will encode a body if possible.
-func newHTTPRequest(ctx context.Context, method string, u *url.URL) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
+func newHTTPRequest(ctx context.Context, method string, uri fmt.Stringer) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, uri.String(), nil)
 	if err != nil {
 		return nil, CreateRequestError(err)
 	}
@@ -146,12 +146,12 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("rate limiter timeout: %v", err)
+		return nil, fmt.Errorf("rate limiter timeout: %w", err)
 	}
 
 	rsp, err := cfg.C.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %v", err)
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
 	if err := validateResponse(rsp); err != nil {

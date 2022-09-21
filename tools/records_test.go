@@ -40,6 +40,7 @@ func TestAssignReadResponseRecords(t *testing.T) {
 
 	assignSliceBenchmarkResponse := new(proto.ReadResponse)
 	assignSliceBenchmarkExpected := []*testCase{}
+
 	for i := 1; i <= 1e6; i++ {
 		r, err := structpb.NewStruct(map[string]interface{}{"int": i})
 		if err != nil {

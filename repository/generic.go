@@ -55,7 +55,6 @@ func NewTx(ctx context.Context, dns string) (Generic, error) {
 		return nil, fmt.Errorf("failed to start transaction: %v", err)
 	}
 	return &GenericService{stg, tx}, nil
-
 }
 
 // Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If

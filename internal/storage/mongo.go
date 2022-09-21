@@ -24,7 +24,7 @@ type Mongo struct {
 // Mongo://username:password@host:port
 func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
-	client, err := mongo.Connect(context.TODO(), clientOptions)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to mongo: %v", err)
 	}
@@ -96,52 +96,6 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 }
 
 func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	// bldr, err := query.GetReadBuilder(query.ReadBuilderType(req.ReaderBuilder[0]))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// args, err := bldr.ReaderArgs(req)
-	// if err != nil {
-	// 	return err
-	// }
-	// filterbytes, err := bldr.ReaderQuery(query.MongoStorage, args...)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// var outputBuffer bytes.Buffer
-	// outputBuffer.Write(filterbytes)
-
-	// q := query.Mongo{}
-	// if err = gob.NewDecoder(&outputBuffer).Decode(&q); err != nil {
-	// 	return err
-	// }
-
-	// cs, err := connstring.ParseAndValidate(m.dns)
-	// if err != nil {
-	// 	return nil
-	// }
-
-	// coll := m.Database(cs.Database).Collection(q.Collection)
-	// cursor, err := coll.Find(ctx, q.D)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for cursor.Next(ctx) {
-	// 	m := make(map[string]interface{})
-	// 	err := cursor.Decode(&m)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	delete(m, "_id")
-	// 	record, err := structpb.NewStruct(m)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	rsp.Records = append(rsp.Records, record)
-	// }
 	return nil
 }
 

@@ -207,7 +207,7 @@ type Config struct {
 }
 
 // connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
-// authentication data, this method will exhuast every transport option in the "Authentication" struct.
+// authentication data, this method will exhaust every transport option in the "Authentication" struct.
 func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	if apiKey := cfg.Authentication.APIKey; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAPIKey().
@@ -305,7 +305,7 @@ type repoConfig struct {
 	truncate bool
 }
 
-func repositoryWorker(_ context.Context, id int, cfg *repoConfig) {
+func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
 		req, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
@@ -328,7 +328,7 @@ func repositoryWorker(_ context.Context, id int, cfg *repoConfig) {
 				rt := repo.Type()
 				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
 				logInfo := tools.LogFormatter{
-					WorkerID:      id,
+					WorkerID:      workerID,
 					WorkerName:    "repository",
 					Duration:      time.Since(start),
 					Msg:           msg,
