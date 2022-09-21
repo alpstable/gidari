@@ -119,6 +119,7 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 		// and a second slice to contain pointers to each item in the columns slice.
 		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
+
 		for i := range columns {
 			columnPointers[i] = &columns[i]
 		}
@@ -159,6 +160,7 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 		if err = pbstruct.UnmarshalJSON(encodedData); err != nil {
 			return fmt.Errorf("failed to unmarshal json: %v", err)
 		}
+
 		*val = append(*val, pbstruct)
 	}
 
@@ -168,15 +170,21 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 // decodeRecords will parse a slice of data into a records slice.
 func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 	var out []interface{}
-	rv := reflect.ValueOf(data)
-	switch rv.Kind() {
+
+	dataValue := reflect.ValueOf(data)
+	switch dataValue.Kind() {
 	case reflect.Slice:
-		for i := 0; i < rv.Len(); i++ {
-			out = append(out, rv.Index(i).Interface())
+		for i := 0; i < dataValue.Len(); i++ {
+			out = append(out, dataValue.Index(i).Interface())
 		}
 	case reflect.Map:
-		out = append(out, rv.Interface())
-	default:
+		out = append(out, dataValue.Interface())
+
+	case reflect.Array, reflect.Bool, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Float32,
+		reflect.Float64, reflect.Func, reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
+		reflect.Interface, reflect.Invalid, reflect.Pointer, reflect.String, reflect.Struct,
+		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8, reflect.Uintptr,
+		reflect.UnsafePointer:
 		return nil, fmt.Errorf("unsupported type %T", data)
 	}
 
@@ -192,6 +200,7 @@ func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal json: %v", err)
 		}
+
 		records = append(records, rec)
 	}
 	return records, nil
@@ -227,11 +236,13 @@ func DecodeUpsertRecords(req *proto.UpsertRequest) ([]*structpb.Struct, error) {
 // comply with insert requirements.
 func PartitionStructs(size int, slice []*structpb.Struct) [][]*structpb.Struct {
 	var chunks [][]*structpb.Struct
+
 	for len(slice) > 0 {
 		if len(slice) < size {
 			size = len(slice)
 		}
 		chunks = append(chunks, slice[0:size])
+
 		slice = slice[size:]
 	}
 	return chunks

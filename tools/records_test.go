@@ -41,13 +41,15 @@ func TestAssignReadResponseRecords(t *testing.T) {
 	assignSliceBenchmarkResponse := new(proto.ReadResponse)
 	assignSliceBenchmarkExpected := []*testCase{}
 
-	for i := 1; i <= 1e6; i++ {
-		r, err := structpb.NewStruct(map[string]interface{}{"int": i})
+	for recInt := 1; recInt <= 1e6; recInt++ {
+		record, err := structpb.NewStruct(map[string]interface{}{"int": recInt})
 		if err != nil {
 			t.Fatalf("failed to create struct: %v", err)
 		}
-		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testCase{Int: i})
-		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, r)
+
+		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testCase{Int: recInt})
+
+		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, record)
 	}
 	t.Run("assign slice benchmark", func(t *testing.T) {
 		t.Parallel()

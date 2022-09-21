@@ -13,7 +13,7 @@ const (
 	oauthSignatureParam         = "oauth_signature"
 	oauthSignatureMethodParam   = "oauth_signature_method"
 	oauthTimestampParam         = "oauth_timestamp"
-	oauthTokenParam             = "oauth_token"
+	oautTParam                  = "oauth_token"
 	oauthVersionParam           = "oauth_version"
 	oauthVersion1               = "1.0"
 )

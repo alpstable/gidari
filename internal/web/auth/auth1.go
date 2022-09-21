@@ -111,7 +111,7 @@ func (auth *Auth1) setRequestAuthHeader(req *http.Request) error {
 		oauthNonceParam:           nonce(),
 		oauthVersionParam:         oauthVersion1,
 	}
-	oauthParams[oauthTokenParam] = auth.accessToken
+	oauthParams[oautTParam] = auth.accessToken
 	params, err := collectParameters(req, oauthParams)
 	if err != nil {
 		return err
@@ -200,13 +200,13 @@ func nonce() string {
 
 // shouldEscape returns false if the byte is an unreserved character that should not be escaped and true otherwise,
 // according to RFC 3986 2.1.
-func shouldEscape(c byte) bool {
+func shouldEscape(byt byte) bool {
 	// RFC3986 2.3 unreserved characters
-	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
+	if 'A' <= byt && byt <= 'Z' || 'a' <= byt && byt <= 'z' || '0' <= byt && byt <= '9' {
 		return false
 	}
 
-	switch c {
+	switch byt {
 	case '-', '.', '_', '~':
 		return false
 	}

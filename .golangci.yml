@@ -11,6 +11,9 @@ linters:
     - gochecknoglobals # Issue #71
     - goerr113 # Issue #73
     - cyclop # Issue #74
+    - gosec # Issue #75
+    - funlen # Issue #76
+    - nlreturn #Issue #77
 
     # nosnakecase will prevent a user from defining functionality with snake case. This is good, in general, but some
     # native go functionality requires this, such as test examples.

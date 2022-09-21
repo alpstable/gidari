@@ -39,21 +39,27 @@ const (
 // String uses the data from the LogFormatter object to build a log message.
 func (lf LogFormatter) String() string {
 	var bldr strings.Builder
+
 	if lf.WorkerID > 0 {
 		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterWorkerID, lf.WorkerID))
 	}
+
 	if lf.WorkerName != "" {
 		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterWorkerName, lf.WorkerName))
 	}
+
 	if lf.Duration > 0 {
 		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterDuration, lf.Duration))
 	}
+
 	if lf.UpsertedCount > 0 {
 		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterUpsertedCount, lf.UpsertedCount))
 	}
+
 	if lf.MatchedCount > 0 {
 		bldr.WriteString(fmt.Sprintf("%s:%d, ", LogFormatterMatchedCount, lf.MatchedCount))
 	}
+
 	if lf.Msg != "" {
 		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterMsg, lf.Msg))
 	}

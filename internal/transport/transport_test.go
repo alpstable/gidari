@@ -14,6 +14,7 @@ import (
 )
 
 func TestTimeseries(t *testing.T) {
+	t.Parallel()
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
 		t.Parallel()
 

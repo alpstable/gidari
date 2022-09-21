@@ -37,7 +37,7 @@ type GenericService struct {
 func New(ctx context.Context, dns string) (Generic, error) {
 	stg, err := storage.New(ctx, dns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to construct storage: %v", err)
+		return nil, fmt.Errorf("failed to construct storage: %w", err)
 	}
 	return &GenericService{stg, nil}, nil
 }
@@ -47,12 +47,12 @@ func New(ctx context.Context, dns string) (Generic, error) {
 func NewTx(ctx context.Context, dns string) (Generic, error) {
 	stg, err := storage.New(ctx, dns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to construct storage: %v", err)
+		return nil, fmt.Errorf("failed to construct storage: %w", err)
 	}
 
 	tx, err := stg.StartTx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start transaction: %v", err)
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	return &GenericService{stg, tx}, nil
 }
@@ -63,7 +63,7 @@ func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) e
 	svc.Tx.Send(func(ctx context.Context, stg storage.Storage) error {
 		err := fn(ctx, svc)
 		if err != nil {
-			return fmt.Errorf("error executing transaction: %v", err)
+			return fmt.Errorf("error executing transaction: %w", err)
 		}
 		return nil
 	})
@@ -73,7 +73,7 @@ func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) e
 func (svc *GenericService) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
 	rsp, err := svc.Storage.Truncate(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("error truncating table: %v", err)
+		return nil, fmt.Errorf("error truncating table: %w", err)
 	}
 	return rsp, nil
 }

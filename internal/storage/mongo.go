@@ -26,7 +26,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("error connecting to mongo: %v", err)
+		return nil, fmt.Errorf("error connecting to mongo: %w", err)
 	}
 	mdb := new(Mongo)
 	mdb.Client = client
@@ -62,7 +62,7 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 			// Start the transaction, if there is an error break the go routine.
 			err := sctx.StartTransaction()
 			if err != nil {
-				return fmt.Errorf("error starting transaction: %v", err)
+				return fmt.Errorf("error starting transaction: %w", err)
 			}
 
 			// listen for writes.
@@ -75,14 +75,14 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 			}
 
 			if err != nil {
-				return fmt.Errorf("error in transaction: %v", err)
+				return fmt.Errorf("error in transaction: %w", err)
 			}
 
 			// Await the decision to commit or rollback.
 			switch {
 			case <-txn.commit:
 				if err := sctx.CommitTransaction(sctx); err != nil {
-					return fmt.Errorf("commit transaction: %v", err)
+					return fmt.Errorf("commit transaction: %w", err)
 				}
 			default:
 				if err := sctx.AbortTransaction(sctx); err != nil {
@@ -108,14 +108,14 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 
 	connString, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse connstring: %v", err)
+		return nil, fmt.Errorf("failed to parse connstring: %w", err)
 	}
 
 	for _, collection := range req.GetTables() {
 		coll := m.Client.Database(connString.Database).Collection(collection)
 		_, err = coll.DeleteMany(ctx, bson.M{})
 		if err != nil {
-			return nil, fmt.Errorf("error truncating collection %s: %v", collection, err)
+			return nil, fmt.Errorf("error truncating collection %s: %w", collection, err)
 		}
 	}
 	return &proto.TruncateResponse{}, nil
@@ -125,7 +125,7 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode records: %v", err)
+		return nil, fmt.Errorf("failed to decode records: %w", err)
 	}
 
 	// If there are no records to upsert, return.
@@ -137,8 +137,9 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	for _, record := range records {
 		doc := bson.D{}
 		if err := tools.AssingRecordBSONDocument(record, &doc); err != nil {
-			return nil, fmt.Errorf("failed to assign record to bson document: %v", err)
+			return nil, fmt.Errorf("failed to assign record to bson document: %w", err)
 		}
+
 		models = append(models, mongo.NewUpdateOneModel().
 			SetFilter(doc).
 			SetUpdate(bson.D{primitive.E{Key: "$set", Value: doc}}).
@@ -147,13 +148,13 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 
 	cs, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse connection string: %v", err)
+		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
 	coll := m.Client.Database(cs.Database).Collection(req.Table)
 	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
-		return nil, fmt.Errorf("bulk write error: %v", err)
+		return nil, fmt.Errorf("bulk write error: %w", err)
 	}
 
 	rsp := &proto.UpsertResponse{

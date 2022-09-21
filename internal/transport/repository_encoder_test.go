@@ -7,6 +7,7 @@ import (
 )
 
 func TestRepositoryEncoderRegistry(t *testing.T) {
+	t.Parallel()
 	if err := RegisterCustomEncoders(); err != nil {
 		t.Fatalf("error registering custom encoders: %v", err)
 	}
