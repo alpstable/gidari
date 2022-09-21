@@ -50,8 +50,9 @@ func ExampleGenericService_Upsert() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table: "accounts",
-		Data:  []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
+		Table:    "accounts",
+		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
+		DataType: int32(tools.UpsertDataJSON),
 	}
 
 	rsp, err := repo.Upsert(ctx, req)

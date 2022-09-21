@@ -2,15 +2,55 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/alpine-hodler/gidari/internal/web/auth"
 	"golang.org/x/time/rate"
 )
+
+var (
+	// ErrCreatingRequest is returned when the request fails to create.
+	ErrCreatingRequest = errors.New("failed to create request")
+
+	// ErrFailedToCreateWebClient is returned when the client fails to create.
+	ErrFailedToCreateWebClient = errors.New("failed to create web client")
+
+	// ErrGettingResponse is returned when the response fails to get.
+	ErrGettingResponse = errors.New("failed to get response")
+
+	// ErrInvalidResponse is returned when the response is invalid.
+	ErrInvalidResponse = errors.New("invalid response")
+
+	// ErrMissingFetchConfigField is returned when a required field is missing.
+	ErrMissingFetchConfigField = errors.New("missing required field on FetchConfig")
+)
+
+// CreateRequestError is returned when the request fails to create.
+func CreateRequestError(err error) error {
+	return fmt.Errorf("%w: %v", ErrCreatingRequest, err)
+}
+
+// FailedToCreateClientError is returned when the client fails to create.
+func FailedToCreateClientError(err error) error {
+	return fmt.Errorf("%w: %v", ErrFailedToCreateWebClient, err)
+}
+
+// MissingFetchConfigFieldError is returned when a required field is missing.
+func MissingFetchConfigFieldError(field string) error {
+	return fmt.Errorf("%w: %q", ErrMissingFetchConfigField, field)
+}
+
+// GettingResponseError is returned when the response fails to get.
+func GettingResponseError(rsp *http.Response) error {
+	if _, err := io.ReadAll(rsp.Body); err != nil {
+		return fmt.Errorf("%w: %v", ErrGettingResponse, err)
+	}
+	return fmt.Errorf("%w: %v", ErrGettingResponse, rsp.Status)
+}
 
 // Client is a wrapper around the http.Client that will handle authentication and rate limiting.
 type Client struct{ http.Client }
@@ -24,33 +64,28 @@ func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) 
 
 // newHTTPRequest will return a new request.  If the options are set, this function will encode a body if possible.
 func newHTTPRequest(ctx context.Context, method string, u *url.URL) (*http.Request, error) {
-	return http.NewRequestWithContext(ctx, method, u.String(), nil)
-}
-
-// ResponseError takes a response and a status and builder an error message to send to the server.
-func ResponseError(resp *http.Response) error {
-	body, err := io.ReadAll(resp.Body)
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
 	if err != nil {
-		panic(err)
+		return nil, CreateRequestError(err)
 	}
-	return fmt.Errorf("Status Code %v (%v): %v", resp.StatusCode, resp.Status, string(body))
+	return req, nil
 }
 
 // validateResponse is a switch condition that parses an error response
 func validateResponse(res *http.Response) error {
 	if res == nil {
-		return fmt.Errorf("no response, check request and env file")
-	} else {
-		switch res.StatusCode {
-		case
-			http.StatusBadRequest,
-			http.StatusUnauthorized,
-			http.StatusInternalServerError,
-			http.StatusNotFound,
-			http.StatusTooManyRequests,
-			http.StatusForbidden:
-			return ResponseError(res)
-		}
+		return ErrInvalidResponse
+	}
+
+	switch res.StatusCode {
+	case
+		http.StatusBadRequest,
+		http.StatusUnauthorized,
+		http.StatusInternalServerError,
+		http.StatusNotFound,
+		http.StatusTooManyRequests,
+		http.StatusForbidden:
+		return GettingResponseError(res)
 	}
 	return nil
 }
@@ -63,26 +98,19 @@ type FetchConfig struct {
 }
 
 func (cfg *FetchConfig) validate() error {
-	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on web.FetchConfig", field) }
 	if cfg.C == nil {
-		return wrapper("Client")
+		return MissingFetchConfigFieldError("Client")
 	}
 	if cfg.Method == "" {
-		return wrapper("Method")
+		return MissingFetchConfigFieldError("Method")
 	}
 	if cfg.URL == nil {
-		return wrapper("URL")
+		return MissingFetchConfigFieldError("URL")
 	}
 	if cfg.RateLimiter == nil {
-		return wrapper("RateLimiter")
+		return MissingFetchConfigFieldError("RateLimiter")
 	}
 	return nil
-}
-
-var ratelimiter *rate.Limiter
-
-func init() {
-	ratelimiter = rate.NewLimiter(rate.Every(1*time.Second), 3)
 }
 
 // FetchResponse is a wrapper for the Fetch function's response data for an HTTP web request.
@@ -108,7 +136,7 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 	}
 
 	// If the rate limiter is not set, set it with defaults.
-	if err := ratelimiter.Wait(ctx); err != nil {
+	if err := cfg.RateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limiter error: %w", err)
 	}
 

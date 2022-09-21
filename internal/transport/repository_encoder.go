@@ -122,7 +122,10 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		}
 
 		productID := tools.SplitURLPath(req)[1]
+
+		// initialize the slice of candles.
 		var candles coinbasepro.Candles
+
 		if err := json.Unmarshal(bytes, &candles); err != nil {
 			return nil, fmt.Errorf("error unmarshaling candles: %v", err)
 		}

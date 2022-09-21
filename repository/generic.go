@@ -8,6 +8,17 @@ import (
 	"github.com/alpine-hodler/gidari/proto"
 )
 
+var (
+	// ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
+	ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
+)
+
+// FailedToCreateRepositoryError is a helper function that returns a new error with the ErrFailedToCreateRepository
+// error wrapped.
+func FailedToCreateRepositoryError(err error) error {
+	return fmt.Errorf("%w: %v", ErrFailedToCreateRepository, err)
+}
+
 // Generic is the interface for the generic service.
 type Generic interface {
 	storage.Storage

@@ -39,6 +39,14 @@ import (
 	"time"
 )
 
+const (
+	// auth1NonceSize is the size of the nonce in bytes, in this case 32 bytes.
+	auth1NonceSize = 32
+
+	// oauthTimestampBase is the base time for calculating the oauth_timestamp parameter.
+	oathTimestampBase = 10
+)
+
 // Auth1 is an http.RoundTripper used to authenticate using the OAuth 1.a algorithm defined by twitter:
 // https://developer.twitter.com/en/docs/authentication/oauth-1-0a/creating-a-signature
 type Auth1 struct {
@@ -99,7 +107,7 @@ func (auth *Auth1) setRequestAuthHeader(req *http.Request) error {
 	oauthParams := map[string]string{
 		oauthConsumerKeyParam:     auth.consumerKey,
 		oauthSignatureMethodParam: defaultOauthSignatureMethod,
-		oauthTimestampParam:       strconv.FormatInt(time.Now().Unix(), 10),
+		oauthTimestampParam:       strconv.FormatInt(time.Now().Unix(), oathTimestampBase),
 		oauthNonceParam:           nonce(),
 		oauthVersionParam:         oauthVersion1,
 	}
@@ -186,7 +194,7 @@ func hmacSign(consumerSecret, tokenSecret, message string, algo func() hash.Hash
 
 // nonce provides a random nonce string.
 func nonce() string {
-	b := make([]byte, 32)
+	b := make([]byte, auth1NonceSize)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
 	}

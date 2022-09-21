@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 )
@@ -35,8 +36,8 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 
 				testURL, _ := url.Parse("http://test")
 				err := registry.Register(testURL, new(DefaultRepositoryEncoder))
-				if err != ErrRepositoryEncoderExists {
-					t.Errorf("expected error %v, got %v", ErrRepositoryEncoderExists, err)
+				if !errors.Is(err, ErrRepositoryEncoderExists) {
+					t.Errorf("expected error to be %q, got %q", ErrRepositoryEncoderExists, err)
 				}
 			})
 		t.Run("should register an encoder when one does not already exist", func(t *testing.T) {

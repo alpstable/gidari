@@ -21,12 +21,57 @@ import (
 )
 
 var (
-	// ErrSettingTimeseriesChunks is returned when the timeseries is unable to set the chunks.
-	ErrSettingTimeseriesChunks = fmt.Errorf("error setting timeseries chunks")
-
 	// ErrFetchingTimeseriesChunks is returned when the timeseries is unable to fetch the chunks.
-	ErrFetchingTimeseriesChunks = fmt.Errorf("error fetching timeseries chunks")
+	ErrFetchingTimeseriesChunks = fmt.Errorf("failed to fetch timeseries chunks")
+
+	// ErrInvalidRateLimit is returned when the rate limit configuration is invalid.
+	ErrInvalidRateLimit = fmt.Errorf("invalid rate limit configuration")
+
+	// ErrMissingConfigField is returned when a configuration field is missing.
+	ErrMissingConfigField = fmt.Errorf("missing config field")
+
+	// ErrMissingRateLimitField is returned when the rate limit configuration is missing a field.
+	ErrMissingRateLimitField = fmt.Errorf("missing rate limit field")
+
+	// ErrMissingTimeseriesField is returned when the timeseries is missing from the configuration.
+	ErrMissingTimeseriesField = fmt.Errorf("missing timeseries field")
+
+	// ErrSettingTimeseriesChunks is returned when the timeseries is unable to set the chunks.
+	ErrSettingTimeseriesChunks = fmt.Errorf("failed to set timeseries chunks")
+
+	// ErrUnableToParse is returned with a parser is unable to parse the data.
+	ErrUnableToParse = fmt.Errorf("unable to parse")
 )
+
+// MissingConfigFieldError is returned when a configuration field is missing.
+func MissingConfigFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingConfigField, field)
+}
+
+// MissingRateLimitFieldError is returned when the rate limit configuration is missing a field.
+func MissingRateLimitFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingRateLimitField, field)
+}
+
+// MissingTimeseriesFieldError is returned when the timeseries is missing from the configuration.
+func MissingTimeseriesFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingTimeseriesField, field)
+}
+
+// UnableToParseError is returned when a parser is unable to parse the data.
+func UnableToParseError(name string) error {
+	return fmt.Errorf("%s %w", name, ErrUnableToParse)
+}
+
+// WrapRepositoryError will wrap an error from the repository with a message.
+func WrapRepositoryError(err error) error {
+	return fmt.Errorf("repository: %w", err)
+}
+
+// WrapWebError will wrap an error from the web package with a message.
+func WrapWebError(err error) error {
+	return fmt.Errorf("web: %w", err)
+}
 
 // APIKey is one method of HTTP(s) transport that requires a passphrase, key, and secret.
 type APIKey struct {
@@ -76,22 +121,22 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 	query := url.Query()
 	startSlice := query[ts.StartName]
 	if len(startSlice) != 1 {
-		return fmt.Errorf("'startName' is required for timeseries data")
+		return MissingTimeseriesFieldError("startName")
 	}
 
 	start, err := time.Parse(*ts.Layout, startSlice[0])
 	if err != nil {
-		return fmt.Errorf("unable to parse start time: %w", err)
+		return UnableToParseError("startTime")
 	}
 
 	endSlice := query[ts.EndName]
 	if len(endSlice) != 1 {
-		return fmt.Errorf("'endName' is required for timeseries data")
+		return MissingTimeseriesFieldError("endName")
 	}
 
 	end, err := time.Parse(*ts.Layout, endSlice[0])
 	if err != nil {
-		return fmt.Errorf("unable to parse end time: %w", err)
+		return UnableToParseError("endTime")
 	}
 
 	for start.Before(end) {
@@ -140,10 +185,10 @@ type RateLimitConfig struct {
 
 func (rl RateLimitConfig) validate() error {
 	if rl.Burst == nil {
-		return fmt.Errorf("rate limit burst is required")
+		return MissingRateLimitFieldError("burst")
 	}
 	if rl.Period == nil {
-		return fmt.Errorf("rate limit period is required")
+		return MissingRateLimitFieldError("period")
 	}
 	return nil
 }
@@ -171,14 +216,14 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
 		if err != nil {
-			return nil, fmt.Errorf("failed to create web client with API key: %w", err)
+			return nil, WrapWebError(web.FailedToCreateClientError(err))
 		}
 		return client, nil
 	}
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
 		if err != nil {
-			return nil, fmt.Errorf("failed to create web client with Auth2: %w", err)
+			return nil, WrapWebError(web.FailedToCreateClientError(err))
 		}
 		return client, nil
 	}
@@ -191,7 +236,7 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 	for _, dns := range cfg.DNSList {
 		repo, err := repository.NewTx(ctx, dns)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
+			return nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
 		}
 		logInfo := tools.LogFormatter{
 			Msg: fmt.Sprintf("created repository for %q", dns),
@@ -205,16 +250,16 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 // validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) validate() error {
 	if cfg.RateLimitConfig == nil {
-		return fmt.Errorf("rate limit config is required")
+		return MissingConfigFieldError("rateLimit")
 	}
 	if err := cfg.RateLimitConfig.validate(); err != nil {
-		return fmt.Errorf("rate limit config is invalid: %w", err)
+		return ErrInvalidRateLimit
 	}
 	return nil
 }
 
 // newFetchConfig constructs a new HTTP request.
-func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.Client,
+func newFetchConfig(_ context.Context, cfg *Config, req *Request, client *web.Client,
 	rl *rate.Limiter) (*web.FetchConfig, error) {
 
 	rawURL, err := url.JoinPath(cfg.URL, req.Endpoint)
@@ -260,7 +305,7 @@ type repoConfig struct {
 	truncate bool
 }
 
-func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
+func repositoryWorker(_ context.Context, id int, cfg *repoConfig) {
 	for job := range cfg.jobs {
 		req, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
@@ -295,7 +340,6 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 			}
 			// Put the data onto the transaction channel for storage.
 			repo.Transact(txfn)
-
 		}
 		cfg.done <- true
 	}
@@ -346,7 +390,9 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 // for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
 	start := time.Now()
-	if err := cfg.validate(); err != nil {
+
+	err := cfg.validate()
+	if err != nil {
 		return err
 	}
 	client, err := cfg.connect(ctx)
@@ -360,10 +406,13 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
+	// Convert the RateLimitConfig.Period to seconds.
+	rateLimitPeriodS := *cfg.RateLimitConfig.Period / time.Second
+
 	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
 	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
 	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period*time.Second), *cfg.RateLimitConfig.Burst)
+	rateLimiter := rate.NewLimiter(rate.Every(rateLimitPeriodS), *cfg.RateLimitConfig.Burst)
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
@@ -399,7 +448,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 					fetchConfig: chunkedFetchConfig,
 					table:       req.Table,
 				})
-
 			}
 		} else {
 			flattenedRequests = append(flattenedRequests, &flattenedRequest{
@@ -418,7 +466,8 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if cfg.Truncate {
 		for _, repo := range repos {
 			start := time.Now()
-			if _, err := repo.Truncate(ctx, truncateRequest); err != nil {
+			_, err := repo.Truncate(ctx, truncateRequest)
+			if err != nil {
 				return fmt.Errorf("unable to truncate tables: %v", err)
 			}
 
@@ -482,7 +531,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		}
 	}
 
-	duration := time.Since(start)
-	cfg.Logger.Info(tools.LogFormatter{Duration: duration, Msg: "upsert completed"}.String())
+	logInfo := tools.LogFormatter{
+		Duration: time.Since(start),
+		Msg:      "upsert completed",
+	}
+	cfg.Logger.Info(logInfo.String())
 	return nil
 }

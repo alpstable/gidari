@@ -4,6 +4,11 @@ linters:
     # exhaustivestruct will enforce that every field of an imported struct is set. This is overkill, we can rely on
     # implicitly set data.
     - exhaustivestruct
+    - exhaustruct
+
+    # TODO these need to be removed with refactors
+    - ireturn # Issue #72
+    - gochecknoglobals # Issue #71
 
     # nosnakecase will prevent a user from defining functionality with snake case. This is good, in general, but some
     # native go functionality requires this, such as test examples.

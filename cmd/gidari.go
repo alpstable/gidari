@@ -18,7 +18,10 @@ import (
 var bashCompletion string
 
 func main() {
+	// configFilepath is the path to the configuration file.
 	var configFilepath string
+
+	// verbose is a flag that enables verbose logging.
 	var verbose bool
 
 	cmd := &cobra.Command{
@@ -55,63 +58,6 @@ func main() {
 			if err := transport.Upsert(ctx, &cfg); err != nil {
 				log.Fatalf("error upserting data: %v", err)
 			}
-
-			// ctx := context.Background()
-
-			// apiKey := cfg.Authentication.APIKey
-			// client, err := web.NewClient(ctx, transport.NewAPIKey().
-			// 	SetKey(apiKey.Key).
-			// 	SetPassphrase(apiKey.Passphrase).
-			// 	SetSecret(apiKey.Secret).
-			// 	SetURL(cfg.URL))
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-
-			// for _, dns := range cfg.DNSList {
-			// 	stg, err := storage.New(ctx, dns)
-			// 	if err != nil {
-			// 		log.Fatalf("error connecting to DNS %q: %v", dns, err)
-			// 	}
-
-			// 	repo := repository.NewCoinbasePro(ctx, stg)
-
-			// 	for _, request := range requests {
-			// 		rsplit := strings.Split(request, " ")
-			// 		method := rsplit[0]
-			// 		endpoint := rsplit[1]
-
-			// 		u, err := url.JoinPath(cfg.URL, endpoint)
-			// 		if err != nil {
-			// 			log.Fatalf("error joining url %q to endpoint %q: %v", cfg.URL, endpoint, err)
-			// 		}
-
-			// 		parsedURL, err := url.Parse(u)
-			// 		if err != nil {
-			// 			log.Fatalf("error parsing URL: %v", err)
-			// 		}
-
-			// 		cfg := &web.FetchConfig{
-			// 			Client: client,
-			// 			Method: method,
-			// 			URL:    parsedURL,
-			// 		}
-
-			// 		body, err := web.Fetch(ctx, cfg)
-			// 		if err != nil {
-			// 			log.Fatalf("error fetching accounts: %v", err)
-			// 		}
-			// 		defer body.Close()
-
-			// 		table := strings.TrimPrefix(parsedURL.EscapedPath(), "/")
-
-			// 		rsp := new(proto.CreateResponse)
-			// 		if err = repo.UpsertJSON(ctx, table, body, rsp); err != nil {
-			// 			log.Fatalf("error upserting data: %v", err)
-			// 		}
-			// 	}
-			//}
-
 		},
 	}
 

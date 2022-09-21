@@ -17,7 +17,7 @@ func TestTimeseries(t *testing.T) {
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		ts := &timeseries{
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -33,7 +33,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T00:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(testURL)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -60,15 +60,15 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		ts := &timeseries{
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -84,7 +84,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T01:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(testURL)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -111,14 +111,14 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
 		t.Parallel()
-		ts := &timeseries{
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -134,7 +134,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T02:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(testURL)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -165,8 +165,8 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 }
@@ -181,10 +181,11 @@ func TestUpsert(t *testing.T) {
 		t.Fatalf("error reading fixtures: %v", err)
 	}
 	for _, fixture := range fixtures {
-		t.Run(fixture.Name(), func(t *testing.T) {
+		name := fixture.Name()
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			path := filepath.Join(fixtureRoot, fixture.Name())
+			path := filepath.Join(fixtureRoot, name)
 
 			bytes, err := os.ReadFile(path)
 			if err != nil {

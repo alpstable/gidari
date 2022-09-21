@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const (
+	// apiKeyTimestmapBase is the base time for calculating the timestamp parameter.
+	apiKeyTimestampBase = 10
+)
+
 // APIKey is transport for authenticating with an API KEy. API Key authentication should only be used to access your
 // own account. If your application requires access to other accounts, do not use API Key. API key authentication
 // requires each request to be signed (enhanced security measure). Your API keys should be assigned to access only
@@ -101,7 +106,7 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	var (
-		timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+		timestamp = strconv.FormatInt(time.Now().Unix(), apiKeyTimestampBase)
 		msg       = auth.generageMsg(req, timestamp)
 	)
 	sig, err := auth.generateSig(msg)
