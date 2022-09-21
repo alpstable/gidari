@@ -51,8 +51,6 @@ func TestTruncate(t *testing.T) {
 			if rsp == nil {
 				t.Fatalf("truncate response is nil")
 			}
-
-			// TODO use a read to make sure this actually worked.
 		})
 	}
 }
@@ -92,14 +90,15 @@ func TestStartTx(t *testing.T) {
 					Data:     bytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
-				return err
+				if err != nil {
+					return fmt.Errorf("failed to upsert data: %w", err)
+				}
+				return nil
 			})
 
 			if err := txn.Commit(); err != nil {
 				t.Fatalf("failed to commit transaction: %v", err)
 			}
-
-			// TODO: check if the data was actually inserted
 
 			// Truncate the test table
 			truncateReq := new(proto.TruncateRequest)
@@ -137,14 +136,15 @@ func TestStartTx(t *testing.T) {
 					Data:     dataBytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
-				return err
+				if err != nil {
+					return fmt.Errorf("failed to insert data: %w", err)
+				}
+				return nil
 			})
 
 			if err := txn.Rollback(); err != nil {
 				t.Fatalf("failed to rollback transaction: %v", err)
 			}
-
-			// TODO: check if the data was actually inserted
 
 			// Truncate the test table
 			truncateReq := new(proto.TruncateRequest)
@@ -179,7 +179,6 @@ func TestStartTx(t *testing.T) {
 			if err := txn.Commit(); err == nil {
 				t.Fatalf("expected error, got nil")
 			}
-			// TODO check if the data was actually not inserted
 		})
 	}
 }

@@ -92,7 +92,7 @@ type DefaultRepositoryEncoder struct{}
 func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
-		return nil, fmt.Errorf("error getting table from request: %v", err)
+		return nil, fmt.Errorf("error getting table from request: %w", err)
 	}
 	return &proto.UpsertRequest{
 		Table:    table,
@@ -110,7 +110,7 @@ type CBPSandboxEncoder struct{}
 func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
-		return nil, fmt.Errorf("error getting table from request: %v", err)
+		return nil, fmt.Errorf("error getting table from request: %w", err)
 	}
 
 	const candleMinutesGranularity = "60"
@@ -128,7 +128,7 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		var candles coinbasepro.Candles
 
 		if err := json.Unmarshal(bytes, &candles); err != nil {
-			return nil, fmt.Errorf("error unmarshaling candles: %v", err)
+			return nil, fmt.Errorf("error unmarshaling candles: %w", err)
 		}
 		for _, candle := range candles {
 			candle.ProductID = productID
@@ -137,7 +137,7 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		var err error
 		updatedBytes, err := json.Marshal(candles)
 		if err != nil {
-			return nil, fmt.Errorf("error marshaling candles: %v", err)
+			return nil, fmt.Errorf("error marshaling candles: %w", err)
 		}
 		return &proto.UpsertRequest{
 			Table:    table,
@@ -145,7 +145,14 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 			DataType: int32(tools.UpsertDataJSON),
 		}, nil
 	default:
-		u, _ := url.Parse("")
-		return RepositoryEncoders.Lookup(u).Encode(req, bytes)
+		u, err := url.Parse("")
+		if err != nil {
+			return nil, fmt.Errorf("error parsing url: %w", err)
+		}
+		upsertRequest, err := RepositoryEncoders.Lookup(u).Encode(req, bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding data: %w", err)
+		}
+		return upsertRequest, nil
 	}
 }

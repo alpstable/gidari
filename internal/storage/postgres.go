@@ -54,14 +54,15 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 	if len(pg.meta) == 0 {
 		columns, err := pg.ListColumns(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error getting postgres metadata: %v", err)
+			return nil, fmt.Errorf("error getting postgres metadata: %w", err)
 		}
 
 		pg.meta = make(map[string]*pgmeta)
+
 		for _, record := range columns.Records {
 			table, ok := record.AsMap()["table_name"].(string)
 			if !ok {
-				return nil, fmt.Errorf("error getting postgres metadata: %v", err)
+				return nil, fmt.Errorf("error getting postgres metadata: %w", err)
 			}
 
 			// Initialize the table pgmeta if it does not exist.
@@ -75,9 +76,16 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 			if !okCol {
 				return nil, fmt.Errorf("error getting postgres metadata: column_name is not a string")
 			}
-			if record.AsMap()["primary_key"].(float64) == 1.0 {
+
+			primaryKey, okPK := record.AsMap()["primary_key"].(float64)
+			if !okPK {
+				return nil, fmt.Errorf("error getting postgres metadata: primary_key is not a bool")
+			}
+
+			if primaryKey == 1.0 {
 				meta.addPK(columnName)
 			}
+
 			meta.addColumn(columnName)
 		}
 	}
@@ -94,12 +102,12 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.Rows) error) error {
 	stmt, err := pg.DB.PrepareContext(ctx, string(query))
 	if err != nil {
-		return fmt.Errorf("unable to prepare statement: %v", err)
+		return fmt.Errorf("unable to prepare statement: %w", err)
 	}
 
 	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to query: %v", err)
+		return fmt.Errorf("unable to query: %w", err)
 	}
 	defer rows.Close()
 	return teardown(rows)
@@ -116,19 +124,19 @@ func (pg *Postgres) Close() {
 func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse, error) {
 	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
 	if err != nil {
-		return nil, fmt.Errorf("unable to prepare statement: %v", err)
+		return nil, fmt.Errorf("unable to prepare statement: %w", err)
 	}
 
 	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to query: %v", err)
+		return nil, fmt.Errorf("unable to query: %w", err)
 	}
 	defer rows.Close()
 
 	var rsp proto.ListColumnsResponse
 	err = tools.AssignStructs(rows, &rsp.Records)
 	if err != nil {
-		return nil, fmt.Errorf("unable to assign structs: %v", err)
+		return nil, fmt.Errorf("unable to assign structs: %w", err)
 	}
 	return &rsp, nil
 }
@@ -137,19 +145,19 @@ func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse
 func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
 	stmt, err := pg.DB.PrepareContext(ctx, string(pgTables))
 	if err != nil {
-		return nil, fmt.Errorf("unable to prepare statement: %v", err)
+		return nil, fmt.Errorf("unable to prepare statement: %w", err)
 	}
 
 	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to query: %v", err)
+		return nil, fmt.Errorf("unable to query: %w", err)
 	}
 	defer rows.Close()
 
 	var rsp proto.ListTablesResponse
 	err = tools.AssignStructs(rows, &rsp.Records)
 	if err != nil {
-		return nil, fmt.Errorf("unable to assign structs: %v", err)
+		return nil, fmt.Errorf("unable to assign structs: %w", err)
 	}
 	return &rsp, nil
 }
@@ -171,6 +179,7 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 	if len(tables) == 0 {
 		return nil, fmt.Errorf("no tables specified")
 	}
+
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
 	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
 }
@@ -181,7 +190,7 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode records: %v", err)
+		return nil, fmt.Errorf("unable to decode records: %w", err)
 	}
 
 	// Do nothing if there are no records.
@@ -198,10 +207,12 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 
 	exclusions := []string{}
 	columns := []string{}
+
 	for _, name := range meta.columns {
 		if !meta.isPK(name) {
 			exclusions = append(exclusions, fmt.Sprintf(exclusTemplate, name, name))
 		}
+
 		columns = append(columns, name)
 	}
 
@@ -228,6 +239,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 			for i := 1; i <= len(meta.columns); i++ {
 				ph = append(ph, fmt.Sprintf("$%d", recordSize*idx+i))
 			}
+
 			recordph := fmt.Sprintf("(%s)", strings.Join(ph, ","))
 			placeholders = append(placeholders, recordph)
 
@@ -252,19 +264,19 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 
 				stmt, err = tx.PrepareContext(ctx, query)
 				if err != nil {
-					return nil, fmt.Errorf("unable to prepare statement: %v", err)
+					return nil, fmt.Errorf("unable to prepare statement: %w", err)
 				}
 			}
 		} else {
 			stmt, err = pg.DB.PrepareContext(ctx, query)
 			if err != nil {
-				return nil, fmt.Errorf("unable to prepare statement: %v", err)
+				return nil, fmt.Errorf("unable to prepare statement: %w", err)
 			}
 		}
 
 		// Execute upsert.
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
-			return nil, fmt.Errorf("unable to execute upsert: %v", err)
+			return nil, fmt.Errorf("unable to execute upsert: %w", err)
 		}
 	}
 	return &proto.UpsertResponse{}, nil
@@ -291,7 +303,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	var err error
 	postgres.DB, err = sql.Open("postgres", connectionURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to postgres: %v", err)
+		return nil, fmt.Errorf("unable to connect to postgres: %w", err)
 	}
 
 	postgres.setMaxOpenConns()
@@ -360,6 +372,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 	if err != nil {
 		return txn, fmt.Errorf("failed to start transaction: %w", err)
 	}
+
 	pg.activeTx.Store(txnID, pgtx)
 
 	// Add the transaction ID to the context.
@@ -377,6 +390,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 			}
 			err = fn(pgCtx, pg)
 		}
+
 		if err != nil {
 			txn.done <- err
 			return

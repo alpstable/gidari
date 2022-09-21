@@ -137,7 +137,6 @@ func baseURI(req *http.Request) string {
 	if hostPort := strings.Split(host, ":"); len(hostPort) == 2 && (hostPort[1] == "80" || hostPort[1] == "443") {
 		host = hostPort[0]
 	}
-	// TODO: use req.URL.EscapedPath() once Go 1.5 is more generally adopted
 	// For now, hacky workaround accomplishes the same internal escaping mode escape(u.Path, encodePath) for proper
 	// compliance with the OAuth1 spec.
 	path := req.URL.Path

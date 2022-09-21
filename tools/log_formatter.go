@@ -63,5 +63,6 @@ func (lf LogFormatter) String() string {
 	if lf.Msg != "" {
 		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterMsg, lf.Msg))
 	}
+
 	return fmt.Sprintf("{%s}", strings.TrimSuffix(bldr.String(), ", "))
 }

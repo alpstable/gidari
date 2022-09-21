@@ -17,6 +17,7 @@ func SplitURLPath(req http.Request) []string {
 	if len(parts) == 1 && parts[0] == "" {
 		return []string{}
 	}
+
 	return parts
 }
 
@@ -27,6 +28,5 @@ func ParseDBTableFromURL(req http.Request) (string, error) {
 		return "", ErrParsingURL
 	}
 
-	table := endpointParts[len(endpointParts)-1]
-	return table, nil
+	return endpointParts[len(endpointParts)-1], nil
 }

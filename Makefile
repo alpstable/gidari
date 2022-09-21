@@ -1,11 +1,10 @@
 default:
+	chmod +rwx scripts/*.sh
 	go build cmd/gidari.go
 
 # containers build the docker containers for performing integration tests.
 .PHONY: containers
 containers:
-	chmod +rwx scripts/*.sh
-
 	scripts/build-storage.sh
 
 # hosts sets up the hosts file for integration tests. This only needs to be run once.
@@ -28,10 +27,15 @@ tests:
 .PHONY: ci
 ci:
 	go clean -testcache
-	chmod +rwx scripts/*.sh
 	./scripts/run-ci-tests.sh
 
 # lint runs the linter.
 .PHONY: lint
 lint:
 	golangci-lint run --config .golangci.yml
+
+# fmt runs the formatter.
+.PHONY: fmt
+fmt:
+	scripts/fmt-pkgs.sh
+

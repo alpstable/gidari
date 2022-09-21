@@ -6,6 +6,19 @@ linters:
     - exhaustivestruct
     - exhaustruct
 
+    # deprecated linters
+    - maligned
+    - varcheck
+    - structcheck
+    - ifshort
+    - golint
+    - scopelint
+    - deadcode
+    - interfacer
+    - rowserrcheck
+    - sqlclosecheck
+    - wastedassign
+
     # TODO these need to be removed with refactors
     - ireturn # Issue #72
     - gochecknoglobals # Issue #71
@@ -13,7 +26,14 @@ linters:
     - cyclop # Issue #74
     - gosec # Issue #75
     - funlen # Issue #76
-    - nlreturn #Issue #77
+    - nlreturn # Issue #77
+    - nestif # Issue #78
+    - gofumpt # Issue #79
+    - gocognit # Issue #80
+    - gci # Issue #81
+
+    # This will unreliably flag things that are not duplications.
+    - dupl
 
     # nosnakecase will prevent a user from defining functionality with snake case. This is good, in general, but some
     # native go functionality requires this, such as test examples.

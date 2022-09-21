@@ -7,7 +7,6 @@ const (
 	contentType                 = "Content-Type"
 	formContentType             = "application/x-www-form-urlencoded"
 	defaultOauthSignatureMethod = "HMAC-SHA1"
-	identifier                  = "Twitter"
 	oauthConsumerKeyParam       = "oauth_consumer_key"
 	oauthNonceParam             = "oauth_nonce"
 	oauthSignatureParam         = "oauth_signature"

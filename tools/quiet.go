@@ -14,8 +14,10 @@ func Quiet() func() {
 	os.Stdout = null
 	os.Stderr = null
 	log.SetOutput(null)
+
 	return func() {
 		defer null.Close()
+
 		os.Stdout = sout
 		os.Stderr = serr
 		log.SetOutput(os.Stderr)

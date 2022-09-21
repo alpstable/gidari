@@ -94,7 +94,6 @@ func parsebytes(req *http.Request) []byte {
 
 // generageMsg makes the message to be signed
 func (auth *APIKey) generageMsg(req *http.Request, timestamp string) string {
-	// TODO there is surely a better way to handle this
 	postAuthority := strings.Replace(req.URL.String(), auth.url.String(), "", 1)
 	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
 }

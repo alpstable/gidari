@@ -39,6 +39,7 @@ func New(ctx context.Context, dns string) (Generic, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct storage: %w", err)
 	}
+
 	return &GenericService{stg, nil}, nil
 }
 
@@ -54,6 +55,7 @@ func NewTx(ctx context.Context, dns string) (Generic, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
+
 	return &GenericService{stg, tx}, nil
 }
 
@@ -65,6 +67,7 @@ func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) e
 		if err != nil {
 			return fmt.Errorf("error executing transaction: %w", err)
 		}
+
 		return nil
 	})
 }
@@ -75,5 +78,6 @@ func (svc *GenericService) Truncate(ctx context.Context, req *proto.TruncateRequ
 	if err != nil {
 		return nil, fmt.Errorf("error truncating table: %w", err)
 	}
+
 	return rsp, nil
 }

@@ -101,12 +101,15 @@ func (cfg *FetchConfig) validate() error {
 	if cfg.C == nil {
 		return MissingFetchConfigFieldError("Client")
 	}
+
 	if cfg.Method == "" {
 		return MissingFetchConfigFieldError("Method")
 	}
+
 	if cfg.URL == nil {
 		return MissingFetchConfigFieldError("URL")
 	}
+
 	if cfg.RateLimiter == nil {
 		return MissingFetchConfigFieldError("RateLimiter")
 	}

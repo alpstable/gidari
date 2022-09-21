@@ -242,6 +242,7 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 			Msg: fmt.Sprintf("created repository for %q", dns),
 		}
 		cfg.Logger.Info(logInfo.String())
+
 		repos = append(repos, repo)
 	}
 	return repos, nil
@@ -252,6 +253,7 @@ func (cfg *Config) validate() error {
 	if cfg.RateLimitConfig == nil {
 		return MissingConfigFieldError("rateLimit")
 	}
+
 	if err := cfg.RateLimitConfig.validate(); err != nil {
 		return ErrInvalidRateLimit
 	}
@@ -260,16 +262,15 @@ func (cfg *Config) validate() error {
 
 // newFetchConfig constructs a new HTTP request.
 func newFetchConfig(_ context.Context, cfg *Config, req *Request, client *web.Client,
-	rl *rate.Limiter) (*web.FetchConfig, error) {
-
+	rateLimiter *rate.Limiter) (*web.FetchConfig, error) {
 	rawURL, err := url.JoinPath(cfg.URL, req.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("error joining url %q to endpoint %q: %v", cfg.URL, req.Endpoint, err)
+		return nil, fmt.Errorf("error joining url %q to endpoint %q: %w", cfg.URL, req.Endpoint, err)
 	}
 
 	uri, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing raw url %q: %v", rawURL, err)
+		return nil, fmt.Errorf("error parsing raw url %q: %w", rawURL, err)
 	}
 
 	// Apply the query parameters if they are on the request.
@@ -285,7 +286,7 @@ func newFetchConfig(_ context.Context, cfg *Config, req *Request, client *web.Cl
 		C:           client,
 		Method:      req.Method,
 		URL:         uri,
-		RateLimiter: rl,
+		RateLimiter: rateLimiter,
 	}
 
 	return webcfg, nil
@@ -323,7 +324,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 				rsp, err := repo.Upsert(sctx, req)
 				if err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
-					return err
+					return fmt.Errorf("error upserting data: %w", err)
 				}
 				rt := repo.Type()
 				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
@@ -362,14 +363,17 @@ type webWorkerJob struct {
 func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
 		start := time.Now()
+
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
+
 		bytes, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
+
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
 		logInfo := tools.LogFormatter{
@@ -395,10 +399,12 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return err
 	}
+
 	client, err := cfg.connect(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to connect to client: %v", err)
+		return fmt.Errorf("unable to connect to client: %w", err)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: fmt.Sprintf("connection establed: %s", cfg.URL)}.String())
 
 	repos, err := cfg.repos(ctx)
@@ -417,6 +423,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
 	truncateRequest := new(proto.TruncateRequest)
+
 	for _, req := range cfg.Requests {
 		// Get is the implicit default method.
 		if req.Method == "" {
@@ -431,6 +438,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		if timeseries := req.Timeseries; timeseries != nil {
 			xurl := fetchConfig.URL
 			err = timeseries.setChunks(xurl)
+
 			if err != nil {
 				return ErrSettingTimeseriesChunks
 			}
@@ -444,6 +452,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 				if err != nil {
 					return ErrFetchingTimeseriesChunks
 				}
+
 				flattenedRequests = append(flattenedRequests, &flattenedRequest{
 					fetchConfig: chunkedFetchConfig,
 					table:       req.Table,
@@ -466,9 +475,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if cfg.Truncate {
 		for _, repo := range repos {
 			start := time.Now()
+
 			_, err := repo.Truncate(ctx, truncateRequest)
 			if err != nil {
-				return fmt.Errorf("unable to truncate tables: %v", err)
+				return fmt.Errorf("unable to truncate tables: %w", err)
 			}
 
 			rt := repo.Type()
@@ -498,6 +508,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go repositoryWorker(ctx, id, repoWorkerCfg)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "repository workers started"}.String())
 
 	webWorkerJobs := make(chan *webWorkerJob, len(cfg.Requests))
@@ -506,6 +517,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "web workers started"}.String())
 
 	// Enqueue the worker jobs
@@ -517,6 +529,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			logger:           cfg.Logger,
 		}
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "web worker jobs enqueued"}.String())
 
 	// Wait for all of the data to flush.
@@ -527,7 +540,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Commit the transactions and check for errors.
 	for _, repo := range repos {
 		if err := repo.Commit(); err != nil {
-			return fmt.Errorf("unable to commit transaction: %v", err)
+			return fmt.Errorf("unable to commit transaction: %w", err)
 		}
 	}
 
