@@ -412,6 +412,7 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 // of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
 // for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
+	fmt.Println("upsert")
 	start := time.Now()
 
 	err := cfg.validate()
@@ -431,13 +432,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	// Convert the RateLimitConfig.Period to seconds.
-	rateLimitPeriodS := *cfg.RateLimitConfig.Period / time.Second
-
 	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
 	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
 	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(rateLimitPeriodS), *cfg.RateLimitConfig.Burst)
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
