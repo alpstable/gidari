@@ -412,7 +412,6 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 // of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
 // for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
-	fmt.Println("upsert")
 	start := time.Now()
 
 	err := cfg.validate()

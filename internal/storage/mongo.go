@@ -56,14 +56,15 @@ func (m *Mongo) Close() {
 }
 
 // startMdbCommitTicker will start a ticker that will commit the transaction every 60 seconds.
-func startMdbCommitTicker(sctx mongo.SessionContext, wg *sync.WaitGroup) {
+func startMdbCommitTicker(sctx mongo.SessionContext, lifetimeWG *sync.WaitGroup) {
 	ticker := time.NewTicker(mdbLifeTimeLimit)
 	quit := make(chan struct{})
+
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				wg.Add(1)
+				lifetimeWG.Add(1)
 
 				if err := sctx.CommitTransaction(sctx); err != nil {
 					panic(fmt.Errorf("commit transaction: %w", err))
@@ -74,7 +75,7 @@ func startMdbCommitTicker(sctx mongo.SessionContext, wg *sync.WaitGroup) {
 					panic(fmt.Errorf("error starting transaction: %w", err))
 				}
 
-				wg.Done()
+				lifetimeWG.Done()
 			case <-quit:
 				ticker.Stop()
 				return
@@ -99,14 +100,14 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 		startMdbCommitTicker(sctx, &lifetimeLimitWG)
 
 		// listen for writes.
-		for fn := range txn.ch {
+		for opr := range txn.ch {
 			lifetimeLimitWG.Wait()
 
 			// If an error has registered, do nothing.
 			if err != nil {
 				continue
 			}
-			err = fn(sctx, m)
+			err = opr(sctx, m)
 		}
 
 		if err != nil {
@@ -133,7 +134,7 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 // MongoDB best practice is to "abort any multi-document transactions that runs for more than 60 seconds". The resulting
 // error for exceeding this time constraint is "TransactionExceededLifetimeLimitSeconds". To maintain agnostism at the
 // repository layer, we implement the logic to handle these transactions errors in the storage layer. Therefore, every
-// 60 seconds, the transacting data will be commited commit the transaction and start a new one.
+// 60 seconds, the transacting data will be committed commit the transaction and start a new one.
 func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a transaction.
 	txn := &tx{
