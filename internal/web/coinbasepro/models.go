@@ -31,24 +31,26 @@ type Candle struct {
 }
 
 // Candles are the historic rates for a product. Rates are returned in grouped buckets. Candle schema is of the form
-// `[timestamp, price_low, price_high, price_open, price_close]`
+// `[timestamp, price_low, price_high, price_open, price_close]`.
 type Candles []*Candle
 
-// UnmarshalJSON will deserialize bytes into a Candles model
+// UnmarshalJSON will deserialize bytes into a Candles model.
 func (candles *Candles) UnmarshalJSON(bytes []byte) error {
-	var raw [][]float64
-	if err := json.Unmarshal(bytes, &raw); err != nil {
+	var rawNumbers [][]float64
+	if err := json.Unmarshal(bytes, &rawNumbers); err != nil {
 		return fmt.Errorf("error unmarshaling candles: %w", err)
 	}
-	for _, r := range raw {
+
+	for _, rnum := range rawNumbers {
 		candle := new(Candle)
-		candle.Unix = int64(r[0])
-		candle.PriceLow = r[1]
-		candle.PriceHigh = r[2]
-		candle.PriceOpen = r[3]
-		candle.PriceClose = r[4]
-		candle.Volume = r[5]
+		candle.Unix = int64(rnum[0])
+		candle.PriceLow = rnum[1]
+		candle.PriceHigh = rnum[2]
+		candle.PriceOpen = rnum[3]
+		candle.PriceClose = rnum[4]
+		candle.Volume = rnum[5]
 		*candles = append(*candles, candle)
 	}
+
 	return nil
 }

@@ -61,6 +61,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
+
 		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
 			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
@@ -112,6 +113,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
+
 		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
 			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
@@ -166,6 +168,7 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
+
 		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
 			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
@@ -177,10 +180,12 @@ func TestUpsert(t *testing.T) {
 
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
+
 	fixtures, err := os.ReadDir(fixtureRoot)
 	if err != nil {
 		t.Fatalf("error reading fixtures: %v", err)
 	}
+
 	for _, fixture := range fixtures {
 		name := fixture.Name()
 		t.Run(name, func(t *testing.T) {
@@ -197,6 +202,7 @@ func TestUpsert(t *testing.T) {
 			if err := yaml.Unmarshal(bytes, &cfg); err != nil {
 				t.Fatalf("error unmarshaling fixture: %v", err)
 			}
+
 			cfg.Logger = logrus.New()
 
 			// Fill in the authentication details for the fixture.

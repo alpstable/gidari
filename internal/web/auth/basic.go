@@ -43,5 +43,11 @@ func (auth *Basic) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme = auth.url.Scheme
 	req.URL.Host = auth.url.Host
 	req.SetBasicAuth(auth.email, auth.password)
-	return http.DefaultTransport.RoundTrip(req)
+
+	rsp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+
+	return rsp, nil
 }

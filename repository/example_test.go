@@ -18,7 +18,6 @@ type testCase struct {
 
 func TestExamples(t *testing.T) {
 	t.Cleanup(tools.Quiet())
-
 	t.Parallel()
 
 	cases := []testCase{
@@ -58,5 +57,6 @@ func ExampleGenericService_Upsert() {
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Printf("upserted %d rows\n", rsp.UpsertedCount)
 }

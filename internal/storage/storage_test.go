@@ -17,6 +17,7 @@ type storageTestCase struct {
 
 func TestTruncate(t *testing.T) {
 	t.Parallel()
+
 	for _, tcase := range []storageTestCase{
 		{"mongodb://mongo1:27017/coinbasepro"},
 		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
@@ -57,6 +58,7 @@ func TestTruncate(t *testing.T) {
 
 func TestStartTx(t *testing.T) {
 	t.Parallel()
+
 	for _, tcase := range []storageTestCase{
 		{"mongodb://mongo1:27017/coinbasepro"},
 		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},

@@ -46,6 +46,7 @@ func (meta *pgmeta) isPK(name string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -72,6 +73,7 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 
 			// Add PK and general column data to the pgmeta table object.
 			meta := pg.meta[table]
+
 			columnName, okCol := record.AsMap()["column_name"].(string)
 			if !okCol {
 				return nil, fmt.Errorf("error getting postgres metadata: column_name is not a string")
@@ -94,6 +96,7 @@ func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) 
 	if meta == nil {
 		return nil, fmt.Errorf("table doesn't exist %q", table)
 	}
+
 	return meta, nil
 }
 
@@ -110,6 +113,7 @@ func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.R
 		return fmt.Errorf("unable to query: %w", err)
 	}
 	defer rows.Close()
+
 	return teardown(rows)
 }
 
@@ -134,10 +138,12 @@ func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse
 	defer rows.Close()
 
 	var rsp proto.ListColumnsResponse
+
 	err = tools.AssignStructs(rows, &rsp.Records)
 	if err != nil {
 		return nil, fmt.Errorf("unable to assign structs: %w", err)
 	}
+
 	return &rsp, nil
 }
 
@@ -155,10 +161,12 @@ func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, 
 	defer rows.Close()
 
 	var rsp proto.ListTablesResponse
+
 	err = tools.AssignStructs(rows, &rsp.Records)
 	if err != nil {
 		return nil, fmt.Errorf("unable to assign structs: %w", err)
 	}
+
 	return &rsp, nil
 }
 
@@ -181,6 +189,7 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 	}
 
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
+
 	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
 }
 
@@ -279,6 +288,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 			return nil, fmt.Errorf("unable to execute upsert: %w", err)
 		}
 	}
+
 	return &proto.UpsertResponse{}, nil
 }
 
@@ -301,6 +311,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	postgres := new(Postgres)
 
 	var err error
+
 	postgres.DB, err = sql.Open("postgres", connectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to postgres: %w", err)
@@ -368,6 +379,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 
 	// Instantiate a new transaction on the Postgres connection and store it in the activeTx map.
 	txnID := uuid.New().String()
+
 	pgtx, err := pg.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return txn, fmt.Errorf("failed to start transaction: %w", err)
@@ -388,6 +400,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 			if err != nil {
 				continue
 			}
+
 			err = fn(pgCtx, pg)
 		}
 
@@ -404,5 +417,6 @@ func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
 			txn.done <- pgtx.Rollback()
 		}
 	}()
+
 	return txn, nil
 }

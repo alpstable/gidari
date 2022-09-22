@@ -45,6 +45,21 @@ const (
 
 	// oauthTimestampBase is the base time for calculating the oauth_timestamp parameter.
 	oathTimestampBase = 10
+
+	authorizationHeaderParam    = "Authorization"
+	authorizationPrefix         = "OAuth"
+	bearerHeaderPrefix          = "Bearer"
+	contentType                 = "Content-Type"
+	formContentType             = "application/x-www-form-urlencoded"
+	defaultOauthSignatureMethod = "HMAC-SHA1"
+	oauthConsumerKeyParam       = "oauth_consumer_key"
+	oauthNonceParam             = "oauth_nonce"
+	oauthSignatureParam         = "oauth_signature"
+	oauthSignatureMethodParam   = "oauth_signature_method"
+	oauthTimestampParam         = "oauth_timestamp"
+	oautTParam                  = "oauth_token"
+	oauthVersionParam           = "oauth_version"
+	oauthVersion1               = "1.0"
 )
 
 // Auth1 is an http.RoundTripper used to authenticate using the OAuth 1.a algorithm defined by twitter:
@@ -67,6 +82,7 @@ func (auth *Auth1) RoundTrip(req *http.Request) (*http.Response, error) {
 	if auth.url == nil {
 		return nil, fmt.Errorf("url is a required value on the HTTP client's transport")
 	}
+
 	req.URL.Scheme = auth.url.Scheme
 	req.URL.Host = auth.url.Host
 
@@ -74,7 +90,13 @@ func (auth *Auth1) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	return http.DefaultTransport.RoundTrip(req)
+
+	rsp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+
+	return rsp, nil
 }
 
 // SetConsumerKey will set the consumerKey field on Auth1.
@@ -112,14 +134,17 @@ func (auth *Auth1) setRequestAuthHeader(req *http.Request) error {
 		oauthVersionParam:         oauthVersion1,
 	}
 	oauthParams[oautTParam] = auth.accessToken
+
 	params, err := collectParameters(req, oauthParams)
 	if err != nil {
 		return err
 	}
+
 	signatureBase := signatureBase(req, params)
 	signature := hmacSign(auth.consumerSecret, auth.accessTokenSecret, signatureBase, sha1.New)
 	oauthParams[oauthSignatureParam] = signature
 	req.Header.Set(authorizationHeaderParam, authHeaderValue(oauthParams))
+
 	return nil
 }
 
@@ -133,16 +158,19 @@ func (auth *Auth1) SetURL(u string) *Auth1 {
 // the port is dropped if it is 80 or 443, and the path minus query parameters is included.
 func baseURI(req *http.Request) string {
 	scheme := strings.ToLower(req.URL.Scheme)
+
 	host := strings.ToLower(req.URL.Host)
 	if hostPort := strings.Split(host, ":"); len(hostPort) == 2 && (hostPort[1] == "80" || hostPort[1] == "443") {
 		host = hostPort[0]
 	}
+
 	// For now, hacky workaround accomplishes the same internal escaping mode escape(u.Path, encodePath) for proper
 	// compliance with the OAuth1 spec.
 	path := req.URL.Path
 	if path != "" {
 		path = strings.Split(req.URL.RequestURI(), "?")[0]
 	}
+
 	return fmt.Sprintf("%v://%v%v", scheme, host, path)
 }
 
@@ -157,26 +185,32 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 		// most backends do not accept duplicate query keys
 		params[key] = value[0]
 	}
+
 	if req.Body != nil && req.Header.Get(contentType) == formContentType {
 		// reads data to a []byte, draining req.Body
 		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error reading request body: %w", err)
 		}
+
 		values, err := url.ParseQuery(string(bodyBytes))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing request body: %w", err)
 		}
+
 		for key, value := range values {
 			// not supporting params with duplicate keys
 			params[key] = value[0]
 		}
+
 		// reinitialize Body with ReadCloser over the []byte
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
+
 	for key, value := range oauthParams {
 		params[key] = value
 	}
+
 	return params, nil
 }
 
@@ -185,6 +219,7 @@ func hmacSign(consumerSecret, tokenSecret, message string, algo func() hash.Hash
 	mac := hmac.New(algo, []byte(signingKey))
 	mac.Write([]byte(message))
 	signatureBytes := mac.Sum(nil)
+
 	return base64.StdEncoding.EncodeToString(signatureBytes)
 }
 
@@ -194,6 +229,7 @@ func nonce() string {
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
 	}
+
 	return base64.StdEncoding.EncodeToString(b)
 }
 
@@ -209,6 +245,7 @@ func shouldEscape(byt byte) bool {
 	case '-', '.', '_', '~':
 		return false
 	}
+
 	// all other bytes must be escaped
 	return true
 }
@@ -216,15 +253,17 @@ func shouldEscape(byt byte) bool {
 // percentEncode percent encodes a string according to RFC 3986 2.1.
 func percentEncode(input string) string {
 	var buf bytes.Buffer
-	for _, b := range []byte(input) {
+
+	for _, byt := range []byte(input) {
 		// if in unreserved set
-		if shouldEscape(b) {
-			buf.Write([]byte(fmt.Sprintf("%%%02X", b)))
+		if shouldEscape(byt) {
+			buf.Write([]byte(fmt.Sprintf("%%%02X", byt)))
 		} else {
 			// do not escape, write byte as-is
-			buf.WriteByte(b)
+			buf.WriteByte(byt)
 		}
 	}
+
 	return buf.String()
 }
 
@@ -235,19 +274,22 @@ func encodeParameters(params map[string]string) map[string]string {
 	for key, value := range params {
 		encoded[percentEncode(key)] = percentEncode(value)
 	}
+
 	return encoded
 }
 
 // sortParameters sorts parameters by key and returns a slice of key/value pairs formatted with the given format string
 // (e.g. "%s=%s").
 func sortParameters(params map[string]string, format string) []string {
-	// sort by key
+	var keyPosition uint16
+
+	// sort by keys
 	keys := make([]string, len(params))
-	i := 0
 	for key := range params {
-		keys[i] = key
-		i++
+		keys[keyPosition] = key
+		keyPosition++
 	}
+
 	sort.Strings(keys)
 
 	// parameter join
@@ -255,6 +297,7 @@ func sortParameters(params map[string]string, format string) []string {
 	for i, key := range keys {
 		pairs[i] = fmt.Sprintf(format, key, params[key])
 	}
+
 	return pairs
 }
 
@@ -281,5 +324,6 @@ func signatureBase(req *http.Request, params map[string]string) string {
 	parameterString := normalizedParameterString(params)
 	// signature base string constructed accoding to 3.4.1.1
 	baseParts := []string{method, percentEncode(baseURL), percentEncode(parameterString)}
+
 	return strings.Join(baseParts, "&")
 }

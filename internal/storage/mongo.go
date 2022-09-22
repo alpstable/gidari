@@ -24,10 +24,12 @@ type Mongo struct {
 // Mongo://username:password@host:port
 func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
+
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to mongo: %w", err)
 	}
+
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
@@ -92,6 +94,7 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 			return nil
 		})
 	}()
+
 	return txn, nil
 }
 
@@ -113,11 +116,13 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 
 	for _, collection := range req.GetTables() {
 		coll := m.Client.Database(connString.Database).Collection(collection)
+
 		_, err = coll.DeleteMany(ctx, bson.M{})
 		if err != nil {
 			return nil, fmt.Errorf("error truncating collection %s: %w", collection, err)
 		}
 	}
+
 	return &proto.TruncateResponse{}, nil
 }
 
@@ -134,6 +139,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	}
 
 	models := []mongo.WriteModel{}
+
 	for _, record := range records {
 		doc := bson.D{}
 		if err := tools.AssingRecordBSONDocument(record, &doc); err != nil {
@@ -152,6 +158,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	}
 
 	coll := m.Client.Database(cs.Database).Collection(req.Table)
+
 	bwr, err := coll.BulkWrite(ctx, models)
 	if err != nil {
 		return nil, fmt.Errorf("bulk write error: %w", err)
@@ -161,5 +168,6 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 		MatchedCount:  bwr.MatchedCount,
 		UpsertedCount: bwr.UpsertedCount,
 	}
+
 	return rsp, nil
 }

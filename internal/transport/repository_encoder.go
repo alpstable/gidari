@@ -48,7 +48,9 @@ func (rer RepositoryEncoderRegistry) Register(u *url.URL, encoder RepositoryEnco
 	if rer[key] != nil {
 		return ErrRepositoryEncoderExists
 	}
+
 	rer[key] = encoder
+
 	return nil
 }
 
@@ -58,6 +60,7 @@ func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
 	if encoder := rer[key]; encoder != nil {
 		return encoder
 	}
+
 	return rer[NewDefaultRepositoryEncoderKey()]
 }
 
@@ -80,6 +83,7 @@ func RegisterCustomEncoders() error {
 	if err := RepositoryEncoders.Register(uri, new(CBPSandboxEncoder)); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -94,6 +98,7 @@ func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) (*pr
 	if err != nil {
 		return nil, fmt.Errorf("error getting table from request: %w", err)
 	}
+
 	return &proto.UpsertRequest{
 		Table:    table,
 		Data:     bytes,
@@ -130,15 +135,16 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		if err := json.Unmarshal(bytes, &candles); err != nil {
 			return nil, fmt.Errorf("error unmarshaling candles: %w", err)
 		}
+
 		for _, candle := range candles {
 			candle.ProductID = productID
 		}
 
-		var err error
 		updatedBytes, err := json.Marshal(candles)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling candles: %w", err)
 		}
+
 		return &proto.UpsertRequest{
 			Table:    table,
 			Data:     updatedBytes,
@@ -149,10 +155,12 @@ func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.Up
 		if err != nil {
 			return nil, fmt.Errorf("error parsing url: %w", err)
 		}
+
 		upsertRequest, err := RepositoryEncoders.Lookup(u).Encode(req, bytes)
 		if err != nil {
 			return nil, fmt.Errorf("error encoding data: %w", err)
 		}
+
 		return upsertRequest, nil
 	}
 }

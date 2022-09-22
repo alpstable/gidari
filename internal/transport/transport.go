@@ -119,6 +119,7 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 	}
 
 	query := url.Query()
+
 	startSlice := query[ts.StartName]
 	if len(startSlice) != 1 {
 		return MissingTimeseriesFieldError("startName")
@@ -146,8 +147,10 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 		} else {
 			ts.chunks = append(ts.chunks, [2]time.Time{start, end})
 		}
+
 		start = next
 	}
+
 	return nil
 }
 
@@ -187,9 +190,11 @@ func (rl RateLimitConfig) validate() error {
 	if rl.Burst == nil {
 		return MissingRateLimitFieldError("burst")
 	}
+
 	if rl.Period == nil {
 		return MissingRateLimitFieldError("period")
 	}
+
 	return nil
 }
 
@@ -218,26 +223,32 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 		if err != nil {
 			return nil, WrapWebError(web.FailedToCreateClientError(err))
 		}
+
 		return client, nil
 	}
+
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
 		if err != nil {
 			return nil, WrapWebError(web.FailedToCreateClientError(err))
 		}
+
 		return client, nil
 	}
-	return nil, nil
+
+	return nil, fmt.Errorf("no authentication method provided")
 }
 
 // repos will return a slice of generic repositories along with associated transaction instances.
 func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
+
 	for _, dns := range cfg.DNSList {
 		repo, err := repository.NewTx(ctx, dns)
 		if err != nil {
 			return nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
 		}
+
 		logInfo := tools.LogFormatter{
 			Msg: fmt.Sprintf("created repository for %q", dns),
 		}
@@ -245,6 +256,7 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 
 		repos = append(repos, repo)
 	}
+
 	return repos, nil
 }
 
@@ -257,6 +269,7 @@ func (cfg *Config) validate() error {
 	if err := cfg.RateLimitConfig.validate(); err != nil {
 		return ErrInvalidRateLimit
 	}
+
 	return nil
 }
 
@@ -279,6 +292,7 @@ func newFetchConfig(_ context.Context, cfg *Config, req *Request, client *web.Cl
 		for n, v := range req.Query {
 			query.Set(n, v)
 		}
+
 		uri.RawQuery = query.Encode()
 	}
 
@@ -321,12 +335,15 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 		for _, repo := range cfg.repos {
 			txfn := func(sctx context.Context, repo repository.Generic) error {
 				start := time.Now()
+
 				rsp, err := repo.Upsert(sctx, req)
 				if err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
 					return fmt.Errorf("error upserting data: %w", err)
 				}
+
 				rt := repo.Type()
+
 				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
 				logInfo := tools.LogFormatter{
 					WorkerID:      workerID,
@@ -336,7 +353,9 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 					UpsertedCount: rsp.UpsertedCount,
 					MatchedCount:  rsp.MatchedCount,
 				}
+
 				cfg.logger.Infof(logInfo.String())
+
 				return nil
 			}
 			// Put the data onto the transaction channel for storage.
@@ -422,6 +441,8 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
+
+	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
 
 	for _, req := range cfg.Requests {
@@ -437,11 +458,12 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 		if timeseries := req.Timeseries; timeseries != nil {
 			xurl := fetchConfig.URL
-			err = timeseries.setChunks(xurl)
 
+			err = timeseries.setChunks(xurl)
 			if err != nil {
 				return ErrSettingTimeseriesChunks
 			}
+
 			for _, chunk := range timeseries.chunks {
 				// copy the request and update it to reflect the partitioned timeseries
 				chunkReq := req
@@ -484,6 +506,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			rt := repo.Type()
 			tables := strings.Join(truncateRequest.Tables, ", ")
 			msg := fmt.Sprintf("truncated tables on %q: %v", storage.Scheme(rt), tables)
+
 			logInfo := tools.LogFormatter{
 				Duration: time.Since(start),
 				Msg:      msg,
@@ -549,5 +572,6 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		Msg:      "upsert completed",
 	}
 	cfg.Logger.Info(logInfo.String())
+
 	return nil
 }

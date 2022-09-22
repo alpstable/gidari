@@ -49,6 +49,7 @@ func GettingResponseError(rsp *http.Response) error {
 	if _, err := io.ReadAll(rsp.Body); err != nil {
 		return fmt.Errorf("%w: %v", ErrGettingResponse, err)
 	}
+
 	return fmt.Errorf("%w: %v", ErrGettingResponse, rsp.Status)
 }
 
@@ -59,6 +60,7 @@ type Client struct{ http.Client }
 func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) {
 	c := new(Client)
 	c.Client.Transport = roundtripper
+
 	return c, nil
 }
 
@@ -68,10 +70,11 @@ func newHTTPRequest(ctx context.Context, method string, uri fmt.Stringer) (*http
 	if err != nil {
 		return nil, CreateRequestError(err)
 	}
+
 	return req, nil
 }
 
-// validateResponse is a switch condition that parses an error response
+// validateResponse is a switch condition that parses an error response.
 func validateResponse(res *http.Response) error {
 	if res == nil {
 		return ErrInvalidResponse
@@ -87,6 +90,7 @@ func validateResponse(res *http.Response) error {
 		http.StatusForbidden:
 		return GettingResponseError(res)
 	}
+
 	return nil
 }
 
@@ -113,6 +117,7 @@ func (cfg *FetchConfig) validate() error {
 	if cfg.RateLimiter == nil {
 		return MissingFetchConfigFieldError("RateLimiter")
 	}
+
 	return nil
 }
 

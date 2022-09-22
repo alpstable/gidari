@@ -18,6 +18,7 @@ type tx struct {
 func (tx *tx) Commit() error {
 	close(tx.ch)
 	tx.commit <- true
+
 	return <-tx.done
 }
 
@@ -25,6 +26,7 @@ func (tx *tx) Commit() error {
 func (tx *tx) Rollback() error {
 	close(tx.ch)
 	tx.commit <- false
+
 	return <-tx.done
 }
 

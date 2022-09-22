@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-// TODO
+// Auth2 is an OAuth2 http transport.
 type Auth2 struct {
 	bearer string
 	url    *url.URL
@@ -37,7 +37,12 @@ func (auth *Auth2) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	req.URL.Scheme = auth.url.Scheme
 	req.URL.Host = auth.url.Host
-
 	req.Header.Set(authorizationHeaderParam, fmt.Sprintf("%s %s", bearerHeaderPrefix, auth.bearer))
-	return http.DefaultTransport.RoundTrip(req)
+
+	rsp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+
+	return rsp, nil
 }

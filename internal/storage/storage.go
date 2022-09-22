@@ -68,5 +68,6 @@ func New(ctx context.Context, dns string) (Storage, error) {
 	if strings.Contains(dns, Scheme(PostgresType)) {
 		return NewPostgres(ctx, dns)
 	}
+
 	return nil, DNSNotSupportedError(dns)
 }

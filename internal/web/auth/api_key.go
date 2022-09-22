@@ -70,6 +70,7 @@ func (auth *APIKey) generateSig(message string) (string, error) {
 	}
 
 	signature := hmac.New(sha256.New, key)
+
 	_, err = signature.Write([]byte(message))
 	if err != nil {
 		return "", fmt.Errorf("error writing signature: %w", err)
@@ -78,7 +79,7 @@ func (auth *APIKey) generateSig(message string) (string, error) {
 	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
 }
 
-// bytes will return the byte stream for the body
+// bytes will return the byte stream for the body.
 func parsebytes(req *http.Request) []byte {
 	if req.Body == nil {
 		return []byte{}
@@ -89,10 +90,11 @@ func parsebytes(req *http.Request) []byte {
 
 	// And now set a new body, which will simulate the same data we read:
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	return body
 }
 
-// generageMsg makes the message to be signed
+// generageMsg makes the message to be signed.
 func (auth *APIKey) generageMsg(req *http.Request, timestamp string) string {
 	postAuthority := strings.Replace(req.URL.String(), auth.url.String(), "", 1)
 	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
@@ -108,6 +110,7 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 		timestamp = strconv.FormatInt(time.Now().Unix(), apiKeyTimestampBase)
 		msg       = auth.generageMsg(req, timestamp)
 	)
+
 	sig, err := auth.generateSig(msg)
 	if err != nil {
 		return nil, err
@@ -126,5 +129,6 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
+
 	return rsp, nil
 }
