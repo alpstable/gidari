@@ -16,6 +16,16 @@ const (
 	PostgresType
 )
 
+var (
+	// ErrDNSNotSupported is an error that is returned when a DNS is not supported.
+	ErrDNSNotSupported = fmt.Errorf("dns is not supported")
+)
+
+// DNSNotSupported wraps an error with ErrDNSNotSupported.
+func DNSNotSupportedError(dns string) error {
+	return fmt.Errorf("%w: %s", ErrDNSNotSupported, dns)
+}
+
 // Storage is an interface that defines the methods that a storage device should implement.
 type Storage interface {
 	Close()
@@ -59,5 +69,5 @@ func New(ctx context.Context, dns string) (Storage, error) {
 		return NewPostgres(ctx, dns)
 	}
 
-	return nil, fmt.Errorf("databse for dns %q is not supported", dns)
+	return nil, DNSNotSupportedError(dns)
 }

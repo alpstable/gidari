@@ -17,24 +17,25 @@ type testCase struct {
 }
 
 func TestExamples(t *testing.T) {
-	defer tools.Quiet()()
+	t.Cleanup(tools.Quiet())
+	t.Parallel()
 
 	cases := []testCase{
 		{databaseURL: "mongodb://mongo1:27017/coinbasepro"},
 	}
 
-	for _, tc := range cases {
-		err := os.Setenv("DATABASE_URL", tc.databaseURL)
+	for _, tcase := range cases {
+		err := os.Setenv("DATABASE_URL", tcase.databaseURL)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
 		}
 
-		t.Run(fmt.Sprintf("ExampleGenericService_UpsertRawJSON databaseURL=%s", tc.databaseURL),
+		t.Run(fmt.Sprintf("ExampleGenericService_UpsertRawJSON databaseURL=%s", tcase.databaseURL),
 			func(t *testing.T) {
+				t.Parallel()
 				ExampleGenericService_Upsert()
 			})
 	}
-
 }
 
 func ExampleGenericService_Upsert() {
@@ -47,13 +48,15 @@ func ExampleGenericService_Upsert() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table: "accounts",
-		Data:  []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
+		Table:    "accounts",
+		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
+		DataType: int32(tools.UpsertDataJSON),
 	}
 
 	rsp, err := repo.Upsert(ctx, req)
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Printf("upserted %d rows\n", rsp.UpsertedCount)
 }

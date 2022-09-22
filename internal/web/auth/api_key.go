@@ -6,12 +6,17 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	// apiKeyTimestmapBase is the base time for calculating the timestamp parameter.
+	apiKeyTimestampBase = 10
 )
 
 // APIKey is transport for authenticating with an API KEy. API Key authentication should only be used to access your
@@ -61,36 +66,37 @@ func (auth *APIKey) SetURL(u string) *APIKey {
 func (auth *APIKey) generateSig(message string) (string, error) {
 	key, err := base64.StdEncoding.DecodeString(auth.secret)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error decoding secret: %w", err)
 	}
 
 	signature := hmac.New(sha256.New, key)
+
 	_, err = signature.Write([]byte(message))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error writing signature: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
 }
 
-// bytes will return the byte stream for the body
+// bytes will return the byte stream for the body.
 func parsebytes(req *http.Request) []byte {
 	if req.Body == nil {
 		return []byte{}
 	}
 
 	// Have to read the body from the request
-	body, _ := ioutil.ReadAll(req.Body)
+	body, _ := io.ReadAll(req.Body)
 
 	// And now set a new body, which will simulate the same data we read:
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	return body
 }
 
-// generageMsg makes the message to be signed
-func (apiKey *APIKey) generageMsg(req *http.Request, timestamp string) string {
-	// TODO there is surely a better way to handle this
-	postAuthority := strings.Replace(req.URL.String(), apiKey.url.String(), "", 1)
+// generageMsg makes the message to be signed.
+func (auth *APIKey) generageMsg(req *http.Request, timestamp string) string {
+	postAuthority := strings.Replace(req.URL.String(), auth.url.String(), "", 1)
 	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
 }
 
@@ -101,9 +107,10 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	var (
-		timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+		timestamp = strconv.FormatInt(time.Now().Unix(), apiKeyTimestampBase)
 		msg       = auth.generageMsg(req, timestamp)
 	)
+
 	sig, err := auth.generateSig(msg)
 	if err != nil {
 		return nil, err
@@ -118,5 +125,10 @@ func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("cb-access-sign", sig)
 	req.Header.Add("cb-access-timestamp", timestamp)
 
-	return http.DefaultTransport.RoundTrip(req)
+	rsp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+
+	return rsp, nil
 }

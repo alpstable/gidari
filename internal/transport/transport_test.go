@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -11,28 +10,31 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestTimeseries(t *testing.T) {
+	t.Parallel()
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
-		ts := &timeseries{
+		t.Parallel()
+
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T00:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -59,29 +61,32 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
-		ts := &timeseries{
+		t.Parallel()
+
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T01:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -108,29 +113,31 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
-		ts := &timeseries{
+		t.Parallel()
+		timeseries := &timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
 		}
 
-		u, err := url.Parse("https//api.test.com/")
+		testURL, err := url.Parse("https//api.test.com/")
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
 
-		query := u.Query()
+		query := testURL.Query()
 		query.Set("start", "2022-05-10T00:00:00Z")
 		query.Set("end", "2022-05-11T02:00:00Z")
-		u.RawQuery = query.Encode()
+		testURL.RawQuery = query.Encode()
 
-		err = ts.setChunks(u)
+		err = timeseries.setChunks(testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -161,24 +168,32 @@ func TestTimeseries(t *testing.T) {
 				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
-		if !reflect.DeepEqual(expChunks, ts.chunks) {
-			t.Fatalf("unexpected chunks: %v", ts.chunks)
+
+		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
 		}
 	})
 }
 
 func TestUpsert(t *testing.T) {
+	t.Parallel()
+
 	// Iterate over the fixtures/upsert directory and run each configuration file.
 	fixtureRoot := "fixtures/upsert"
-	fixtures, err := ioutil.ReadDir(fixtureRoot)
+
+	fixtures, err := os.ReadDir(fixtureRoot)
 	if err != nil {
 		t.Fatalf("error reading fixtures: %v", err)
 	}
-	for _, fixture := range fixtures {
-		t.Run(fixture.Name(), func(t *testing.T) {
-			path := filepath.Join(fixtureRoot, fixture.Name())
 
-			bytes, err := ioutil.ReadFile(path)
+	for _, fixture := range fixtures {
+		name := fixture.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(fixtureRoot, name)
+
+			bytes, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("error reading fixture: %v", err)
 			}
@@ -187,6 +202,7 @@ func TestUpsert(t *testing.T) {
 			if err := yaml.Unmarshal(bytes, &cfg); err != nil {
 				t.Fatalf("error unmarshaling fixture: %v", err)
 			}
+
 			cfg.Logger = logrus.New()
 
 			// Fill in the authentication details for the fixture.

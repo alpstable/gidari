@@ -20,6 +20,59 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var (
+	// ErrFetchingTimeseriesChunks is returned when the timeseries is unable to fetch the chunks.
+	ErrFetchingTimeseriesChunks = fmt.Errorf("failed to fetch timeseries chunks")
+
+	// ErrInvalidRateLimit is returned when the rate limit configuration is invalid.
+	ErrInvalidRateLimit = fmt.Errorf("invalid rate limit configuration")
+
+	// ErrMissingConfigField is returned when a configuration field is missing.
+	ErrMissingConfigField = fmt.Errorf("missing config field")
+
+	// ErrMissingRateLimitField is returned when the rate limit configuration is missing a field.
+	ErrMissingRateLimitField = fmt.Errorf("missing rate limit field")
+
+	// ErrMissingTimeseriesField is returned when the timeseries is missing from the configuration.
+	ErrMissingTimeseriesField = fmt.Errorf("missing timeseries field")
+
+	// ErrSettingTimeseriesChunks is returned when the timeseries is unable to set the chunks.
+	ErrSettingTimeseriesChunks = fmt.Errorf("failed to set timeseries chunks")
+
+	// ErrUnableToParse is returned with a parser is unable to parse the data.
+	ErrUnableToParse = fmt.Errorf("unable to parse")
+)
+
+// MissingConfigFieldError is returned when a configuration field is missing.
+func MissingConfigFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingConfigField, field)
+}
+
+// MissingRateLimitFieldError is returned when the rate limit configuration is missing a field.
+func MissingRateLimitFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingRateLimitField, field)
+}
+
+// MissingTimeseriesFieldError is returned when the timeseries is missing from the configuration.
+func MissingTimeseriesFieldError(field string) error {
+	return fmt.Errorf("%w: %s", ErrMissingTimeseriesField, field)
+}
+
+// UnableToParseError is returned when a parser is unable to parse the data.
+func UnableToParseError(name string) error {
+	return fmt.Errorf("%s %w", name, ErrUnableToParse)
+}
+
+// WrapRepositoryError will wrap an error from the repository with a message.
+func WrapRepositoryError(err error) error {
+	return fmt.Errorf("repository: %w", err)
+}
+
+// WrapWebError will wrap an error from the web package with a message.
+func WrapWebError(err error) error {
+	return fmt.Errorf("web: %w", err)
+}
+
 // APIKey is one method of HTTP(s) transport that requires a passphrase, key, and secret.
 type APIKey struct {
 	Passphrase string `yaml:"passphrase"`
@@ -38,6 +91,7 @@ type Authentication struct {
 	Auth2  *Auth2  `yaml:"auth2"`
 }
 
+// timeseries is a struct that contains the information needed to query a web API for timeseries data.
 type timeseries struct {
 	StartName string `yaml:"startName"`
 	EndName   string `yaml:"endName"`
@@ -65,24 +119,25 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 	}
 
 	query := url.Query()
+
 	startSlice := query[ts.StartName]
 	if len(startSlice) != 1 {
-		return fmt.Errorf("'startName' is required for timeseries data")
+		return MissingTimeseriesFieldError("startName")
 	}
 
 	start, err := time.Parse(*ts.Layout, startSlice[0])
 	if err != nil {
-		return err
+		return UnableToParseError("startTime")
 	}
 
 	endSlice := query[ts.EndName]
 	if len(endSlice) != 1 {
-		return fmt.Errorf("'endName' is required for timeseries data")
+		return MissingTimeseriesFieldError("endName")
 	}
 
 	end, err := time.Parse(*ts.Layout, endSlice[0])
 	if err != nil {
-		return err
+		return UnableToParseError("endTime")
 	}
 
 	for start.Before(end) {
@@ -92,8 +147,10 @@ func (ts *timeseries) setChunks(url *url.URL) error {
 		} else {
 			ts.chunks = append(ts.chunks, [2]time.Time{start, end})
 		}
+
 		start = next
 	}
+
 	return nil
 }
 
@@ -130,15 +187,14 @@ type RateLimitConfig struct {
 }
 
 func (rl RateLimitConfig) validate() error {
-	wrapper := func(field string) error {
-		return fmt.Errorf("%q is a required field on transport.RateLimitConfig", field)
-	}
 	if rl.Burst == nil {
-		return wrapper("Burst")
+		return MissingRateLimitFieldError("burst")
 	}
+
 	if rl.Period == nil {
-		return wrapper("Period")
+		return MissingRateLimitFieldError("period")
 	}
+
 	return nil
 }
 
@@ -156,78 +212,95 @@ type Config struct {
 }
 
 // connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
-// authentication data, this method will exhuast every transport option in the "Authentication" struct.
+// authentication data, this method will exhaust every transport option in the "Authentication" struct.
 func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	if apiKey := cfg.Authentication.APIKey; apiKey != nil {
-		return web.NewClient(ctx, auth.NewAPIKey().
+		client, err := web.NewClient(ctx, auth.NewAPIKey().
 			SetURL(cfg.URL).
 			SetKey(apiKey.Key).
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
+		if err != nil {
+			return nil, WrapWebError(web.FailedToCreateClientError(err))
+		}
+
+		return client, nil
 	}
+
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
-		return web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
+		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
+		if err != nil {
+			return nil, WrapWebError(web.FailedToCreateClientError(err))
+		}
+
+		return client, nil
 	}
-	return nil, nil
+
+	return nil, fmt.Errorf("no authentication method provided")
 }
 
 // repos will return a slice of generic repositories along with associated transaction instances.
 func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
+
 	for _, dns := range cfg.DNSList {
 		repo, err := repository.NewTx(ctx, dns)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create repository for %q: %w", dns, err)
+			return nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
 		}
+
 		logInfo := tools.LogFormatter{
 			Msg: fmt.Sprintf("created repository for %q", dns),
 		}
 		cfg.Logger.Info(logInfo.String())
+
 		repos = append(repos, repo)
 	}
+
 	return repos, nil
 }
 
 // validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) validate() error {
-	wrapper := func(field string) error { return fmt.Errorf("%q is a required field on transport.Config", field) }
 	if cfg.RateLimitConfig == nil {
-		return wrapper("RateLimitConfig")
+		return MissingConfigFieldError("rateLimit")
 	}
+
 	if err := cfg.RateLimitConfig.validate(); err != nil {
-		return err
+		return ErrInvalidRateLimit
 	}
+
 	return nil
 }
 
 // newFetchConfig constructs a new HTTP request.
-func newFetchConfig(ctx context.Context, cfg *Config, req *Request, client *web.Client,
-	rl *rate.Limiter) (*web.FetchConfig, error) {
-
+func newFetchConfig(_ context.Context, cfg *Config, req *Request, client *web.Client,
+	rateLimiter *rate.Limiter) (*web.FetchConfig, error) {
 	rawURL, err := url.JoinPath(cfg.URL, req.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("error joining url %q to endpoint %q: %v", cfg.URL, req.Endpoint, err)
+		return nil, fmt.Errorf("error joining url %q to endpoint %q: %w", cfg.URL, req.Endpoint, err)
 	}
 
-	u, err := url.Parse(rawURL)
+	uri, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing raw url %q: %v", rawURL, err)
+		return nil, fmt.Errorf("error parsing raw url %q: %w", rawURL, err)
 	}
 
 	// Apply the query parameters if they are on the request.
 	if req.Query != nil {
-		query := u.Query()
+		query := uri.Query()
 		for n, v := range req.Query {
 			query.Set(n, v)
 		}
-		u.RawQuery = query.Encode()
+
+		uri.RawQuery = query.Encode()
 	}
 
 	webcfg := &web.FetchConfig{
-		Client:      client,
+		C:           client,
 		Method:      req.Method,
-		URL:         u,
-		RateLimiter: rl,
+		URL:         uri,
+		RateLimiter: rateLimiter,
 	}
 
 	return webcfg, nil
@@ -247,7 +320,7 @@ type repoConfig struct {
 	truncate bool
 }
 
-func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
+func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
 		req, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
@@ -262,27 +335,31 @@ func repositoryWorker(ctx context.Context, id int, cfg *repoConfig) {
 		for _, repo := range cfg.repos {
 			txfn := func(sctx context.Context, repo repository.Generic) error {
 				start := time.Now()
+
 				rsp, err := repo.Upsert(sctx, req)
 				if err != nil {
 					cfg.logger.Fatalf("error upserting data: %v", err)
-					return err
+					return fmt.Errorf("error upserting data: %w", err)
 				}
+
 				rt := repo.Type()
+
 				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
 				logInfo := tools.LogFormatter{
-					WorkerID:      id,
+					WorkerID:      workerID,
 					WorkerName:    "repository",
 					Duration:      time.Since(start),
 					Msg:           msg,
 					UpsertedCount: rsp.UpsertedCount,
 					MatchedCount:  rsp.MatchedCount,
 				}
+
 				cfg.logger.Infof(logInfo.String())
+
 				return nil
 			}
 			// Put the data onto the transaction channel for storage.
 			repo.Transact(txfn)
-
 		}
 		cfg.done <- true
 	}
@@ -302,21 +379,24 @@ type webWorkerJob struct {
 	logger   *logrus.Logger
 }
 
-func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
+func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
 	for job := range jobs {
 		start := time.Now()
+
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
+
 		bytes, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			job.logger.Fatal(err)
 		}
+
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
 		logInfo := tools.LogFormatter{
-			WorkerID:   id,
+			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
 			Msg:        fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
@@ -333,13 +413,17 @@ func webWorker(ctx context.Context, id int, jobs <-chan *webWorkerJob) {
 // for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
 	start := time.Now()
-	if err := cfg.validate(); err != nil {
+
+	err := cfg.validate()
+	if err != nil {
 		return err
 	}
+
 	client, err := cfg.connect(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to connect to client: %v", err)
+		return fmt.Errorf("unable to connect to client: %w", err)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: fmt.Sprintf("connection establed: %s", cfg.URL)}.String())
 
 	repos, err := cfg.repos(ctx)
@@ -347,14 +431,20 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
+	// Convert the RateLimitConfig.Period to seconds.
+	rateLimitPeriodS := *cfg.RateLimitConfig.Period / time.Second
+
 	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
 	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
 	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period*time.Second), *cfg.RateLimitConfig.Burst)
+	rateLimiter := rate.NewLimiter(rate.Every(rateLimitPeriodS), *cfg.RateLimitConfig.Burst)
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest
+
+	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
+
 	for _, req := range cfg.Requests {
 		// Get is the implicit default method.
 		if req.Method == "" {
@@ -366,27 +456,29 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			return err
 		}
 
-		if ts := req.Timeseries; ts != nil {
+		if timeseries := req.Timeseries; timeseries != nil {
 			xurl := fetchConfig.URL
-			err = ts.setChunks(xurl)
+
+			err = timeseries.setChunks(xurl)
 			if err != nil {
-				return fmt.Errorf("error getting timeseries chunks: %v", ts.chunks)
+				return ErrSettingTimeseriesChunks
 			}
-			for _, chunk := range ts.chunks {
+
+			for _, chunk := range timeseries.chunks {
 				// copy the request and update it to reflect the partitioned timeseries
 				chunkReq := req
-				chunkReq.Query[ts.StartName] = chunk[0].Format(*ts.Layout)
-				chunkReq.Query[ts.EndName] = chunk[1].Format(*ts.Layout)
+				chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
+				chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
 
 				chunkedFetchConfig, err := newFetchConfig(ctx, cfg, chunkReq, client, rateLimiter)
 				if err != nil {
-					return err
+					return ErrFetchingTimeseriesChunks
 				}
+
 				flattenedRequests = append(flattenedRequests, &flattenedRequest{
 					fetchConfig: chunkedFetchConfig,
 					table:       req.Table,
 				})
-
 			}
 		} else {
 			flattenedRequests = append(flattenedRequests, &flattenedRequest{
@@ -405,13 +497,16 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if cfg.Truncate {
 		for _, repo := range repos {
 			start := time.Now()
-			if _, err := repo.Truncate(ctx, truncateRequest); err != nil {
-				return fmt.Errorf("unable to truncate tables: %v", err)
+
+			_, err := repo.Truncate(ctx, truncateRequest)
+			if err != nil {
+				return fmt.Errorf("unable to truncate tables: %w", err)
 			}
 
 			rt := repo.Type()
 			tables := strings.Join(truncateRequest.Tables, ", ")
 			msg := fmt.Sprintf("truncated tables on %q: %v", storage.Scheme(rt), tables)
+
 			logInfo := tools.LogFormatter{
 				Duration: time.Since(start),
 				Msg:      msg,
@@ -436,6 +531,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go repositoryWorker(ctx, id, repoWorkerCfg)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "repository workers started"}.String())
 
 	webWorkerJobs := make(chan *webWorkerJob, len(cfg.Requests))
@@ -444,6 +540,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	for id := 1; id <= runtime.NumCPU(); id++ {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "web workers started"}.String())
 
 	// Enqueue the worker jobs
@@ -455,6 +552,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 			logger:           cfg.Logger,
 		}
 	}
+
 	cfg.Logger.Info(tools.LogFormatter{Msg: "web worker jobs enqueued"}.String())
 
 	// Wait for all of the data to flush.
@@ -465,11 +563,15 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	// Commit the transactions and check for errors.
 	for _, repo := range repos {
 		if err := repo.Commit(); err != nil {
-			return err
+			return fmt.Errorf("unable to commit transaction: %w", err)
 		}
 	}
 
-	duration := time.Since(start)
-	cfg.Logger.Info(tools.LogFormatter{Duration: duration, Msg: "upsert completed"}.String())
+	logInfo := tools.LogFormatter{
+		Duration: time.Since(start),
+		Msg:      "upsert completed",
+	}
+	cfg.Logger.Info(logInfo.String())
+
 	return nil
 }

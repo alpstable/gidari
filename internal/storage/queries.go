@@ -1,7 +1,7 @@
 package storage
 
 import (
-	_ "embed"
+	_ "embed" // Embed external data.
 )
 
 //go:embed queries/pg_columns.sql

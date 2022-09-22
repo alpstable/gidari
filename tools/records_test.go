@@ -8,12 +8,15 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type testcase struct {
+type testCase struct {
 	Int int `json:"int"`
 }
 
 func TestAssignReadResponseRecords(t *testing.T) {
+	t.Parallel()
+
 	t.Run("assign slice", func(t *testing.T) {
+		t.Parallel()
 		rsp := new(proto.ReadResponse)
 
 		r1, err := structpb.NewStruct(map[string]interface{}{"int": 1})
@@ -23,36 +26,41 @@ func TestAssignReadResponseRecords(t *testing.T) {
 
 		rsp.Records = []*structpb.Struct{r1}
 
-		tc := []*testcase{}
-		err = AssignReadResponseRecords(rsp, &tc)
+		tcase := []*testCase{}
+		err = AssignReadResponseRecords(rsp, &tcase)
 		if err != nil {
 			t.Fatalf("failed to assign records: %v", err)
 		}
 
-		expected := []*testcase{{1}}
-		if !reflect.DeepEqual(tc, expected) {
-			t.Fatalf("expected %v, got %v", expected, tc)
+		expected := []*testCase{{1}}
+		if !reflect.DeepEqual(tcase, expected) {
+			t.Fatalf("expected %v, got %v", expected, tcase)
 		}
 	})
 
 	assignSliceBenchmarkResponse := new(proto.ReadResponse)
-	assignSliceBenchmarkExpected := []*testcase{}
-	for i := 1; i <= 1e6; i++ {
-		r, err := structpb.NewStruct(map[string]interface{}{"int": i})
+	assignSliceBenchmarkExpected := []*testCase{}
+
+	for recInt := 1; recInt <= 1e6; recInt++ {
+		record, err := structpb.NewStruct(map[string]interface{}{"int": recInt})
 		if err != nil {
 			t.Fatalf("failed to create struct: %v", err)
 		}
-		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testcase{Int: i})
-		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, r)
+
+		assignSliceBenchmarkExpected = append(assignSliceBenchmarkExpected, &testCase{Int: recInt})
+
+		assignSliceBenchmarkResponse.Records = append(assignSliceBenchmarkResponse.Records, record)
 	}
 	t.Run("assign slice benchmark", func(t *testing.T) {
-		tc := []*testcase{}
-		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tc)
+		t.Parallel()
+
+		tcase := []*testCase{}
+		err := AssignReadResponseRecords(assignSliceBenchmarkResponse, &tcase)
 		if err != nil {
 			t.Fatalf("failed to assign records: %v", err)
 		}
-		if !reflect.DeepEqual(tc, assignSliceBenchmarkExpected) {
-			t.Fatalf("expected %v, got %v", assignSliceBenchmarkExpected, tc)
+		if !reflect.DeepEqual(tcase, assignSliceBenchmarkExpected) {
+			t.Fatalf("expected %v, got %v", assignSliceBenchmarkExpected, tcase)
 		}
 	})
 }
