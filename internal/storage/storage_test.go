@@ -19,7 +19,7 @@ func TestTruncate(t *testing.T) {
 	t.Parallel()
 
 	for _, tcase := range []storageTestCase{
-		{"mongodb://mongo1:27017/coinbasepro"},
+		{"mongodb://mongo1:27017/cbp-stg"},
 		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
 	} {
 		dns := tcase.dns

@@ -3,7 +3,7 @@ authentication:
   auth2:
     bearer: POL_BEARER_TOKEN
 dnsList:
-  - mongodb://mongo1:27017/polygon
+  - mongodb://mongo1:27017/polygon-transport
 rateLimit:
   burst: 99
   period: 1
