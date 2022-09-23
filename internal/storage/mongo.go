@@ -89,7 +89,6 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 				}
 				err = opr(sctx, m)
 			}
-
 		}
 
 		if err != nil {
