@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/alpine-hodler/gidari/proto"
@@ -15,14 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
-const (
-	mdbLifeTimeLimit = 60 * time.Second
-)
+const defaultMDBLifetime = 60 * time.Second
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
 type Mongo struct {
 	*mongo.Client
-	dns string
+	dns      string
+	lifetime time.Duration
 }
 
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
@@ -39,6 +37,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
+	mdb.lifetime = defaultMDBLifetime
 
 	return mdb, nil
 }
@@ -55,59 +54,42 @@ func (m *Mongo) Close() {
 	}
 }
 
-// startMdbCommitTicker will start a ticker that will commit the transaction every 60 seconds.
-func startMdbCommitTicker(sctx mongo.SessionContext, lifetimeWG *sync.WaitGroup) {
-	ticker := time.NewTicker(mdbLifeTimeLimit)
-	quit := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				lifetimeWG.Add(1)
-
-				if err := sctx.CommitTransaction(sctx); err != nil {
-					panic(fmt.Errorf("commit transaction: %w", err))
-				}
-
-				// Start a new transaction.
-				if err := sctx.StartTransaction(); err != nil {
-					panic(fmt.Errorf("error starting transaction: %w", err))
-				}
-
-				lifetimeWG.Done()
-			case <-quit:
-				ticker.Stop()
-				return
-			}
-		}
-	}()
-}
-
 // startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
 // to avoid lifetime limit errors.
 func (m *Mongo) startSession(ctx context.Context, txn *tx) {
+	// lifetime is the time in seconds that a transaction can run for before it is reset.
+	lifetime := m.lifetime
+
 	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 		// Start the transaction, if there is an error break the go routine.
 		err := sctx.StartTransaction()
 		if err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)
 		}
-		// Need to create a wait group to halt the txn.ch listener when a lifetime limit has been reached.
-		lifetimeLimitWG := sync.WaitGroup{}
 
-		// Start the lifetime timer to avoid the "TransactionExceededLifetimeLimitSeconds" error.
-		startMdbCommitTicker(sctx, &lifetimeLimitWG)
+		lifetimeTicker := time.NewTicker(lifetime)
 
 		// listen for writes.
 		for opr := range txn.ch {
-			lifetimeLimitWG.Wait()
+			select {
+			case <-lifetimeTicker.C:
+				// If the transaction has exceeded the lifetime, commit the transaction and start a new
+				// one.
+				if err := sctx.CommitTransaction(sctx); err != nil {
+					panic(fmt.Errorf("commit transaction: %w", err))
+				}
 
-			// If an error has registered, do nothing.
-			if err != nil {
-				continue
+				// Start a new transaction on the context.
+				if err := sctx.StartTransaction(); err != nil {
+					panic(fmt.Errorf("error starting transaction: %w", err))
+				}
+			default:
+				if err != nil {
+					continue
+				}
+				err = opr(sctx, m)
 			}
-			err = opr(sctx, m)
+
 		}
 
 		if err != nil {
