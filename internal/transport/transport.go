@@ -431,13 +431,10 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	// Convert the RateLimitConfig.Period to seconds.
-	rateLimitPeriodS := *cfg.RateLimitConfig.Period / time.Second
-
 	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
 	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
 	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(rateLimitPeriodS), *cfg.RateLimitConfig.Burst)
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
 
 	// Get all of the fetch configurations needed to process the upsert.
 	var flattenedRequests []*flattenedRequest

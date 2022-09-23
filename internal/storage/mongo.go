@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
@@ -13,10 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
+const defaultMDBLifetime = 60 * time.Second
+
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
 type Mongo struct {
 	*mongo.Client
-	dns string
+	dns      string
+	lifetime time.Duration
 }
 
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
@@ -33,6 +37,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
+	mdb.lifetime = defaultMDBLifetime
 
 	return mdb, nil
 }
@@ -49,7 +54,68 @@ func (m *Mongo) Close() {
 	}
 }
 
+// startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
+// to avoid lifetime limit errors.
+func (m *Mongo) startSession(ctx context.Context, txn *tx) {
+	// lifetime is the time in seconds that a transaction can run for before it is reset.
+	lifetime := m.lifetime
+
+	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
+		// Start the transaction, if there is an error break the go routine.
+		err := sctx.StartTransaction()
+		if err != nil {
+			return fmt.Errorf("error starting transaction: %w", err)
+		}
+
+		lifetimeTicker := time.NewTicker(lifetime)
+
+		// listen for writes.
+		for opr := range txn.ch {
+			select {
+			case <-lifetimeTicker.C:
+				// If the transaction has exceeded the lifetime, commit the transaction and start a new
+				// one.
+				if err := sctx.CommitTransaction(sctx); err != nil {
+					panic(fmt.Errorf("commit transaction: %w", err))
+				}
+
+				// Start a new transaction on the context.
+				if err := sctx.StartTransaction(); err != nil {
+					panic(fmt.Errorf("error starting transaction: %w", err))
+				}
+			default:
+				if err != nil {
+					continue
+				}
+				err = opr(sctx, m)
+			}
+		}
+
+		if err != nil {
+			return fmt.Errorf("error in transaction: %w", err)
+		}
+
+		// Await the decision to commit or rollback.
+		switch {
+		case <-txn.commit:
+			if err := sctx.CommitTransaction(sctx); err != nil {
+				return fmt.Errorf("commit transaction: %w", err)
+			}
+		default:
+			if err := sctx.AbortTransaction(sctx); err != nil {
+				return fmt.Errorf("transaction aborted")
+			}
+		}
+		return nil
+	})
+}
+
 // StartTx will start a mongodb session where all data from write methods can be rolled back.
+//
+// MongoDB best practice is to "abort any multi-document transactions that runs for more than 60 seconds". The resulting
+// error for exceeding this time constraint is "TransactionExceededLifetimeLimitSeconds". To maintain agnostism at the
+// repository layer, we implement the logic to handle these transactions errors in the storage layer. Therefore, every
+// 60 seconds, the transacting data will be committed commit the transaction and start a new one.
 func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	// Construct a transaction.
 	txn := &tx{
@@ -59,41 +125,7 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	}
 
 	// Create a go routine that creates a session and listens for writes.
-	go func() {
-		txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
-			// Start the transaction, if there is an error break the go routine.
-			err := sctx.StartTransaction()
-			if err != nil {
-				return fmt.Errorf("error starting transaction: %w", err)
-			}
-
-			// listen for writes.
-			for fn := range txn.ch {
-				// If an error has registered, do nothing.
-				if err != nil {
-					continue
-				}
-				err = fn(sctx, m)
-			}
-
-			if err != nil {
-				return fmt.Errorf("error in transaction: %w", err)
-			}
-
-			// Await the decision to commit or rollback.
-			switch {
-			case <-txn.commit:
-				if err := sctx.CommitTransaction(sctx); err != nil {
-					return fmt.Errorf("commit transaction: %w", err)
-				}
-			default:
-				if err := sctx.AbortTransaction(sctx); err != nil {
-					return fmt.Errorf("transaction aborted")
-				}
-			}
-			return nil
-		})
-	}()
+	go m.startSession(ctx, txn)
 
 	return txn, nil
 }

@@ -5,7 +5,7 @@ authentication:
     secret: CBP_SECRET
     key: CBP_KEY
 dnsList:
-  - mongodb://mongo1:27017/coinbasepro
+  - mongodb://mongo1:27017/coinbasepro-transport
 rateLimit:
   burst: 5
   period: 1
