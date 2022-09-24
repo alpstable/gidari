@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const defaultMDBLifetime = 60 * time.Second
@@ -202,4 +203,34 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	}
 
 	return rsp, nil
+}
+
+// ListTables will return a list of all tables in the MongoDB database.
+func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
+	cs, err := connstring.ParseAndValidate(m.dns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse connection string: %w", err)
+	}
+
+	collections, err := m.Client.Database(cs.Database).ListCollectionNames(ctx, bson.D{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list collections: %w", err)
+	}
+
+	record := []*structpb.Struct{}
+	for _, collection := range collections {
+		record = append(record, &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"table_name": {
+					Kind: &structpb.Value_StringValue{
+						StringValue: collection,
+					},
+				},
+			},
+		})
+	}
+
+	return &proto.ListTablesResponse{
+		Records: record,
+	}, nil
 }

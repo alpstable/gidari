@@ -28,16 +28,25 @@ func DNSNotSupportedError(dns string) error {
 
 // Storage is an interface that defines the methods that a storage device should implement.
 type Storage interface {
+	// Close will disconnect the storage device.
 	Close()
-	Read(context.Context, *proto.ReadRequest, *proto.ReadResponse) error
+
+	// ListTables will return a list of all tables in the database.
+	ListTables(ctx context.Context) (*proto.ListTablesResponse, error)
 
 	// StartTx will start a transaction and return a "Tx" object that can be used to put operations on a channel,
 	// commit the result of all operations sent to the transaction, or rollback the result of all operations sent
 	// to the transaction.
 	StartTx(context.Context) (Tx, error)
+
+	// Truncate will delete all data from the storage device for ast list of tables.
 	Truncate(context.Context, *proto.TruncateRequest) (*proto.TruncateResponse, error)
-	Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error)
+
+	// Type returns the type of storage device.
 	Type() uint8
+
+	// Upsert will insert or update a batch of records in the storage device.
+	Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error)
 }
 
 // Tx is an interface that defines the methods that a transaction object should implement.
