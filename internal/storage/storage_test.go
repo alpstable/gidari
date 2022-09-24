@@ -15,13 +15,15 @@ type storageTestCase struct {
 	dns string
 }
 
+var testCases = []storageTestCase{
+	{"mongodb://mongo1:27017/cbp-stg"},
+	{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+}
+
 func TestTruncate(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range []storageTestCase{
-		{"mongodb://mongo1:27017/cbp-stg"},
-		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	} {
+	for _, tcase := range testCases {
 		dns := tcase.dns
 		t.Run(fmt.Sprintf("empty case: %s", dns), func(t *testing.T) {
 			ctx := context.Background()
@@ -59,10 +61,7 @@ func TestTruncate(t *testing.T) {
 func TestStartTx(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range []storageTestCase{
-		{"mongodb://mongo1:27017/coinbasepro"},
-		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	} {
+	for _, tcase := range testCases {
 		dns := tcase.dns
 		t.Run(fmt.Sprintf("tx should commit %s", dns), func(t *testing.T) {
 			t.Parallel()
@@ -180,6 +179,60 @@ func TestStartTx(t *testing.T) {
 
 			if err := txn.Commit(); err == nil {
 				t.Fatalf("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestListTables(t *testing.T) {
+	t.Parallel()
+
+	for _, tcase := range testCases {
+		dns := tcase.dns
+		t.Run(fmt.Sprintf("list tables %s", dns), func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			stg, err := New(ctx, dns)
+			if err != nil {
+				t.Fatalf("failed to create client: %v", err)
+			}
+			defer stg.Close()
+
+			// If the type is mongodb, then we need to seed some collections.
+			if stg.Type() == MongoType {
+				// Upsert some data to a random table
+				_, err := stg.Upsert(ctx, &proto.UpsertRequest{
+					Table:    "accounts",
+					Data:     []byte(`{"test": "test"}`),
+					DataType: int32(tools.UpsertDataJSON),
+				})
+				if err != nil {
+					t.Fatalf("failed to upsert data: %v", err)
+				}
+			}
+
+			rsp, err := stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if len(rsp.Records) == 0 {
+				t.Fatalf("expected tables, got none")
+			}
+
+			// Make sure that one of the records has the table "accounts".
+			found := false
+			for _, record := range rsp.Records {
+				asMap := record.AsMap()
+				if asMap["table_name"] == "accounts" {
+					found = true
+				}
+			}
+
+			if !found {
+				t.Fatalf("expected to find table accounts, got none")
 			}
 		})
 	}
