@@ -76,5 +76,11 @@ func TestMongoDBTxn(t *testing.T) {
 		if err := txn.Commit(); err != nil {
 			t.Fatalf("failed to commit transaction: %v", err)
 		}
+
+		// Truncate the collection.
+		treq := &proto.TruncateRequest{Tables: []string{collection}}
+		if _, err := mdb.Truncate(ctx, treq); err != nil {
+			t.Fatalf("failed to truncate collection: %v", err)
+		}
 	})
 }

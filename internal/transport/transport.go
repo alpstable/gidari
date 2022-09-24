@@ -322,44 +322,46 @@ type repoConfig struct {
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		req, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
+		reqs, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
 			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
 
-		// If a table is defined for the job, then replace the table name in the raw data.
-		if table := job.table; table != nil {
-			req.Table = *table
-		}
-
-		for _, repo := range cfg.repos {
-			txfn := func(sctx context.Context, repo repository.Generic) error {
-				start := time.Now()
-
-				rsp, err := repo.Upsert(sctx, req)
-				if err != nil {
-					cfg.logger.Fatalf("error upserting data: %v", err)
-					return fmt.Errorf("error upserting data: %w", err)
-				}
-
-				rt := repo.Type()
-
-				msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
-				logInfo := tools.LogFormatter{
-					WorkerID:      workerID,
-					WorkerName:    "repository",
-					Duration:      time.Since(start),
-					Msg:           msg,
-					UpsertedCount: rsp.UpsertedCount,
-					MatchedCount:  rsp.MatchedCount,
-				}
-
-				cfg.logger.Infof(logInfo.String())
-
-				return nil
+		for _, req := range reqs {
+			// If a table is defined for the job, then replace the table name in the raw data.
+			if table := job.table; table != nil {
+				req.Table = *table
 			}
-			// Put the data onto the transaction channel for storage.
-			repo.Transact(txfn)
+
+			for _, repo := range cfg.repos {
+				txfn := func(sctx context.Context, repo repository.Generic) error {
+					start := time.Now()
+
+					rsp, err := repo.Upsert(sctx, req)
+					if err != nil {
+						cfg.logger.Fatalf("error upserting data: %v", err)
+						return fmt.Errorf("error upserting data: %w", err)
+					}
+
+					rt := repo.Type()
+
+					msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
+					logInfo := tools.LogFormatter{
+						WorkerID:      workerID,
+						WorkerName:    "repository",
+						Duration:      time.Since(start),
+						Msg:           msg,
+						UpsertedCount: rsp.UpsertedCount,
+						MatchedCount:  rsp.MatchedCount,
+					}
+
+					cfg.logger.Infof(logInfo.String())
+
+					return nil
+				}
+				// Put the data onto the transaction channel for storage.
+				repo.Transact(txfn)
+			}
 		}
 		cfg.done <- true
 	}
