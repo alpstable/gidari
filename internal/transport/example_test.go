@@ -10,8 +10,8 @@ import (
 
 type CustomRepositoryEncoder struct{}
 
-func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) (*proto.UpsertRequest, error) {
-	return new(proto.UpsertRequest), nil
+func (e *CustomRepositoryEncoder) Encode(_ http.Request, _ []byte) ([]*proto.UpsertRequest, error) {
+	return []*proto.UpsertRequest{new(proto.UpsertRequest)}, nil
 }
 
 func ExampleRepositoryEncoderRegistry() {

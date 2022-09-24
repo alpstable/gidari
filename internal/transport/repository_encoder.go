@@ -1,12 +1,10 @@
 package transport
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"github.com/alpine-hodler/gidari/internal/web/coinbasepro"
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 )
@@ -34,12 +32,24 @@ func NewDefaultRepositoryEncoderKey() RepositoryEncoderKey {
 // can be passed to repository upsert methods.
 type RepositoryEncoder interface {
 	// Encode will transform the data from a web request into a byte slice that can be passed to repository upsert
-	// methods.
-	Encode(http.Request, []byte) (*proto.UpsertRequest, error)
+	// methods. This method returns a slice of upserts, in the event that the data to encode will needs to be split
+	// into multiple table upserts, e.g. relational data.
+	Encode(http.Request, []byte) ([]*proto.UpsertRequest, error)
 }
 
 // RepositoryEncoderRegistry is a map of registered repository encoders.
 type RepositoryEncoderRegistry map[RepositoryEncoderKey]RepositoryEncoder
+
+// RegisterEncoders will register all listed encoders for the deployment.
+func RegisterEncoders(encoders ...func() error) error {
+	for _, encoder := range encoders {
+		if err := encoder(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // Register will map a "RepositoryEncoderKey" created by the URL and table to the given encoder. If the encoder has
 // already been regisered, this method will throw the "ErrRepositorEncoderExists" error.
@@ -70,18 +80,15 @@ func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
 // in the init function, and (3) allow for the possibility of having multiple registries.
 var RepositoryEncoders = make(RepositoryEncoderRegistry)
 
-// RegisterCustomEncoders will register custom encoder specific to the default project.
-func RegisterCustomEncoders() error {
-	// Register the default case
-	uri, _ := url.Parse("")
-	if err := RepositoryEncoders.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
-		return err
+// RegisterDefaultEncoder will register custom encoder specific to the default project.
+func RegisterDefaultEncoder() error {
+	uri, err := url.Parse("")
+	if err != nil {
+		return fmt.Errorf("error parsing url: %w", err)
 	}
 
-	// Register the CoinbasePro Sandbox Candles case
-	uri, _ = url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
-	if err := RepositoryEncoders.Register(uri, new(CBPSandboxEncoder)); err != nil {
-		return err
+	if err := RepositoryEncoders.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
+		return fmt.Errorf("error registering default encoder: %w", err)
 	}
 
 	return nil
@@ -93,74 +100,17 @@ type DefaultRepositoryEncoder struct{}
 
 // Encode will transform the data from arbitrary web API requests into a byte slice that can be passed to repository
 // upsert methods.
-func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
+func (dre *DefaultRepositoryEncoder) Encode(req http.Request, bytes []byte) ([]*proto.UpsertRequest, error) {
 	table, err := tools.ParseDBTableFromURL(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting table from request: %w", err)
 	}
 
-	return &proto.UpsertRequest{
+	defaultUpsert := &proto.UpsertRequest{
 		Table:    table,
 		Data:     bytes,
 		DataType: int32(tools.UpsertDataJSON),
-	}, nil
-}
-
-// CBPSandboxEncoder is the encoder used to transform data from Coinbase Pro Sandbox web requests into bytes that
-// can be processed by repository upsert methods.
-type CBPSandboxEncoder struct{}
-
-// Encode will transform the data from Coinbase Pro Sandbox web requests into a byte slice that can be passed to
-// repository.
-func (ccre *CBPSandboxEncoder) Encode(req http.Request, bytes []byte) (*proto.UpsertRequest, error) {
-	table, err := tools.ParseDBTableFromURL(req)
-	if err != nil {
-		return nil, fmt.Errorf("error getting table from request: %w", err)
 	}
 
-	const candleMinutesGranularity = "60"
-
-	switch table {
-	case "candles":
-		granularity := req.URL.Query()["granularity"][0]
-		if granularity == candleMinutesGranularity {
-			table = "candle_minutes"
-		}
-
-		productID := tools.SplitURLPath(req)[1]
-
-		// initialize the slice of candles.
-		var candles coinbasepro.Candles
-
-		if err := json.Unmarshal(bytes, &candles); err != nil {
-			return nil, fmt.Errorf("error unmarshaling candles: %w", err)
-		}
-
-		for _, candle := range candles {
-			candle.ProductID = productID
-		}
-
-		updatedBytes, err := json.Marshal(candles)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling candles: %w", err)
-		}
-
-		return &proto.UpsertRequest{
-			Table:    table,
-			Data:     updatedBytes,
-			DataType: int32(tools.UpsertDataJSON),
-		}, nil
-	default:
-		u, err := url.Parse("")
-		if err != nil {
-			return nil, fmt.Errorf("error parsing url: %w", err)
-		}
-
-		upsertRequest, err := RepositoryEncoders.Lookup(u).Encode(req, bytes)
-		if err != nil {
-			return nil, fmt.Errorf("error encoding data: %w", err)
-		}
-
-		return upsertRequest, nil
-	}
+	return []*proto.UpsertRequest{defaultUpsert}, nil
 }
