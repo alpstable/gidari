@@ -64,14 +64,18 @@ func (rer RepositoryEncoderRegistry) Register(u *url.URL, encoder RepositoryEnco
 	return nil
 }
 
+type RegisteredRepositoryEncoder struct {
+	RepositoryEncoder
+}
+
 // Lookup will lookup the "RepositoryEncoder" using a URL and table.
-func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) RepositoryEncoder {
+func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) *RegisteredRepositoryEncoder {
 	key := NewRepositoryEncoderKey(u)
 	if encoder := rer[key]; encoder != nil {
-		return encoder
+		return &RegisteredRepositoryEncoder{encoder}
 	}
 
-	return rer[NewDefaultRepositoryEncoderKey()]
+	return &RegisteredRepositoryEncoder{rer[NewDefaultRepositoryEncoderKey()]}
 }
 
 // RepositoryEncoders is the registry of encoders used to transform web request data into a byte slice that can be
