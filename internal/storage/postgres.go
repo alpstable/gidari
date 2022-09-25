@@ -311,6 +311,9 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	return postgres, nil
 }
 
+// IsNoSQL returns "false" to indicate that "Postgres" is not a NoSQL database.
+func (pg *Postgres) IsNoSQL() bool { return false }
+
 // Type implements the storage interface.
 func (pg *Postgres) Type() uint8 { return PostgresType }
 
