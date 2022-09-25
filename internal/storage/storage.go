@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -47,6 +48,11 @@ type Storage interface {
 
 	// Upsert will insert or update a batch of records in the storage device.
 	Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error)
+}
+
+// sqlStmtPreparer can be used to prepare a statement and return the result.
+type sqlStmtPreparer interface {
+	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
 }
 
 // Tx is an interface that defines the methods that a transaction object should implement.

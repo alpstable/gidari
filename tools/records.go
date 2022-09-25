@@ -116,6 +116,59 @@ func AssignReadRequired(req *proto.ReadRequest, key string, val interface{}) err
 	return nil
 }
 
+// scanColumnPointers will scan a row into a slice of pointers, returning the slice.
+func scanColumnPointers(rows *sql.Rows, columns []string) ([]interface{}, error) {
+	// Create a slice of interface{}'s to represent each column,
+	// and a second slice to contain pointers to each item in the columns slice.
+	columnReps := make([]interface{}, len(columns))
+	columnPointers := make([]interface{}, len(columns))
+
+	for i := range columns {
+		columnPointers[i] = &columnReps[i]
+	}
+
+	// Scan the result into the column pointers...
+	if err := rows.Scan(columnPointers...); err != nil {
+		return nil, fmt.Errorf("failed to scan row: %w", err)
+	}
+
+	return columnPointers, nil
+}
+
+// sortColumnValues will sort the values of a row into a map of column name to value.
+func sortColumnValues(rows *sql.Rows, columns []string) (map[string]interface{}, error) {
+	columnPointers, err := scanColumnPointers(rows, columns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan column pointers: %w", err)
+	}
+
+	// Create our map, and retrieve the value for each column from the pointers slice,
+	// storing it in the map with the name of the column as the key.
+	colVal := make(map[string]interface{})
+
+	for i, colName := range columns {
+		val, ok := columnPointers[i].(*interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to assert interface")
+		}
+
+		if reflect.TypeOf(*val) == reflect.TypeOf([]byte{}) {
+			// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse
+			// these values into strings.
+			f, err := strconv.ParseFloat(string((*val).([]byte)), strconv.IntSize)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse float64 from []byte: %w", err)
+			}
+
+			*val = f
+		}
+
+		colVal[colName] = *val
+	}
+
+	return colVal, nil
+}
+
 // AssignStructs will convert SQL rows into structpb.Struct value and append the slice passed into the function,
 // genreralizing the process of createing JSON objects from SQL rows.
 func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
@@ -126,42 +179,10 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		// Create a slice of interface{}'s to represent each column,
-		// and a second slice to contain pointers to each item in the columns slice.
-		columns := make([]interface{}, len(cols))
-		columnPointers := make([]interface{}, len(cols))
-
-		for i := range columns {
-			columnPointers[i] = &columns[i]
-		}
-
-		// Scan the result into the column pointers...
-		if err := rows.Scan(columnPointers...); err != nil {
-			return fmt.Errorf("error scanning rows: %w", err)
-		}
-
-		// Create our map, and retrieve the value for each column from the pointers slice,
-		// storing it in the map with the name of the column as the key.
-		colVal := make(map[string]interface{})
-
-		for i, colName := range cols {
-			val, ok := columnPointers[i].(*interface{})
-			if !ok {
-				return fmt.Errorf("failed to assert interface")
-			}
-
-			if reflect.TypeOf(*val) == reflect.TypeOf([]byte{}) {
-				// The postgres driver treats numbers & decimal columns as []uint8. We chose to parse
-				// these values into strings.
-				f, err := strconv.ParseFloat(string((*val).([]byte)), strconv.IntSize)
-				if err != nil {
-					return fmt.Errorf("unable to parse float64 from []byte: %w", err)
-				}
-
-				*val = f
-			}
-
-			colVal[colName] = *val
+		// Scan the rows into a slice of pointers, then sort them by column name.
+		colVal, err := sortColumnValues(rows, cols)
+		if err != nil {
+			return fmt.Errorf("failed to sort column values: %w", err)
 		}
 
 		// Encoded the data and append it to the response tables.

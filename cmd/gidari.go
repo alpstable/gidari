@@ -9,7 +9,6 @@ import (
 	"github.com/alpine-hodler/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 
 	_ "embed" // Embed external data.
 )
@@ -50,9 +49,9 @@ func main() {
 				log.Fatalf("error reading config file  %s: %v", configFilepath, err)
 			}
 
-			var cfg transport.Config
-			if err := yaml.Unmarshal(bytes, &cfg); err != nil {
-				log.Fatalf("error unmarshaling data: %v", err)
+			cfg, err := transport.NewConfig(bytes)
+			if err != nil {
+				log.Fatalf("error creating config: %v", err)
 			}
 
 			cfg.Logger = logrus.New()
@@ -62,7 +61,7 @@ func main() {
 				cfg.Logger.SetLevel(logrus.FatalLevel)
 			}
 
-			if err := transport.Upsert(ctx, &cfg); err != nil {
+			if err := transport.Upsert(ctx, cfg); err != nil {
 				log.Fatalf("error upserting data: %v", err)
 			}
 		},

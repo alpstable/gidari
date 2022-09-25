@@ -50,6 +50,37 @@ func (meta *pgmeta) isPK(name string) bool {
 	return false
 }
 
+// exclusionConstraints will return a string of non-primary key columns to "exclude" if they are not changed in the
+// context of a Postgres insert. That is, if a column is not changed, it will not be updated. All columns beside primary
+// keys must be included in the "excluded" clause.
+func (meta *pgmeta) exclusionConstraints() []string {
+	var constraints []string
+
+	for _, column := range meta.columns {
+		if !meta.isPK(column) {
+			constraints = append(constraints, fmt.Sprintf("\"%s\" = EXCLUDED.\"%s\"", column, column))
+		}
+	}
+
+	return constraints
+}
+
+// upsertStatement will return a postgres upsert statement for the meta object.
+func (meta *pgmeta) upsertStmt(ctx context.Context, preparer sqlStmtPreparer, numRows int) (*sql.Stmt, error) {
+	query := fmt.Sprintf(`INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`, meta.table,
+		strings.Join(meta.columns, ","),
+		tools.SQLIterativePlaceholders(len(meta.columns), numRows, "$"),
+		strings.Join(meta.pk, ","),
+		strings.Join(meta.exclusionConstraints(), ","))
+
+	stmt, err := preparer.PrepareContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare statement: %w", err)
+	}
+
+	return stmt, nil
+}
+
 // getMeta will get postgres database metadata for processing generalized functionality, such as upsert.
 func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) {
 	if len(pg.meta) == 0 {
@@ -170,12 +201,6 @@ func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, 
 	return &rsp, nil
 }
 
-// Read read will attempt to assign a reader buidler based on the request, assinging the resuling rows to the response
-// in-memory.
-func (pg *Postgres) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	return nil
-}
-
 // Truncate will truncate a table.
 func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*proto.TruncateResponse, error) {
 	// If the table is not specified, return an error.
@@ -191,6 +216,25 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
 
 	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
+}
+
+// upsertPreparer will return the implementation of an object that can prepare an upsert statement.
+func (pg *Postgres) upsertPreparer(ctx context.Context) (sqlStmtPreparer, error) {
+	// First check to see if a transaction has been assigned to the context. If it has, use the transaction.
+	// Otherwise, use the database.
+	txID, ok := ctx.Value(basicPostgressTxID).(string)
+	if ok {
+		if tx, ok := pg.activeTx.Load(txID); ok {
+			tx, ok := tx.(*sql.Tx)
+			if !ok {
+				return nil, fmt.Errorf("unable to cast transaction to *sql.Tx")
+			}
+
+			return tx, nil
+		}
+	}
+
+	return pg.DB, nil
 }
 
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
@@ -212,78 +256,21 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		return nil, fmt.Errorf("table %q does not exist", req.Table)
 	}
 
-	exclusTemplate := "\"%s\" = EXCLUDED.\"%s\""
-
-	exclusions := []string{}
-	columns := []string{}
-
-	for _, name := range meta.columns {
-		if !meta.isPK(name) {
-			exclusions = append(exclusions, fmt.Sprintf(exclusTemplate, name, name))
-		}
-
-		columns = append(columns, name)
+	preparer, err := pg.upsertPreparer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get preparer: %w", err)
 	}
 
-	pkstr := strings.Join(meta.pk, ",")
-	exstr := strings.Join(exclusions, ",")
-	clstr := strings.Join(columns, ",")
-
-	upsertQuery := `INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`
-	upsertTemplate := fmt.Sprintf(upsertQuery, meta.table, clstr, "%s", pkstr, exstr)
-
-	// Get record-specific metadata from a sample record.
-	sample := records[0]
-	recordSize := len(sample.Fields)
-
-	// Upsert 1000 records at a time.
+	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
+	// postgres database.
 	for _, partition := range tools.PartitionStructs(postgresPartitionSize, records) {
-		volume := len(partition)
-		placeholders := make([]string, 0, volume)
-		arguments := make([]interface{}, 0, recordSize*volume)
-
-		// Prepare data to populate the prepared statement.
-		for idx, record := range partition {
-			ph := []string{}
-			for i := 1; i <= len(meta.columns); i++ {
-				ph = append(ph, fmt.Sprintf("$%d", recordSize*idx+i))
-			}
-
-			recordph := fmt.Sprintf("(%s)", strings.Join(ph, ","))
-			placeholders = append(placeholders, recordph)
-
-			mrecord := record.AsMap()
-			for _, col := range meta.columns {
-				arguments = append(arguments, mrecord[col])
-			}
-		}
-
-		// Create the prepared statement for execution.
-		query := fmt.Sprintf(upsertTemplate, strings.Join(placeholders, ","))
-
-		var stmt *sql.Stmt
-
-		// If the context has a transaction ID set get it and then lookup the transaction from the activxTx map.
-		if txID, ok := ctx.Value(basicPostgressTxID).(string); ok {
-			if probablyTX, ok := pg.activeTx.Load(txID); ok {
-				tx, ok := probablyTX.(*sql.Tx)
-				if !ok {
-					return nil, fmt.Errorf("unable to cast transaction to *sql.Tx")
-				}
-
-				stmt, err = tx.PrepareContext(ctx, query)
-				if err != nil {
-					return nil, fmt.Errorf("unable to prepare statement: %w", err)
-				}
-			}
-		} else {
-			stmt, err = pg.DB.PrepareContext(ctx, query)
-			if err != nil {
-				return nil, fmt.Errorf("unable to prepare statement: %w", err)
-			}
+		stmt, err := meta.upsertStmt(ctx, preparer, len(partition))
+		if err != nil {
+			return nil, fmt.Errorf("unable to prepare statement: %w", err)
 		}
 
 		// Execute upsert.
+		arguments := tools.SQLFlattenPartition(meta.columns, partition)
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
 			return nil, fmt.Errorf("unable to execute upsert: %w", err)
 		}
