@@ -4,33 +4,40 @@ import (
 	"context"
 )
 
-// TXChanFn is a function that will be sent to the transaction channel.
-type TXChanFn func(context.Context, Storage) error
+// TxnChanFn is a function that will be sent to the transaction channel.
+type TxnChanFn func(context.Context, Storage) error
 
-// tx is a wrapper for a mongo session that can be used to perform CRUD operations on a mongo DB instance.
-type tx struct {
-	ch     chan TXChanFn
+// Txn is a wrapper for a mongo session that can be used to perform CRUD operations on a mongo DB instance.
+type Txn struct {
+	ch     chan TxnChanFn
 	done   chan error
 	commit chan bool
 }
 
-// Commit will commit the transaction.
-func (tx *tx) Commit() error {
-	close(tx.ch)
-	tx.commit <- true
+// Transactor is an interface that can be used to perform CRUD operations within the context of a database transaction.
+type Transactor interface {
+	Commit() error
+	Rollback() error
+	Send(TxnChanFn)
+}
 
-	return <-tx.done
+// Commit will commit the transaction.
+func (txn *Txn) Commit() error {
+	close(txn.ch)
+	txn.commit <- true
+
+	return <-txn.done
 }
 
 // Rollback will rollback the transaction.
-func (tx *tx) Rollback() error {
-	close(tx.ch)
-	tx.commit <- false
+func (txn *Txn) Rollback() error {
+	close(txn.ch)
+	txn.commit <- false
 
-	return <-tx.done
+	return <-txn.done
 }
 
 // Send will send a function to the transaction channel.
-func (tx *tx) Send(fn TXChanFn) {
-	tx.ch <- fn
+func (txn *Txn) Send(fn TxnChanFn) {
+	txn.ch <- fn
 }

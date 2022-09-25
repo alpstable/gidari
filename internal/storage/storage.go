@@ -38,7 +38,7 @@ type Storage interface {
 	// StartTx will start a transaction and return a "Tx" object that can be used to put operations on a channel,
 	// commit the result of all operations sent to the transaction, or rollback the result of all operations sent
 	// to the transaction.
-	StartTx(context.Context) (Tx, error)
+	StartTx(context.Context) (*Txn, error)
 
 	// Truncate will delete all data from the storage device for ast list of tables.
 	Truncate(context.Context, *proto.TruncateRequest) (*proto.TruncateResponse, error)
@@ -50,17 +50,8 @@ type Storage interface {
 	Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error)
 }
 
-// sqlStmtPreparer can be used to prepare a statement and return the result.
-type sqlStmtPreparer interface {
-	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-}
-
-// Tx is an interface that defines the methods that a transaction object should implement.
-type Tx interface {
-	Commit() error
-	Rollback() error
-	Send(TXChanFn)
-}
+// sqlPrepareContextFn can be used to prepare a statement and return the result.
+type sqlPrepareContextFn func(context.Context, string) (*sql.Stmt, error)
 
 // Scheme takes a byte and returns the associated DNS root database resource.
 func Scheme(t uint8) string {
@@ -74,14 +65,29 @@ func Scheme(t uint8) string {
 	}
 }
 
+// Service is a wrapper for a Storage implementation.
+type Service struct {
+	Storage
+}
+
 // New will attempt to return a generic storage object given a DNS.
-func New(ctx context.Context, dns string) (Storage, error) {
+func New(ctx context.Context, dns string) (*Service, error) {
 	if strings.Contains(dns, Scheme(MongoType)) {
-		return NewMongo(ctx, dns)
+		svc, err := NewMongo(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
+		}
+
+		return &Service{svc}, nil
 	}
 
 	if strings.Contains(dns, Scheme(PostgresType)) {
-		return NewPostgres(ctx, dns)
+		svc, err := NewPostgres(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
+		}
+
+		return &Service{svc}, nil
 	}
 
 	return nil, DNSNotSupportedError(dns)

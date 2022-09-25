@@ -22,7 +22,7 @@ func FailedToCreateRepositoryError(err error) error {
 // Generic is the interface for the generic service.
 type Generic interface {
 	storage.Storage
-	storage.Tx
+	storage.Transactor
 
 	Transact(fn func(ctx context.Context, repo Generic) error)
 }
@@ -30,11 +30,11 @@ type Generic interface {
 // GenericService is the implementation of the Generic service.
 type GenericService struct {
 	storage.Storage
-	storage.Tx
+	*storage.Txn
 }
 
 // New returns a new Generic service.
-func New(ctx context.Context, dns string) (Generic, error) {
+func New(ctx context.Context, dns string) (*GenericService, error) {
 	stg, err := storage.New(ctx, dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct storage: %w", err)
@@ -45,7 +45,7 @@ func New(ctx context.Context, dns string) (Generic, error) {
 
 // NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
 // storage operations made by the repository layer.
-func NewTx(ctx context.Context, dns string) (Generic, error) {
+func NewTx(ctx context.Context, dns string) (*GenericService, error) {
 	stg, err := storage.New(ctx, dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct storage: %w", err)
@@ -62,7 +62,7 @@ func NewTx(ctx context.Context, dns string) (Generic, error) {
 // Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If
 // svc is not a transaction, the function will be executed without executing.
 func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) error) {
-	svc.Tx.Send(func(ctx context.Context, stg storage.Storage) error {
+	svc.Txn.Send(func(ctx context.Context, stg storage.Storage) error {
 		err := fn(ctx, svc)
 		if err != nil {
 			return fmt.Errorf("error executing transaction: %w", err)

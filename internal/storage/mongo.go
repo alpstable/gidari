@@ -57,7 +57,7 @@ func (m *Mongo) Close() {
 
 // ReceiveWrites will listen for writes to the transaction and commit them to the database every time the lifetime
 // limit is reached, or when the transaction is committed through the commit channel.
-func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *tx) error {
+func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) error {
 	lifetimeTicker := time.NewTicker(m.lifetime)
 
 	var err error
@@ -94,7 +94,7 @@ func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *tx) error {
 
 // startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
 // to avoid lifetime limit errors.
-func (m *Mongo) startSession(ctx context.Context, txn *tx) {
+func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 		// Start the transaction, if there is an error break the go routine.
 		err := sctx.StartTransaction()
@@ -128,10 +128,10 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 // error for exceeding this time constraint is "TransactionExceededLifetimeLimitSeconds". To maintain agnostism at the
 // repository layer, we implement the logic to handle these transactions errors in the storage layer. Therefore, every
 // 60 seconds, the transacting data will be committed commit the transaction and start a new one.
-func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
+func (m *Mongo) StartTx(ctx context.Context) (*Txn, error) {
 	// Construct a transaction.
-	txn := &tx{
-		make(chan TXChanFn),
+	txn := &Txn{
+		make(chan TxnChanFn),
 		make(chan error, 1),
 		make(chan bool, 1),
 	}

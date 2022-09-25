@@ -66,14 +66,14 @@ func (meta *pgmeta) exclusionConstraints() []string {
 }
 
 // upsertStatement will return a postgres upsert statement for the meta object.
-func (meta *pgmeta) upsertStmt(ctx context.Context, preparer sqlStmtPreparer, numRows int) (*sql.Stmt, error) {
+func (meta *pgmeta) upsertStmt(ctx context.Context, prepareCtx sqlPrepareContextFn, numRows int) (*sql.Stmt, error) {
 	query := fmt.Sprintf(`INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`, meta.table,
 		strings.Join(meta.columns, ","),
 		tools.SQLIterativePlaceholders(len(meta.columns), numRows, "$"),
 		strings.Join(meta.pk, ","),
 		strings.Join(meta.exclusionConstraints(), ","))
 
-	stmt, err := preparer.PrepareContext(ctx, query)
+	stmt, err := prepareCtx(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare statement: %w", err)
 	}
@@ -218,8 +218,8 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
 }
 
-// upsertPreparer will return the implementation of an object that can prepare an upsert statement.
-func (pg *Postgres) upsertPreparer(ctx context.Context) (sqlStmtPreparer, error) {
+// getPrepareContextFn will return a function that can prepare an upsert statement for a given table.
+func (pg *Postgres) getPrepareContextFn(ctx context.Context) (sqlPrepareContextFn, error) {
 	// First check to see if a transaction has been assigned to the context. If it has, use the transaction.
 	// Otherwise, use the database.
 	txID, ok := ctx.Value(basicPostgressTxID).(string)
@@ -230,11 +230,11 @@ func (pg *Postgres) upsertPreparer(ctx context.Context) (sqlStmtPreparer, error)
 				return nil, fmt.Errorf("unable to cast transaction to *sql.Tx")
 			}
 
-			return tx, nil
+			return tx.PrepareContext, nil
 		}
 	}
 
-	return pg.DB, nil
+	return pg.DB.PrepareContext, nil
 }
 
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
@@ -256,7 +256,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		return nil, fmt.Errorf("table %q does not exist", req.Table)
 	}
 
-	preparer, err := pg.upsertPreparer(ctx)
+	prepareContextFn, err := pg.getPrepareContextFn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get preparer: %w", err)
 	}
@@ -264,7 +264,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
 	// postgres database.
 	for _, partition := range tools.PartitionStructs(postgresPartitionSize, records) {
-		stmt, err := meta.upsertStmt(ctx, preparer, len(partition))
+		stmt, err := meta.upsertStmt(ctx, prepareContextFn, len(partition))
 		if err != nil {
 			return nil, fmt.Errorf("unable to prepare statement: %w", err)
 		}
@@ -356,10 +356,10 @@ func (pg *Postgres) setMaxOpenConns() {
 
 // StartTx will start a transaction on the Postgres connection. The transaction ID is returned and should be used
 // to commit or rollback the transaction.
-func (pg *Postgres) StartTx(ctx context.Context) (Tx, error) {
+func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 	// Construct a gidari storage transaction.
-	txn := &tx{
-		make(chan TXChanFn),
+	txn := &Txn{
+		make(chan TxnChanFn),
 		make(chan error, 1),
 		make(chan bool, 1),
 	}
