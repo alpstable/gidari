@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -198,9 +197,9 @@ func TestUpsert(t *testing.T) {
 				t.Fatalf("error reading fixture: %v", err)
 			}
 
-			var cfg Config
-			if err := yaml.Unmarshal(bytes, &cfg); err != nil {
-				t.Fatalf("error unmarshaling fixture: %v", err)
+			cfg, err := NewConfig(bytes)
+			if err != nil {
+				t.Fatalf("error creating config: %v", err)
 			}
 
 			cfg.Logger = logrus.New()
@@ -230,7 +229,7 @@ func TestUpsert(t *testing.T) {
 			}
 
 			// Upsert the fixture.
-			if err := Upsert(context.Background(), &cfg); err != nil {
+			if err := Upsert(context.Background(), cfg); err != nil {
 				t.Fatalf("error upserting: %v", err)
 			}
 		})

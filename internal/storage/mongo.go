@@ -55,12 +55,46 @@ func (m *Mongo) Close() {
 	}
 }
 
+// ReceiveWrites will listen for writes to the transaction and commit them to the database every time the lifetime
+// limit is reached, or when the transaction is committed through the commit channel.
+func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *tx) error {
+	lifetimeTicker := time.NewTicker(m.lifetime)
+
+	var err error
+
+	// Receive write requests.
+	for opr := range txn.ch {
+		select {
+		case <-lifetimeTicker.C:
+			// If the transaction has exceeded the lifetime, commit the transaction and start a new
+			// one.
+			if err := ctx.CommitTransaction(ctx); err != nil {
+				panic(fmt.Errorf("commit transaction: %w", err))
+			}
+
+			// Start a new transaction on the context.
+			if err := ctx.StartTransaction(); err != nil {
+				panic(fmt.Errorf("error starting transaction: %w", err))
+			}
+		default:
+			if err != nil {
+				continue
+			}
+
+			err = opr(ctx, m)
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("error in transaction: %w", err)
+	}
+
+	return nil
+}
+
 // startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
 // to avoid lifetime limit errors.
 func (m *Mongo) startSession(ctx context.Context, txn *tx) {
-	// lifetime is the time in seconds that a transaction can run for before it is reset.
-	lifetime := m.lifetime
-
 	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 		// Start the transaction, if there is an error break the go routine.
 		err := sctx.StartTransaction()
@@ -68,32 +102,8 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 			return fmt.Errorf("error starting transaction: %w", err)
 		}
 
-		lifetimeTicker := time.NewTicker(lifetime)
-
-		// listen for writes.
-		for opr := range txn.ch {
-			select {
-			case <-lifetimeTicker.C:
-				// If the transaction has exceeded the lifetime, commit the transaction and start a new
-				// one.
-				if err := sctx.CommitTransaction(sctx); err != nil {
-					panic(fmt.Errorf("commit transaction: %w", err))
-				}
-
-				// Start a new transaction on the context.
-				if err := sctx.StartTransaction(); err != nil {
-					panic(fmt.Errorf("error starting transaction: %w", err))
-				}
-			default:
-				if err != nil {
-					continue
-				}
-				err = opr(sctx, m)
-			}
-		}
-
-		if err != nil {
-			return fmt.Errorf("error in transaction: %w", err)
+		if err := m.receiveWrites(sctx, txn); err != nil {
+			return fmt.Errorf("error receiving writes: %w", err)
 		}
 
 		// Await the decision to commit or rollback.
@@ -107,6 +117,7 @@ func (m *Mongo) startSession(ctx context.Context, txn *tx) {
 				return fmt.Errorf("transaction aborted")
 			}
 		}
+
 		return nil
 	})
 }
@@ -129,10 +140,6 @@ func (m *Mongo) StartTx(ctx context.Context) (Tx, error) {
 	go m.startSession(ctx, txn)
 
 	return txn, nil
-}
-
-func (m *Mongo) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	return nil
 }
 
 // Truncate will delete all records in a collection.

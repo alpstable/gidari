@@ -23,7 +23,7 @@ linters:
     - ireturn # Issue #72
     - gochecknoglobals # Issue #71
     - goerr113 # Issue #73
-    - cyclop # Issue #74
+      #- cyclop # Issue #74
     - gosec # Issue #75
     - funlen # Issue #76
     - nlreturn # Issue #77
@@ -46,3 +46,11 @@ linters:
     # testpackage requires that all tests be written in their own package. I.e. if you're testing in package "a", this
     # linter wants the tests to be written in "a_test". This doesn't work for unit testing unexported data, however.
     - testpackage
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        # Tests are allowed to have complexity.
+        - cyclop
