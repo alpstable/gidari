@@ -317,26 +317,25 @@ type repoJob struct {
 }
 
 type repoConfig struct {
-	repos    []repository.Generic
-	close    repoCloser
-	jobs     chan *repoJob
-	done     chan bool
-	logger   *logrus.Logger
-	truncate bool
+	repos      []repository.Generic
+	closeRepos repoCloser
+	jobs       chan *repoJob
+	done       chan bool
+	logger     *logrus.Logger
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
-	repos, closer, err := cfg.repos(ctx)
+	repos, closeRepos, err := cfg.repos(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &repoConfig{
-		repos:  repos,
-		close:  closer,
-		jobs:   make(chan *repoJob, volume*len(repos)),
-		done:   make(chan bool, volume),
-		logger: cfg.Logger,
+		repos:      repos,
+		closeRepos: closeRepos,
+		jobs:       make(chan *repoJob, volume*len(repos)),
+		done:       make(chan bool, volume),
+		logger:     cfg.Logger,
 	}, nil
 }
 
@@ -437,11 +436,12 @@ func Truncate(ctx context.Context, cfg *Config) error {
 
 	start := time.Now()
 
-	repos, close, err := cfg.repos(ctx)
+	repos, closeRepos, err := cfg.repos(ctx)
 	if err != nil {
 		return err
 	}
-	defer close()
+
+	defer closeRepos()
 
 	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
@@ -503,7 +503,8 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	defer repoConfig.close()
+
+	defer repoConfig.closeRepos()
 
 	// Start the repository workers.
 	for id := 1; id <= runtime.NumCPU(); id++ {
