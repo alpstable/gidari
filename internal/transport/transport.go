@@ -319,6 +319,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 					rsp, err := repo.Upsert(sctx, req)
 					if err != nil {
 						cfg.logger.Fatalf("error upserting data: %v", err)
+
 						return fmt.Errorf("error upserting data: %w", err)
 					}
 

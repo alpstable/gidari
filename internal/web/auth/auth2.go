@@ -20,12 +20,14 @@ func NewAuth2() *Auth2 {
 // SetBearer will set the bearer field on Auth2.
 func (auth *Auth2) SetBearer(val string) *Auth2 {
 	auth.bearer = val
+
 	return auth
 }
 
 // SetURL will set the key field on APIKey.
 func (auth *Auth2) SetURL(u string) *Auth2 {
 	auth.url, _ = url.Parse(u)
+
 	return auth
 }
 

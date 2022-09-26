@@ -25,6 +25,7 @@ func NewRepositoryEncoderKey(u *url.URL) RepositoryEncoderKey {
 // NewDefaultRepositoryEncoderKey will return a key for the default encoder. This key will have an empty host.
 func NewDefaultRepositoryEncoderKey() RepositoryEncoderKey {
 	u, _ := url.Parse("")
+
 	return NewRepositoryEncoderKey(u)
 }
 

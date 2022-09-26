@@ -414,6 +414,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 
 		if err != nil {
 			txn.done <- err
+
 			return
 		}
 
