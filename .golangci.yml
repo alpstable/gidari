@@ -27,7 +27,6 @@ linters:
     - nlreturn # Issue #77
     - nestif # Issue #78
     - gocognit # Issue #80
-    - gci # Issue #81
 
     # This will unreliably flag things that are not duplications.
     - dupl

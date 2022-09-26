@@ -38,4 +38,5 @@ lint:
 .PHONY: fmt
 fmt:
 	gofumpt -l -w .
+	golangci-lint run --fix
 
