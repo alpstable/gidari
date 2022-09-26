@@ -244,11 +244,36 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	return nil, fmt.Errorf("no authentication method provided")
 }
 
+type repoCloser func()
+
 // repos will return a slice of generic repositories along with associated transaction instances.
-func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
+func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser, error) {
 	repos := []repository.Generic{}
 
-	return repos, nil
+	for _, dns := range cfg.DNSList {
+		repo, err := repository.NewTx(ctx, dns)
+		if err != nil {
+			return nil, nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+		}
+
+		logInfo := tools.LogFormatter{
+			Msg: fmt.Sprintf("created repository for %q", dns),
+		}
+		cfg.Logger.Info(logInfo.String())
+
+		repos = append(repos, repo)
+	}
+
+	return repos, func() {
+		for _, repo := range repos {
+			repo.Close()
+
+			logInfo := tools.LogFormatter{
+				Msg: fmt.Sprintf("closed repository for %q", storage.Scheme(repo.Type())),
+			}
+			cfg.Logger.Info(logInfo.String())
+		}
+	}, nil
 }
 
 // validate will ensure that the configuration is valid for querying the web API.
@@ -292,25 +317,25 @@ type repoJob struct {
 }
 
 type repoConfig struct {
-	repos    []repository.Generic
-	jobs     chan *repoJob
-	done     chan bool
-	logger   *logrus.Logger
-	truncate bool
+	repos      []repository.Generic
+	closeRepos repoCloser
+	jobs       chan *repoJob
+	done       chan bool
+	logger     *logrus.Logger
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
-	repos, err := cfg.repos(ctx)
+	repos, closeRepos, err := cfg.repos(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &repoConfig{
-		repos:    repos,
-		jobs:     make(chan *repoJob, volume*len(repos)),
-		done:     make(chan bool, volume),
-		logger:   cfg.Logger,
-		truncate: cfg.Truncate,
+		repos:      repos,
+		closeRepos: closeRepos,
+		jobs:       make(chan *repoJob, volume*len(repos)),
+		done:       make(chan bool, volume),
+		logger:     cfg.Logger,
 	}, nil
 }
 
@@ -358,6 +383,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 				repo.Transact(txfn)
 			}
 		}
+
 		cfg.done <- true
 	}
 }
@@ -410,10 +436,12 @@ func Truncate(ctx context.Context, cfg *Config) error {
 
 	start := time.Now()
 
-	repos, err := cfg.repos(ctx)
+	repos, closeRepos, err := cfg.repos(ctx)
 	if err != nil {
 		return err
 	}
+
+	defer closeRepos()
 
 	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
@@ -475,6 +503,8 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return err
 	}
+
+	defer repoConfig.closeRepos()
 
 	// Start the repository workers.
 	for id := 1; id <= runtime.NumCPU(); id++ {
