@@ -33,37 +33,7 @@ func main() {
 		Deprecated:             "",
 		Version:                version.Gidari,
 
-		Run: func(_ *cobra.Command, _ []string) {
-			ctx := context.Background()
-
-			// Register supported encoders.
-			err := transport.RegisterEncoders(transport.RegisterDefaultEncoder,
-				transport.RegisterCBPEncoder)
-			if err != nil {
-				log.Fatalf("error registering encoders: %v", err)
-			}
-
-			bytes, err := os.ReadFile(configFilepath)
-			if err != nil {
-				log.Fatalf("error reading config file  %s: %v", configFilepath, err)
-			}
-
-			cfg, err := transport.NewConfig(bytes)
-			if err != nil {
-				log.Fatalf("error creating config: %v", err)
-			}
-
-			cfg.Logger = logrus.New()
-
-			// If the user has not set the verbose flag, only log fatals.
-			if !verbose {
-				cfg.Logger.SetLevel(logrus.FatalLevel)
-			}
-
-			if err := transport.Upsert(ctx, cfg); err != nil {
-				log.Fatalf("error upserting data: %v", err)
-			}
-		},
+		Run: func(_ *cobra.Command, args []string) { run(configFilepath, verbose, args) },
 	}
 
 	cmd.Flags().StringVar(&configFilepath, "config", "c", "path to configuration")
@@ -76,5 +46,37 @@ func main() {
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
 		os.Exit(1)
+	}
+}
+
+func run(configFilepath string, verboseLogging bool, _ []string) {
+	ctx := context.Background()
+
+	// Register supported encoders.
+	err := transport.RegisterEncoders(transport.RegisterDefaultEncoder,
+		transport.RegisterCBPEncoder)
+	if err != nil {
+		log.Fatalf("error registering encoders: %v", err)
+	}
+
+	bytes, err := os.ReadFile(configFilepath)
+	if err != nil {
+		log.Fatalf("error reading config file  %s: %v", configFilepath, err)
+	}
+
+	cfg, err := transport.NewConfig(bytes)
+	if err != nil {
+		log.Fatalf("error creating config: %v", err)
+	}
+
+	cfg.Logger = logrus.New()
+
+	// If the user has not set the verbose flag, only log fatals.
+	if !verboseLogging {
+		cfg.Logger.SetLevel(logrus.FatalLevel)
+	}
+
+	if err := transport.Upsert(ctx, cfg); err != nil {
+		log.Fatalf("error upserting data: %v", err)
 	}
 }

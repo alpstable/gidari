@@ -293,10 +293,25 @@ type repoJob struct {
 
 type repoConfig struct {
 	repos    []repository.Generic
-	jobs     <-chan *repoJob
+	jobs     chan *repoJob
 	done     chan bool
 	logger   *logrus.Logger
 	truncate bool
+}
+
+func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
+	repos, err := cfg.repos(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &repoConfig{
+		repos:    repos,
+		jobs:     make(chan *repoJob, volume*len(repos)),
+		done:     make(chan bool, volume),
+		logger:   cfg.Logger,
+		truncate: cfg.Truncate,
+	}, nil
 }
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
@@ -347,14 +362,21 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	}
 }
 
-type webWorkerJob struct {
+type webJob struct {
 	*flattenedRequest
 	repoJobs chan<- *repoJob
-	client   *web.Client
 	logger   *logrus.Logger
 }
 
-func webWorker(ctx context.Context, workerID int, jobs <-chan *webWorkerJob) {
+func newWebJob(cfg *Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
+	return &webJob{
+		flattenedRequest: req,
+		repoJobs:         repoJobs,
+		logger:           cfg.Logger,
+	}
+}
+
+func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 	for job := range jobs {
 		start := time.Now()
 
@@ -444,36 +466,24 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	repos, err := cfg.repos(ctx)
-	if err != nil {
-		return err
-	}
-
 	flattenedRequests, err := cfg.flattenRequests(ctx)
 	if err != nil {
 		return err
 	}
 
-	// repoJobs is a channel that will be used to pass jobs to the repository workers. The repository workers will
-	// be responsible for upserting the data into the database.
-	repoJobCh := make(chan *repoJob, len(flattenedRequests)*len(repos))
-
-	repoWorkerCfg := &repoConfig{
-		repos:    repos,
-		logger:   cfg.Logger,
-		done:     make(chan bool, len(flattenedRequests)),
-		jobs:     repoJobCh,
-		truncate: cfg.Truncate,
+	repoConfig, err := newRepoConfig(ctx, cfg, len(flattenedRequests))
+	if err != nil {
+		return err
 	}
 
 	// Start the repository workers.
 	for id := 1; id <= runtime.NumCPU(); id++ {
-		go repositoryWorker(ctx, id, repoWorkerCfg)
+		go repositoryWorker(ctx, id, repoConfig)
 	}
 
 	cfg.Logger.Info(tools.LogFormatter{Msg: "repository workers started"}.String())
 
-	webWorkerJobs := make(chan *webWorkerJob, len(cfg.Requests))
+	webWorkerJobs := make(chan *webJob, len(cfg.Requests))
 
 	// Start the same number of web workers as the cores on the machine.
 	for id := 1; id <= runtime.NumCPU(); id++ {
@@ -484,23 +494,18 @@ func Upsert(ctx context.Context, cfg *Config) error {
 
 	// Enqueue the worker jobs
 	for _, req := range flattenedRequests {
-		webWorkerJobs <- &webWorkerJob{
-			flattenedRequest: req,
-			repoJobs:         repoJobCh,
-			client:           req.fetchConfig.C,
-			logger:           cfg.Logger,
-		}
+		webWorkerJobs <- newWebJob(cfg, req, repoConfig.jobs)
 	}
 
 	cfg.Logger.Info(tools.LogFormatter{Msg: "web worker jobs enqueued"}.String())
 
 	// Wait for all of the data to flush.
 	for a := 1; a <= len(flattenedRequests); a++ {
-		<-repoWorkerCfg.done
+		<-repoConfig.done
 	}
 
 	// Commit the transactions and check for errors.
-	for _, repo := range repos {
+	for _, repo := range repoConfig.repos {
 		if err := repo.Commit(); err != nil {
 			return fmt.Errorf("unable to commit transaction: %w", err)
 		}
