@@ -248,6 +248,20 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, error) {
 	repos := []repository.Generic{}
 
+	for _, dns := range cfg.DNSList {
+		repo, err := repository.NewTx(ctx, dns)
+		if err != nil {
+			return nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+		}
+
+		logInfo := tools.LogFormatter{
+			Msg: fmt.Sprintf("created repository for %q", dns),
+		}
+		cfg.Logger.Info(logInfo.String())
+
+		repos = append(repos, repo)
+	}
+
 	return repos, nil
 }
 
@@ -358,6 +372,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 				repo.Transact(txfn)
 			}
 		}
+
 		cfg.done <- true
 	}
 }
