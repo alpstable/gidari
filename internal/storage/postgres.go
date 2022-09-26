@@ -81,46 +81,62 @@ func (meta *pgmeta) upsertStmt(ctx context.Context, prepareCtx sqlPrepareContext
 	return stmt, nil
 }
 
+// loadMeta will load the postgres metadata for the database. If the data has already been loaded, this method will do
+// nothing.
+func (pg *Postgres) loadMeta(ctx context.Context) error {
+	pg.metaMutex.Lock()
+	defer pg.metaMutex.Unlock()
+
+	if len(pg.meta) > 0 {
+		return nil
+	}
+
+	columns, err := pg.ListColumns(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting postgres metadata: %w", err)
+	}
+
+	pg.meta = make(map[string]*pgmeta)
+
+	for _, record := range columns.Records {
+		rtable, ok := record.AsMap()["table_name"].(string)
+		if !ok {
+			return fmt.Errorf("error getting postgres metadata: %w", err)
+		}
+
+		// Initialize the table pgmeta if it does not exist.
+		if pg.meta[rtable] == nil {
+			pg.meta[rtable] = &pgmeta{table: rtable}
+		}
+
+		// Add PK and general column data to the pgmeta table object.
+		meta := pg.meta[rtable]
+
+		columnName, okCol := record.AsMap()["column_name"].(string)
+		if !okCol {
+			return fmt.Errorf("error getting postgres metadata: column_name is not a string")
+		}
+
+		primaryKey, okPK := record.AsMap()["primary_key"].(float64)
+		if !okPK {
+			return fmt.Errorf("error getting postgres metadata: primary_key is not a bool")
+		}
+
+		if primaryKey == 1.0 {
+			meta.addPK(columnName)
+		}
+
+		meta.addColumn(columnName)
+	}
+
+	return nil
+}
+
 // getMeta will get postgres database metadata for processing generalized functionality, such as upsert.
 func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) {
-	if len(pg.meta) == 0 {
-		columns, err := pg.ListColumns(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error getting postgres metadata: %w", err)
-		}
-
-		pg.meta = make(map[string]*pgmeta)
-
-		for _, record := range columns.Records {
-			table, ok := record.AsMap()["table_name"].(string)
-			if !ok {
-				return nil, fmt.Errorf("error getting postgres metadata: %w", err)
-			}
-
-			// Initialize the table pgmeta if it does not exist.
-			if pg.meta[table] == nil {
-				pg.meta[table] = &pgmeta{table: table}
-			}
-
-			// Add PK and general column data to the pgmeta table object.
-			meta := pg.meta[table]
-
-			columnName, okCol := record.AsMap()["column_name"].(string)
-			if !okCol {
-				return nil, fmt.Errorf("error getting postgres metadata: column_name is not a string")
-			}
-
-			primaryKey, okPK := record.AsMap()["primary_key"].(float64)
-			if !okPK {
-				return nil, fmt.Errorf("error getting postgres metadata: primary_key is not a bool")
-			}
-
-			if primaryKey == 1.0 {
-				meta.addPK(columnName)
-			}
-
-			meta.addColumn(columnName)
-		}
+	// Lazy load the meta data.
+	if err := pg.loadMeta(ctx); err != nil {
+		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
 	meta := pg.meta[table]
@@ -282,7 +298,8 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 // Postgres is a wrapper around the sql.DB object.
 type Postgres struct {
 	*sql.DB
-	meta map[string]*pgmeta
+	meta      map[string]*pgmeta
+	metaMutex sync.Mutex
 
 	// activeTx are the transactions that are currently active on this connection. When a user calls "StartTx" on
 	// a Postgres intance, a transaction is created and added to this map. Afterward, if the user calls a write
@@ -306,6 +323,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 
 	postgres.setMaxOpenConns()
 	postgres.meta = make(map[string]*pgmeta)
+	postgres.metaMutex = sync.Mutex{}
 	postgres.activeTx = sync.Map{}
 
 	return postgres, nil
