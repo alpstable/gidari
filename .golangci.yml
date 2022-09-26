@@ -24,7 +24,6 @@ linters:
     - goerr113 # Issue #73
     - gosec # Issue #75
     - funlen # Issue #76
-    - nlreturn # Issue #77
 
     # This will unreliably flag things that are not duplications.
     - dupl

@@ -19,18 +19,21 @@ func NewBasic() *Basic {
 // SetEmail will set the email field on Basic.
 func (auth *Basic) SetEmail(val string) *Basic {
 	auth.email = val
+
 	return auth
 }
 
 // SetPassword will set the password field on Basic.
 func (auth *Basic) SetPassword(val string) *Basic {
 	auth.password = val
+
 	return auth
 }
 
 // SetURL will set the key field on Basic.
 func (auth *Basic) SetURL(val string) *Basic {
 	auth.url, _ = url.Parse(val)
+
 	return auth
 }
 

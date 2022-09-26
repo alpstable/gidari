@@ -94,6 +94,7 @@ func TestStartTx(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to upsert data: %w", err)
 				}
+
 				return nil
 			})
 
@@ -140,6 +141,7 @@ func TestStartTx(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to insert data: %w", err)
 				}
+
 				return nil
 			})
 

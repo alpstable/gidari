@@ -164,6 +164,7 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 
 	if err := validateResponse(rsp); err != nil {
 		rsp.Body.Close()
+
 		return nil, fmt.Errorf("error validating response: %w", err)
 	}
 

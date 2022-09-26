@@ -38,24 +38,28 @@ func NewAPIKey() *APIKey {
 // SetKey will set the key field on APIKey.
 func (auth *APIKey) SetKey(key string) *APIKey {
 	auth.key = key
+
 	return auth
 }
 
 // SetPassphrase will set the key field on APIKey.
 func (auth *APIKey) SetPassphrase(passphrase string) *APIKey {
 	auth.passphrase = passphrase
+
 	return auth
 }
 
 // SetSecret will set the key field on APIKey.
 func (auth *APIKey) SetSecret(secret string) *APIKey {
 	auth.secret = secret
+
 	return auth
 }
 
 // SetURL will set the key field on APIKey.
 func (auth *APIKey) SetURL(u string) *APIKey {
 	auth.url, _ = url.Parse(u)
+
 	return auth
 }
 
@@ -97,6 +101,7 @@ func parsebytes(req *http.Request) []byte {
 // generageMsg makes the message to be signed.
 func (auth *APIKey) generageMsg(req *http.Request, timestamp string) string {
 	postAuthority := strings.Replace(req.URL.String(), auth.url.String(), "", 1)
+
 	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
 }
 
