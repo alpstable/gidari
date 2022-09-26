@@ -8,10 +8,8 @@ import (
 	"github.com/alpine-hodler/gidari/proto"
 )
 
-var (
-	// ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
-	ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
-)
+// ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
+var ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
 
 // FailedToCreateRepositoryError is a helper function that returns a new error with the ErrFailedToCreateRepository
 // error wrapped.

@@ -17,10 +17,8 @@ const (
 	PostgresType
 )
 
-var (
-	// ErrDNSNotSupported is an error that is returned when a DNS is not supported.
-	ErrDNSNotSupported = fmt.Errorf("dns is not supported")
-)
+// ErrDNSNotSupported is an error that is returned when a DNS is not supported.
+var ErrDNSNotSupported = fmt.Errorf("dns is not supported")
 
 // DNSNotSupported wraps an error with ErrDNSNotSupported.
 func DNSNotSupportedError(dns string) error {

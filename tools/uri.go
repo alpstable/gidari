@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-var (
-	// ErrParsingURL is returned when there is an error parsing the url.
-	ErrParsingURL = fmt.Errorf("error parsing url")
-)
+// ErrParsingURL is returned when there is an error parsing the url.
+var ErrParsingURL = fmt.Errorf("error parsing url")
 
 // SplitURLPath will return the endpoint parts from the request.
 func SplitURLPath(req http.Request) []string {

@@ -26,7 +26,6 @@ linters:
     - funlen # Issue #76
     - nlreturn # Issue #77
     - nestif # Issue #78
-    - gofumpt # Issue #79
     - gocognit # Issue #80
     - gci # Issue #81
 

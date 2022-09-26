@@ -40,24 +40,24 @@ func TestTimeseries(t *testing.T) {
 
 		expChunks := [][2]time.Time{
 			{
-				time.Date(2022, 05, 10, 0, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 0, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 11, 0, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 11, 0, 0, 0, 0, time.UTC),
 			},
 		}
 
@@ -92,24 +92,24 @@ func TestTimeseries(t *testing.T) {
 
 		expChunks := [][2]time.Time{
 			{
-				time.Date(2022, 05, 10, 0, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 0, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 11, 1, 0, 0, 0, time.UTC),
 			},
 		}
 
@@ -143,28 +143,28 @@ func TestTimeseries(t *testing.T) {
 
 		expChunks := [][2]time.Time{
 			{
-				time.Date(2022, 05, 10, 0, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 0, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 5, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 5, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 10, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 10, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 15, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 15, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 10, 20, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 10, 20, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 11, 1, 0, 0, 0, time.UTC),
 			},
 			{
-				time.Date(2022, 05, 11, 1, 0, 0, 0, time.UTC),
-				time.Date(2022, 05, 11, 2, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 11, 1, 0, 0, 0, time.UTC),
+				time.Date(2022, 0o5, 11, 2, 0, 0, 0, time.UTC),
 			},
 		}
 
