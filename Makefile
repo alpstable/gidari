@@ -37,5 +37,5 @@ lint:
 # fmt runs the formatter.
 .PHONY: fmt
 fmt:
-	scripts/fmt-pkgs.sh
+	gofumpt -l -w .
 

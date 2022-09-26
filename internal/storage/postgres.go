@@ -324,7 +324,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	numCores := runtime.NumCPU()
 
 	// parallel_io_limit is the number of concurrent I/O requests your storage subsystem can handle.
-	var parallelIOLimit = 115
+	parallelIOLimit := 115
 	// if pg.opts != nil && pg.opts.ParallelIOLimit != nil {
 	// 	parallelIOLimit = *pg.opts.ParallelIOLimit
 	// } else {
@@ -335,7 +335,7 @@ func (pg *Postgres) setMaxOpenConns() {
 
 	// session_busy_ratio is the fraction of time that the connection is active executing a statement in the database.
 	// If your workload consists of big analytical queries, session_busy_ratio can be up to 1.
-	var sessionBusyRatio = 1.0
+	sessionBusyRatio := 1.0
 	// if pg.opts != nil && pg.opts.SessionBusyRatio != nil {
 	// 	sessionBusyRatio = *pg.opts.SessionBusyRatio
 	// } else {
@@ -344,7 +344,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	// value for this ratio is 1.
 	// }
 
-	var avgParallelism = 1.0
+	avgParallelism := 1.0
 	// if pg.opts != nil && pg.opts.AvgParallelism != nil {
 	// 	avgParallelism = *pg.opts.AvgParallelism
 	// } else {

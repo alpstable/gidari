@@ -11,6 +11,7 @@ To develop locally you need to install the following dependencies:
 2. Go: https://go.dev/doc/install
 3. godotenv: https://github.com/joho/godotenv#installation
 4. golangci-lin: https://golangci-lint.run/usage/install/#local-installation
+5. gofumt: https://github.com/mvdan/gofumpt
 
 ## Build
 

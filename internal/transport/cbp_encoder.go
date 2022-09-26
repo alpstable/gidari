@@ -10,8 +10,10 @@ import (
 	"github.com/alpine-hodler/gidari/tools"
 )
 
-const cbpCandlesTable = "candles"
-const cbpCandlesMinutesGranularity = "60"
+const (
+	cbpCandlesTable              = "candles"
+	cbpCandlesMinutesGranularity = "60"
+)
 
 // cbpCandle represents the historic rate for a product at a point in time.
 type cbpCandle struct {
