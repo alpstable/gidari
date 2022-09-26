@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed" // Embed external data.
 	"log"
 	"os"
 
@@ -9,8 +10,6 @@ import (
 	"github.com/alpine-hodler/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	_ "embed" // Embed external data.
 )
 
 //go:embed bash-completion.sh
