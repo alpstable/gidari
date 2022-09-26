@@ -26,7 +26,6 @@ linters:
     - funlen # Issue #76
     - nlreturn # Issue #77
     - nestif # Issue #78
-    - gocognit # Issue #80
 
     # This will unreliably flag things that are not duplications.
     - dupl
@@ -50,3 +49,4 @@ issues:
       linters:
         # Tests are allowed to have complexity.
         - cyclop
+        - gocognit
