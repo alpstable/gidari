@@ -23,7 +23,6 @@ linters:
     - gochecknoglobals # Issue #71
     - goerr113 # Issue #73
     - gosec # Issue #75
-    - funlen # Issue #76
 
     # This will unreliably flag things that are not duplications.
     - dupl
@@ -48,3 +47,4 @@ issues:
         # Tests are allowed to have complexity.
         - cyclop
         - gocognit
+        - funlen
