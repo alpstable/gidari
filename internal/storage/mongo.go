@@ -43,6 +43,9 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	return mdb, nil
 }
 
+// IsNoSQL returns "true" indicating that the "MongoDB" database is NoSQL.
+func (m *Mongo) IsNoSQL() bool { return true }
+
 // Type returns the type of storage.
 func (m *Mongo) Type() uint8 {
 	return MongoType

@@ -35,6 +35,9 @@ type Storage interface {
 	// ListTables will return a list of all tables in the database.
 	ListTables(ctx context.Context) (*proto.ListTablesResponse, error)
 
+	// IsNoSQL will return true if the storage device is a NoSQL database.
+	IsNoSQL() bool
+
 	// StartTx will start a transaction and return a "Tx" object that can be used to put operations on a channel,
 	// commit the result of all operations sent to the transaction, or rollback the result of all operations sent
 	// to the transaction.
