@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/alpine-hodler/gidari/proto"
@@ -15,9 +16,32 @@ type storageTestCase struct {
 	dns string
 }
 
+type listPKStorageTestCase struct {
+	storageTestCase
+
+	// Map a table to a list of primary keys we expect to find on that table.
+	expectedPKSet map[string][]string
+}
+
 var testCases = []storageTestCase{
 	{"mongodb://mongo1:27017/cbp-stg"},
 	{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+}
+
+var listPKTestCases = []listPKStorageTestCase{
+	{
+		storageTestCase{"mongodb://mongo1:27017/cbp-stg"},
+		map[string][]string{
+			"accounts": {"_id"},
+		},
+	},
+	{
+		storageTestCase{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+		map[string][]string{
+			"accounts":       {"id"},
+			"candle_minutes": {"product_id", "unix"},
+		},
+	},
 }
 
 func TestTruncate(t *testing.T) {
@@ -220,21 +244,61 @@ func TestListTables(t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			if len(rsp.Records) == 0 {
+			if len(rsp.GetTableSet()) == 0 {
 				t.Fatalf("expected tables, got none")
 			}
 
 			// Make sure that one of the records has the table "accounts".
-			found := false
-			for _, record := range rsp.Records {
-				asMap := record.AsMap()
-				if asMap["table_name"] == "accounts" {
-					found = true
+			for table := range rsp.GetTableSet() {
+				if table == "accounts" {
+					return
 				}
 			}
 
-			if !found {
-				t.Fatalf("expected to find table accounts, got none")
+			t.Fatalf("expected to find table accounts, got none")
+		})
+	}
+}
+
+func TestListPrimaryKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, tcase := range listPKTestCases {
+		dns := tcase.dns
+		expectedPKSet := tcase.expectedPKSet
+
+		t.Run(fmt.Sprintf("list tables %s", dns), func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			stg, err := New(ctx, dns)
+			if err != nil {
+				t.Fatalf("failed to create client: %v", err)
+			}
+			defer stg.Close()
+
+			pks, err := stg.ListPrimaryKeys(ctx)
+			if err != nil {
+				t.Fatalf("failed to list primary keys: %v", err)
+			}
+
+			if len(pks.GetPKSet()) == 0 {
+				t.Fatalf("expected primary keys, got none")
+			}
+
+			successCount := 0
+			for table, pk := range pks.GetPKSet() {
+				if len(expectedPKSet[table]) == 0 {
+					continue
+				}
+				if reflect.DeepEqual(pk.List, expectedPKSet[table]) {
+					successCount++
+				}
+			}
+
+			if successCount != len(expectedPKSet) {
+				t.Fatalf("expected primary keys not found")
 			}
 		})
 	}

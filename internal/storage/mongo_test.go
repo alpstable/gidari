@@ -21,7 +21,7 @@ func TestMongoDBTxn(t *testing.T) {
 
 		const collection = "test-ceebf"
 		const database = "ltest"
-		const tolerance = 50_000
+		const tolerance = 5_000
 
 		ctx := context.Background()
 		mdb, err := NewMongo(ctx, fmt.Sprintf("mongodb://mongo1:27017/%s", database))

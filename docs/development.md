@@ -9,9 +9,11 @@ To develop locally you need to install the following dependencies:
 
 1. Docker: https://docs.docker.com/get-docker/
 2. Go: https://go.dev/doc/install
-3. godotenv (test only): https://github.com/joho/godotenv#installation
-4. golangci-lin (test only): https://golangci-lint.run/usage/install/#local-installation
-5. gofumt (test only): https://github.com/mvdan/gofumpt
+3. protobuf: http://google.github.io/proto-lens/installing-protoc.html
+4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
+5. godotenv (test only): https://github.com/joho/godotenv#installation
+6. golangci-lin (test only): https://golangci-lint.run/usage/install/#local-installation
+7. gofumt (test only): https://github.com/mvdan/gofumpt
 
 ## Build
 
