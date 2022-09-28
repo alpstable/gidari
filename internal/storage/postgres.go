@@ -26,12 +26,6 @@ const (
 	basicPostgressTxID postgresTxType = iota
 )
 
-type pgmetaRaw struct {
-	columnName string
-	tableName  string
-	primaryKey bool
-}
-
 type pgmeta struct {
 	// cols are the columns for a specific table.
 	cols map[string][]string
@@ -113,13 +107,14 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 
 	for rows.Next() {
 		var table, column string
-		var pk bool
 
-		if err := rows.Scan(&column, &table, &pk); err != nil {
+		var primaryKey bool
+
+		if err := rows.Scan(&column, &table, &primaryKey); err != nil {
 			return fmt.Errorf("unable to scan row: %w", err)
 		}
 
-		if pk {
+		if primaryKey {
 			pg.meta.pks[table] = append(pg.meta.pks[table], column)
 		}
 
@@ -180,6 +175,7 @@ func (pg *Postgres) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeys
 		if rsp.PKSet[table] == nil {
 			rsp.PKSet[table] = &proto.PrimaryKeys{}
 		}
+
 		rsp.PKSet[table].List = append(rsp.PKSet[table].List, pks...)
 	}
 

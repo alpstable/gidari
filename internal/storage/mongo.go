@@ -229,11 +229,11 @@ func (m *Mongo) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResp
 		if rsp.PKSet[collection] == nil {
 			rsp.PKSet[collection] = &proto.PrimaryKeys{}
 		}
+
 		rsp.PKSet[collection].List = append(rsp.PKSet[collection].List, "_id")
 	}
 
 	return rsp, nil
-
 }
 
 // ListTables will return a list of all tables in the MongoDB database.
