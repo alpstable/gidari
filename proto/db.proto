@@ -5,10 +5,6 @@ package proto;
 
 option go_package = ".;proto";
 
-service Db {
-	rpc ListTables(ListTablesRequest) returns (ListTablesResponse) {}
-}
-
 // Create a record in the database. Optionally include an "id" field otherwise it's set automatically.
 message UpsertRequest {
 	string table = 1;
@@ -24,19 +20,24 @@ message UpsertResponse {
 	int64 matchedCount = 2;
 }
 
+message Columns {
+	repeated string list = 1;
+}
+
 message ListColumnsResponse {
-	repeated google.protobuf.Struct records =1;
+	map<string, Columns> colSet = 1;
+}
+
+message PrimaryKeys {
+	repeated string list = 1;
 }
 
 message ListPrimaryKeysResponse {
-	repeated google.protobuf.Struct records =1;
+	map<string,  PrimaryKeys> PKSet = 3;
 }
 
-// List tables in the DB.
-message ListTablesRequest {}
-
 message ListTablesResponse {
-	repeated google.protobuf.Struct records = 1;
+	map<string, bool> tableSet = 1;
 }
 
 // Read data from a table. Lookup can be by ID or via querying any field in the record.

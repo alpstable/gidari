@@ -30,6 +30,9 @@ type Storage interface {
 	// Close will disconnect the storage device.
 	Close()
 
+	// ListPrimaryKeys will return a list of primary keys for all tables in the database.
+	ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error)
+
 	// ListTables will return a list of all tables in the database.
 	ListTables(ctx context.Context) (*proto.ListTablesResponse, error)
 

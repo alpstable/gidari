@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const defaultMDBLifetime = 60 * time.Second
@@ -215,6 +214,28 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	return rsp, nil
 }
 
+// ListPrimaryKeys will return a "proto.ListPrimaryKeysResponse" containing a list of primary keys data for all tables
+// in a database. MongoDB does not have a concept of primary keys, so we will return the "_id" field as the primary key
+// for all collections in the database associated with the underlying connection string.
+func (m *Mongo) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error) {
+	collections, err := m.ListTables(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error listing collections: %w", err)
+	}
+
+	rsp := &proto.ListPrimaryKeysResponse{PKSet: make(map[string]*proto.PrimaryKeys)}
+
+	for collection := range collections.GetTableSet() {
+		if rsp.PKSet[collection] == nil {
+			rsp.PKSet[collection] = &proto.PrimaryKeys{}
+		}
+
+		rsp.PKSet[collection].List = append(rsp.PKSet[collection].List, "_id")
+	}
+
+	return rsp, nil
+}
+
 // ListTables will return a list of all tables in the MongoDB database.
 func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
 	cs, err := connstring.ParseAndValidate(m.dns)
@@ -227,20 +248,11 @@ func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, erro
 		return nil, fmt.Errorf("failed to list collections: %w", err)
 	}
 
-	record := []*structpb.Struct{}
+	rsp := &proto.ListTablesResponse{TableSet: make(map[string]bool)}
+
 	for _, collection := range collections {
-		record = append(record, &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				"table_name": {
-					Kind: &structpb.Value_StringValue{
-						StringValue: collection,
-					},
-				},
-			},
-		})
+		rsp.TableSet[collection] = true
 	}
 
-	return &proto.ListTablesResponse{
-		Records: record,
-	}, nil
+	return rsp, nil
 }

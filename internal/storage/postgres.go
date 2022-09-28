@@ -27,21 +27,15 @@ const (
 )
 
 type pgmeta struct {
-	table   string
-	pk      []string
-	columns []string
+	// cols are the columns for a specific table.
+	cols map[string][]string
+
+	// pks are the primary keys for a specific table.
+	pks map[string][]string
 }
 
-func (meta *pgmeta) addColumn(pk string) {
-	meta.columns = append(meta.columns, pk)
-}
-
-func (meta *pgmeta) addPK(pk string) {
-	meta.pk = append(meta.pk, pk)
-}
-
-func (meta *pgmeta) isPK(name string) bool {
-	for _, pk := range meta.pk {
+func (meta *pgmeta) isPK(table, name string) bool {
+	for _, pk := range meta.pks[table] {
 		if pk == name {
 			return true
 		}
@@ -50,14 +44,20 @@ func (meta *pgmeta) isPK(name string) bool {
 	return false
 }
 
+// isPopulated will return true if the database table information is populated. This information is considered
+// "populated" if there are columns present on the pgmeta object.
+func (meta *pgmeta) isPopulated() bool {
+	return len(meta.cols) > 0
+}
+
 // exclusionConstraints will return a string of non-primary key columns to "exclude" if they are not changed in the
 // context of a Postgres insert. That is, if a column is not changed, it will not be updated. All columns beside primary
 // keys must be included in the "excluded" clause.
-func (meta *pgmeta) exclusionConstraints() []string {
+func (meta *pgmeta) exclusionConstraints(table string) []string {
 	var constraints []string
 
-	for _, column := range meta.columns {
-		if !meta.isPK(column) {
+	for _, column := range meta.cols[table] {
+		if !meta.isPK(table, column) {
 			constraints = append(constraints, fmt.Sprintf("\"%s\" = EXCLUDED.\"%s\"", column, column))
 		}
 	}
@@ -66,14 +66,14 @@ func (meta *pgmeta) exclusionConstraints() []string {
 }
 
 // upsertStatement will return a postgres upsert statement for the meta object.
-func (meta *pgmeta) upsertStmt(ctx context.Context, prepareCtx sqlPrepareContextFn, numRows int) (*sql.Stmt, error) {
-	query := fmt.Sprintf(`INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`, meta.table,
-		strings.Join(meta.columns, ","),
-		tools.SQLIterativePlaceholders(len(meta.columns), numRows, "$"),
-		strings.Join(meta.pk, ","),
-		strings.Join(meta.exclusionConstraints(), ","))
+func (meta *pgmeta) upsertStmt(ctx context.Context, table string, pcf sqlPrepareContextFn, vol int) (*sql.Stmt, error) {
+	query := fmt.Sprintf(`INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`, table,
+		strings.Join(meta.cols[table], ","),
+		tools.SQLIterativePlaceholders(len(meta.cols[table]), vol, "$"),
+		strings.Join(meta.pks[table], ","),
+		strings.Join(meta.exclusionConstraints(table), ","))
 
-	stmt, err := prepareCtx(ctx, query)
+	stmt, err := pcf(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare statement: %w", err)
 	}
@@ -87,64 +87,41 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 	pg.metaMutex.Lock()
 	defer pg.metaMutex.Unlock()
 
-	if len(pg.meta) > 0 {
+	if pg.meta.isPopulated() {
 		return nil
 	}
 
-	columns, err := pg.ListColumns(ctx)
+	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
 	if err != nil {
-		return fmt.Errorf("error getting postgres metadata: %w", err)
+		return fmt.Errorf("unable to prepare statement: %w", err)
 	}
 
-	pg.meta = make(map[string]*pgmeta)
+	rows, err := stmt.QueryContext(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to query: %w", err)
+	}
+	defer rows.Close()
 
-	for _, record := range columns.Records {
-		rtable, ok := record.AsMap()["table_name"].(string)
-		if !ok {
-			return fmt.Errorf("error getting postgres metadata: %w", err)
+	pg.meta.cols = make(map[string][]string)
+	pg.meta.pks = make(map[string][]string)
+
+	for rows.Next() {
+		var table, column string
+
+		var primaryKey bool
+
+		if err := rows.Scan(&column, &table, &primaryKey); err != nil {
+			return fmt.Errorf("unable to scan row: %w", err)
 		}
 
-		// Initialize the table pgmeta if it does not exist.
-		if pg.meta[rtable] == nil {
-			pg.meta[rtable] = &pgmeta{table: rtable}
+		if primaryKey {
+			pg.meta.pks[table] = append(pg.meta.pks[table], column)
 		}
 
-		// Add PK and general column data to the pgmeta table object.
-		meta := pg.meta[rtable]
-
-		columnName, okCol := record.AsMap()["column_name"].(string)
-		if !okCol {
-			return fmt.Errorf("error getting postgres metadata: column_name is not a string")
-		}
-
-		primaryKey, okPK := record.AsMap()["primary_key"].(float64)
-		if !okPK {
-			return fmt.Errorf("error getting postgres metadata: primary_key is not a bool")
-		}
-
-		if primaryKey == 1.0 {
-			meta.addPK(columnName)
-		}
-
-		meta.addColumn(columnName)
+		pg.meta.cols[table] = append(pg.meta.cols[table], column)
 	}
 
 	return nil
-}
-
-// getMeta will get postgres database metadata for processing generalized functionality, such as upsert.
-func (pg *Postgres) getMeta(ctx context.Context, table string) (*pgmeta, error) {
-	// Lazy load the meta data.
-	if err := pg.loadMeta(ctx); err != nil {
-		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
-	}
-
-	meta := pg.meta[table]
-	if meta == nil {
-		return nil, fmt.Errorf("table doesn't exist %q", table)
-	}
-
-	return meta, nil
 }
 
 // exec executes a query that requires no input, passing the resulting rows into a user-defined teardown
@@ -173,48 +150,51 @@ func (pg *Postgres) Close() {
 
 // ListColumns will set a complete list of available columns per table on the response.
 func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse, error) {
-	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
-	if err != nil {
-		return nil, fmt.Errorf("unable to prepare statement: %w", err)
+	if err := pg.loadMeta(ctx); err != nil {
+		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
-
-	rows, err := stmt.QueryContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to query: %w", err)
-	}
-	defer rows.Close()
 
 	var rsp proto.ListColumnsResponse
-
-	err = tools.AssignStructs(rows, &rsp.Records)
-	if err != nil {
-		return nil, fmt.Errorf("unable to assign structs: %w", err)
+	for table, columns := range pg.meta.cols {
+		rsp.ColSet[table].List = append(rsp.ColSet[table].List, columns...)
 	}
 
 	return &rsp, nil
 }
 
+// ListPrimaryKeys will list all primary keys for all of the tables in the database defined by the DNS used to create
+// the postgres instance.
+func (pg *Postgres) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error) {
+	if err := pg.loadMeta(ctx); err != nil {
+		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
+	}
+
+	rsp := &proto.ListPrimaryKeysResponse{PKSet: make(map[string]*proto.PrimaryKeys)}
+
+	for table, pks := range pg.meta.pks {
+		if rsp.PKSet[table] == nil {
+			rsp.PKSet[table] = &proto.PrimaryKeys{}
+		}
+
+		rsp.PKSet[table].List = append(rsp.PKSet[table].List, pks...)
+	}
+
+	return rsp, nil
+}
+
 // ListTables will set a complete list of available tables on the response.
 func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
-	stmt, err := pg.DB.PrepareContext(ctx, string(pgTables))
-	if err != nil {
-		return nil, fmt.Errorf("unable to prepare statement: %w", err)
+	if err := pg.loadMeta(ctx); err != nil {
+		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
-	rows, err := stmt.QueryContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to query: %w", err)
-	}
-	defer rows.Close()
+	rsp := &proto.ListTablesResponse{TableSet: make(map[string]bool)}
 
-	var rsp proto.ListTablesResponse
-
-	err = tools.AssignStructs(rows, &rsp.Records)
-	if err != nil {
-		return nil, fmt.Errorf("unable to assign structs: %w", err)
+	for table := range pg.meta.cols {
+		rsp.TableSet[table] = true
 	}
 
-	return &rsp, nil
+	return rsp, nil
 }
 
 // Truncate will truncate a table.
@@ -267,26 +247,27 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		return &proto.UpsertResponse{}, nil
 	}
 
-	meta, err := pg.getMeta(ctx, req.Table)
-	if err != nil {
-		return nil, fmt.Errorf("table %q does not exist", req.Table)
-	}
-
 	prepareContextFn, err := pg.getPrepareContextFn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get preparer: %w", err)
 	}
 
+	if err := pg.loadMeta(ctx); err != nil {
+		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
+	}
+
+	table := req.GetTable()
+
 	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
 	// postgres database.
 	for _, partition := range tools.PartitionStructs(postgresPartitionSize, records) {
-		stmt, err := meta.upsertStmt(ctx, prepareContextFn, len(partition))
+		stmt, err := pg.meta.upsertStmt(ctx, table, prepareContextFn, len(partition))
 		if err != nil {
 			return nil, fmt.Errorf("unable to prepare statement: %w", err)
 		}
 
 		// Execute upsert.
-		arguments := tools.SQLFlattenPartition(meta.columns, partition)
+		arguments := tools.SQLFlattenPartition(pg.meta.cols[table], partition)
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
 			return nil, fmt.Errorf("unable to execute upsert: %w", err)
 		}
@@ -298,7 +279,9 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 // Postgres is a wrapper around the sql.DB object.
 type Postgres struct {
 	*sql.DB
-	meta      map[string]*pgmeta
+
+	// meta hold metdata about the database.
+	meta      *pgmeta
 	metaMutex sync.Mutex
 
 	// activeTx are the transactions that are currently active on this connection. When a user calls "StartTx" on
@@ -322,7 +305,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	}
 
 	postgres.setMaxOpenConns()
-	postgres.meta = make(map[string]*pgmeta)
+	postgres.meta = new(pgmeta)
 	postgres.metaMutex = sync.Mutex{}
 	postgres.activeTx = sync.Map{}
 
