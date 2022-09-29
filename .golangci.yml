@@ -19,9 +19,6 @@ linters:
     - sqlclosecheck
     - wastedassign
 
-    # TODO these need to be removed with refactors
-    - gosec # Issue #75
-
     # This will unreliably flag things that are not duplications.
     - dupl
 
