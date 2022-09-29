@@ -189,7 +189,7 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 
 	tables := req.GetTables()
 	if len(tables) == 0 {
-		return nil, fmt.Errorf("no tables specified")
+		return nil, ErrNoTables
 	}
 
 	stmt, err := pg.DB.PrepareContext(ctx, fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ",")))
@@ -215,7 +215,7 @@ func (pg *Postgres) getPrepareContextFn(ctx context.Context) (sqlPrepareContextF
 		if tx, ok := pg.activeTx.Load(txID); ok {
 			tx, ok := tx.(*sql.Tx)
 			if !ok {
-				return nil, fmt.Errorf("unable to cast transaction to *sql.Tx")
+				return nil, ErrTransactionNotFound
 			}
 
 			return tx.PrepareContext, nil

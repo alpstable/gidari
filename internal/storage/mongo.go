@@ -116,7 +116,7 @@ func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 			}
 		default:
 			if err := sctx.AbortTransaction(sctx); err != nil {
-				return fmt.Errorf("transaction aborted")
+				return ErrTransactionAborted
 			}
 		}
 

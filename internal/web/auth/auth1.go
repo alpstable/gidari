@@ -80,7 +80,7 @@ func NewAuth1() *Auth1 {
 // RoundTrip authorizes the request with a signed OAuth1 Authorization header.
 func (auth *Auth1) RoundTrip(req *http.Request) (*http.Response, error) {
 	if auth.url == nil {
-		return nil, fmt.Errorf("url is a required value on the HTTP client's transport")
+		return nil, ErrURLRequired
 	}
 
 	req.URL.Scheme = auth.url.Scheme
@@ -93,7 +93,7 @@ func (auth *Auth1) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	rsp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %w", err)
+		return nil, fmt.Errorf("%v: %w", err, ErrRequestFailed)
 	}
 
 	return rsp, nil

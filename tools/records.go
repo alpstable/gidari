@@ -14,6 +14,20 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+var (
+	ErrUnsupportedDataType     = fmt.Errorf("unsupported data type")
+	ErrFailedToAssertInterface = fmt.Errorf("failed to assert interface")
+	ErrFailedToMarshalBSON     = fmt.Errorf("failed to marshal bson")
+	ErrFailedToUnmarshalBSON   = fmt.Errorf("failed to unmarshal bson")
+	ErrFailedToMarshalJSON     = fmt.Errorf("failed to marshal json")
+	ErrFailedToUnmarshalJSON   = fmt.Errorf("failed to unmarshal json")
+	ErrFailedToCreateStruct    = fmt.Errorf("failed to create struct")
+	ErrFailedToScanRow         = fmt.Errorf("failed to scan row")
+	ErrFailedToParseFloat      = fmt.Errorf("failed to parse float")
+	ErrFailedToDecodeRecords   = fmt.Errorf("failed to decode records")
+	ErrFailedToGetColumns      = fmt.Errorf("failed to get columns")
+)
+
 type Encoder interface {
 	EncodeBody() (io.Reader, error)
 	EncodeQuery(*http.Request)
@@ -22,12 +36,12 @@ type Encoder interface {
 func AssingRecordBSONDocument(req *structpb.Struct, doc *bson.D) error {
 	data, err := bson.Marshal(req.AsMap())
 	if err != nil {
-		return fmt.Errorf("failed to marshal bson: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToMarshalBSON, err)
 	}
 
 	err = bson.Unmarshal(data, doc)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal bson: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToUnmarshalBSON, err)
 	}
 
 	return nil
@@ -37,17 +51,17 @@ func AssingRecordBSONDocument(req *structpb.Struct, doc *bson.D) error {
 func AssignReadOptions(req *proto.ReadRequest, opts Encoder) error {
 	bytes, err := json.Marshal(opts)
 	if err != nil {
-		return fmt.Errorf("failed to marshal json: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToMarshalJSON, err)
 	}
 
 	optsMap := make(map[string]interface{})
 	if err := json.Unmarshal(bytes, &optsMap); err != nil {
-		return fmt.Errorf("failed to unmarshal json: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToUnmarshalJSON, err)
 	}
 
 	req.Options, err = structpb.NewStruct(optsMap)
 	if err != nil {
-		return fmt.Errorf("failed to create options struct: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToCreateStruct, err)
 	}
 
 	return nil
@@ -70,14 +84,14 @@ func AssignReadResponseRecords(rsp *proto.ReadResponse, dest interface{}) error 
 		for idx, record := range rsp.Records {
 			bytes, err := record.MarshalJSON()
 			if err != nil {
-				return fmt.Errorf("failed to marshal json: %w", err)
+				return fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
 			}
 
 			model := reflect.New(nonptrStructType).Interface()
 
 			err = json.Unmarshal(bytes, &model)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal json: %w", err)
+				return fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 			}
 
 			result.Index(idx).Set(reflect.ValueOf(model))
@@ -89,7 +103,7 @@ func AssignReadResponseRecords(rsp *proto.ReadResponse, dest interface{}) error 
 		reflect.Interface, reflect.Invalid, reflect.Map, reflect.Pointer, reflect.String, reflect.Struct,
 		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8, reflect.Uintptr,
 		reflect.UnsafePointer:
-		return fmt.Errorf("assign read response does not support type %T", elem)
+		return fmt.Errorf("%w: %v", ErrUnsupportedDataType, elem.Kind())
 	}
 
 	return nil
@@ -101,7 +115,7 @@ func AssignReadRequired(req *proto.ReadRequest, key string, val interface{}) err
 	if req.Required == nil {
 		req.Required, err = structpb.NewStruct(map[string]interface{}{})
 		if err != nil {
-			return fmt.Errorf("failed to create required struct: %w", err)
+			return fmt.Errorf("%v: %w", ErrFailedToCreateStruct, err)
 		}
 	}
 
@@ -110,7 +124,7 @@ func AssignReadRequired(req *proto.ReadRequest, key string, val interface{}) err
 
 	req.Required, err = structpb.NewStruct(m)
 	if err != nil {
-		return fmt.Errorf("failed to assign required: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToCreateStruct, err)
 	}
 
 	return nil
@@ -129,7 +143,7 @@ func scanColumnPointers(rows *sql.Rows, columns []string) ([]interface{}, error)
 
 	// Scan the result into the column pointers...
 	if err := rows.Scan(columnPointers...); err != nil {
-		return nil, fmt.Errorf("failed to scan row: %w", err)
+		return nil, fmt.Errorf("%v: %w", ErrFailedToScanRow, err)
 	}
 
 	return columnPointers, nil
@@ -139,7 +153,7 @@ func scanColumnPointers(rows *sql.Rows, columns []string) ([]interface{}, error)
 func sortColumnValues(rows *sql.Rows, columns []string) (map[string]interface{}, error) {
 	columnPointers, err := scanColumnPointers(rows, columns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan column pointers: %w", err)
+		return nil, err
 	}
 
 	// Create our map, and retrieve the value for each column from the pointers slice,
@@ -149,7 +163,7 @@ func sortColumnValues(rows *sql.Rows, columns []string) (map[string]interface{},
 	for i, colName := range columns {
 		val, ok := columnPointers[i].(*interface{})
 		if !ok {
-			return nil, fmt.Errorf("failed to assert interface")
+			return nil, ErrFailedToAssertInterface
 		}
 
 		if reflect.TypeOf(*val) == reflect.TypeOf([]byte{}) {
@@ -157,7 +171,7 @@ func sortColumnValues(rows *sql.Rows, columns []string) (map[string]interface{},
 			// these values into strings.
 			f, err := strconv.ParseFloat(string((*val).([]byte)), strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse float64 from []byte: %w", err)
+				return nil, fmt.Errorf("%v: %w", ErrFailedToParseFloat, err)
 			}
 
 			*val = f
@@ -174,7 +188,7 @@ func sortColumnValues(rows *sql.Rows, columns []string) (map[string]interface{},
 func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 	cols, err := rows.Columns()
 	if err != nil {
-		return fmt.Errorf("failed to get columns: %w", err)
+		return fmt.Errorf("%v: %w", ErrFailedToGetColumns, err)
 	}
 	defer rows.Close()
 
@@ -182,18 +196,18 @@ func AssignStructs(rows *sql.Rows, val *[]*structpb.Struct) error {
 		// Scan the rows into a slice of pointers, then sort them by column name.
 		colVal, err := sortColumnValues(rows, cols)
 		if err != nil {
-			return fmt.Errorf("failed to sort column values: %w", err)
+			return err
 		}
 
 		// Encoded the data and append it to the response tables.
 		encodedData, err := json.Marshal(colVal)
 		if err != nil {
-			return fmt.Errorf("failed to marshal json: %w", err)
+			return fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
 		}
 
 		pbstruct := &structpb.Struct{}
 		if err = pbstruct.UnmarshalJSON(encodedData); err != nil {
-			return fmt.Errorf("failed to unmarshal json: %w", err)
+			return fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 		}
 
 		*val = append(*val, pbstruct)
@@ -220,7 +234,7 @@ func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 		reflect.Interface, reflect.Invalid, reflect.Pointer, reflect.String, reflect.Struct,
 		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8, reflect.Uintptr,
 		reflect.UnsafePointer:
-		return nil, fmt.Errorf("unsupported type %T", data)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedDataType, dataValue.Kind())
 	}
 
 	records := make([]*structpb.Struct, 0)
@@ -228,14 +242,14 @@ func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 	for _, r := range out {
 		record, err := json.Marshal(r)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal json: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
 		}
 
 		rec := new(structpb.Struct)
 
 		err = rec.UnmarshalJSON(record)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal json: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 		}
 
 		records = append(records, rec)
@@ -257,18 +271,18 @@ func DecodeUpsertRecords(req *proto.UpsertRequest) ([]*structpb.Struct, error) {
 	if UpsertDataType(req.DataType) == UpsertDataJSON {
 		var data interface{}
 		if err := json.Unmarshal(req.Data, &data); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal raw data: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 		}
 
 		records, err := decodeRecords(data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode records: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrFailedToDecodeRecords, err)
 		}
 
 		return records, nil
 	}
 
-	return nil, fmt.Errorf("unsupported data type: %v", req.DataType)
+	return nil, fmt.Errorf("%w: %v", ErrUnsupportedDataType, req.DataType)
 }
 
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to
