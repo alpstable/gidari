@@ -178,7 +178,7 @@ func TestUpsert(t *testing.T) {
 	t.Parallel()
 
 	// Iterate over the fixtures/upsert directory and run each configuration file.
-	fixtureRoot := "fixtures/upsert"
+	fixtureRoot := "testdata/upsert"
 
 	fixtures, err := os.ReadDir(fixtureRoot)
 	if err != nil {
