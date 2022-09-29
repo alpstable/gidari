@@ -52,13 +52,6 @@ func main() {
 func run(configFilepath string, verboseLogging bool, _ []string) {
 	ctx := context.Background()
 
-	// Register supported encoders.
-	err := transport.RegisterEncoders(transport.RegisterDefaultEncoder,
-		transport.RegisterCBPEncoder)
-	if err != nil {
-		log.Fatalf("error registering encoders: %v", err)
-	}
-
 	bytes, err := os.ReadFile(configFilepath)
 	if err != nil {
 		log.Fatalf("error reading config file  %s: %v", configFilepath, err)
@@ -74,6 +67,13 @@ func run(configFilepath string, verboseLogging bool, _ []string) {
 	// If the user has not set the verbose flag, only log fatals.
 	if !verboseLogging {
 		cfg.Logger.SetLevel(logrus.FatalLevel)
+	}
+
+	// Register supported encoders.
+	err = transport.RegisterEncoders(cfg.RepositoryEncoderRegistry, transport.RegisterDefaultEncoder,
+		transport.RegisterCBPEncoder)
+	if err != nil {
+		log.Fatalf("error registering encoders: %v", err)
 	}
 
 	if err := transport.Upsert(ctx, cfg); err != nil {
