@@ -124,23 +124,6 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 	return nil
 }
 
-// exec executes a query that requires no input, passing the resulting rows into a user-defined teardown
-// function.
-func (pg *Postgres) exec(ctx context.Context, query []byte, teardown func(*sql.Rows) error) error {
-	stmt, err := pg.DB.PrepareContext(ctx, string(query))
-	if err != nil {
-		return fmt.Errorf("unable to prepare statement: %w", err)
-	}
-
-	rows, err := stmt.QueryContext(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to query: %w", err)
-	}
-	defer rows.Close()
-
-	return teardown(rows)
-}
-
 // Close will close the underlying database / transaction.
 func (pg *Postgres) Close() {
 	if pg.DB != nil {
@@ -209,9 +192,18 @@ func (pg *Postgres) Truncate(ctx context.Context, req *proto.TruncateRequest) (*
 		return nil, fmt.Errorf("no tables specified")
 	}
 
-	query := fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ","))
+	stmt, err := pg.DB.PrepareContext(ctx, fmt.Sprintf(string(pgTruncatedTables), strings.Join(tables, ",")))
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare statement: %w", err)
+	}
 
-	return &proto.TruncateResponse{}, pg.exec(ctx, []byte(query), func(r *sql.Rows) error { return nil })
+	rows, err := stmt.QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query: %w", err)
+	}
+	defer rows.Close()
+
+	return &proto.TruncateResponse{}, nil
 }
 
 // getPrepareContextFn will return a function that can prepare an upsert statement for a given table.
