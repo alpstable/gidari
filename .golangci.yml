@@ -20,7 +20,6 @@ linters:
     - wastedassign
 
     # TODO these need to be removed with refactors
-    - goerr113 # Issue #73
     - gosec # Issue #75
 
     # This will unreliably flag things that are not duplications.
@@ -48,3 +47,4 @@ issues:
         - gocognit
         - funlen
         - gochecknoglobals
+        - goerr113

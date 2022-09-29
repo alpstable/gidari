@@ -40,7 +40,7 @@ func (auth *Basic) SetURL(val string) *Basic {
 // RoundTrip authorizes the request with a signed OAuth1 Authorization header using the author and TokenSource.
 func (auth *Basic) RoundTrip(req *http.Request) (*http.Response, error) {
 	if auth.url == nil {
-		return nil, fmt.Errorf("url is a required value on the HTTP client's transport")
+		return nil, ErrURLRequired
 	}
 
 	req.URL.Scheme = auth.url.Scheme
@@ -49,7 +49,7 @@ func (auth *Basic) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	rsp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %w", err)
+		return nil, fmt.Errorf("%v: %w", ErrRequestFailed, err)
 	}
 
 	return rsp, nil

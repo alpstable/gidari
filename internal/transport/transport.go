@@ -21,26 +21,14 @@ import (
 )
 
 var (
-	// ErrFetchingTimeseriesChunks is returned when the timeseries is unable to fetch the chunks.
 	ErrFetchingTimeseriesChunks = fmt.Errorf("failed to fetch timeseries chunks")
-
-	// ErrInvalidRateLimit is returned when the rate limit configuration is invalid.
-	ErrInvalidRateLimit = fmt.Errorf("invalid rate limit configuration")
-
-	// ErrMissingConfigField is returned when a configuration field is missing.
-	ErrMissingConfigField = fmt.Errorf("missing config field")
-
-	// ErrMissingRateLimitField is returned when the rate limit configuration is missing a field.
-	ErrMissingRateLimitField = fmt.Errorf("missing rate limit field")
-
-	// ErrMissingTimeseriesField is returned when the timeseries is missing from the configuration.
-	ErrMissingTimeseriesField = fmt.Errorf("missing timeseries field")
-
-	// ErrSettingTimeseriesChunks is returned when the timeseries is unable to set the chunks.
-	ErrSettingTimeseriesChunks = fmt.Errorf("failed to set timeseries chunks")
-
-	// ErrUnableToParse is returned with a parser is unable to parse the data.
-	ErrUnableToParse = fmt.Errorf("unable to parse")
+	ErrInvalidRateLimit         = fmt.Errorf("invalid rate limit configuration")
+	ErrMissingConfigField       = fmt.Errorf("missing config field")
+	ErrMissingRateLimitField    = fmt.Errorf("missing rate limit field")
+	ErrMissingTimeseriesField   = fmt.Errorf("missing timeseries field")
+	ErrSettingTimeseriesChunks  = fmt.Errorf("failed to set timeseries chunks")
+	ErrUnableToParse            = fmt.Errorf("unable to parse")
+	ErrNoAuthenticator          = fmt.Errorf("no authenticator")
 )
 
 // MissingConfigFieldError is returned when a configuration field is missing.
@@ -245,7 +233,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 		return client, nil
 	}
 
-	return nil, fmt.Errorf("no authentication method provided")
+	return nil, ErrNoAuthenticator
 }
 
 type repoCloser func()

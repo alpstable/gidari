@@ -108,7 +108,7 @@ func (auth *APIKey) generageMsg(req *http.Request, timestamp string) string {
 // RoundTrip authorizes the request with a signed API Key Authorization header.
 func (auth *APIKey) RoundTrip(req *http.Request) (*http.Response, error) {
 	if auth.url == nil {
-		return nil, fmt.Errorf("url is a required value on the HTTP client's transport")
+		return nil, ErrURLRequired
 	}
 
 	var (
