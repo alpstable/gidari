@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"hash"
@@ -145,7 +145,7 @@ func (auth *Auth1) setRequestAuthHeader(req *http.Request) error {
 	}
 
 	signatureBase := signatureBase(req, params)
-	signature := hmacSign(auth.consumerSecret, auth.accessTokenSecret, signatureBase, sha1.New)
+	signature := hmacSign(auth.consumerSecret, auth.accessTokenSecret, signatureBase, sha256.New)
 	oauthParams[oauthSignatureParam] = signature
 	req.Header.Set(authorizationHeaderParam, authHeaderValue(oauthParams))
 
