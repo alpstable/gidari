@@ -9,7 +9,7 @@ import (
 func TestRepositoryEncoderRegistry(t *testing.T) {
 	t.Parallel()
 
-	err := RegisterEncoders(RegisterDefaultEncoder, RegisterCBPEncoder)
+	err := RegisterEncoders(RepositoryEncoderRegistry{}, RegisterDefaultEncoder, RegisterCBPEncoder)
 	if err != nil {
 		t.Fatalf("error registering encoders: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestRepositoryEncoderRegistry(t *testing.T) {
 		t.Run("should return the default encoder when one is not registered", func(t *testing.T) {
 			t.Parallel()
 			testURL, _ := url.Parse("http://test")
-			encoder := RepositoryEncoders.Lookup(testURL)
+			encoder := RepositoryEncoderRegistry{}.Lookup(testURL)
 			if encoder == nil {
 				t.Error("expected encoder to be registered, got nil")
 			}

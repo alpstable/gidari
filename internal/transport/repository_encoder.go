@@ -42,9 +42,9 @@ type RepositoryEncoder interface {
 type RepositoryEncoderRegistry map[RepositoryEncoderKey]RepositoryEncoder
 
 // RegisterEncoders will register all listed encoders for the deployment.
-func RegisterEncoders(encoders ...func() error) error {
+func RegisterEncoders(rer RepositoryEncoderRegistry, encoders ...func(RepositoryEncoderRegistry) error) error {
 	for _, encoder := range encoders {
-		if err := encoder(); err != nil {
+		if err := encoder(rer); err != nil {
 			return err
 		}
 	}
@@ -76,23 +76,17 @@ func (rer RepositoryEncoderRegistry) Lookup(u *url.URL) *RegisteredRepositoryEnc
 		return &RegisteredRepositoryEncoder{encoder}
 	}
 
-	return &RegisteredRepositoryEncoder{rer[NewDefaultRepositoryEncoderKey()]}
+	return &RegisteredRepositoryEncoder{new(DefaultRepositoryEncoder)}
 }
 
-// RepositoryEncoders is the registry of encoders used to transform web request data into a byte slice that can be
-// passed to a repository upsert method. The reason for making RepositoryEncoders a global variable is to (1) avoid
-// needing to pass it around to every function that needs to access the data, (2) allow custom registration of encoders
-// in the init function, and (3) allow for the possibility of having multiple registries.
-var RepositoryEncoders = make(RepositoryEncoderRegistry)
-
 // RegisterDefaultEncoder will register custom encoder specific to the default project.
-func RegisterDefaultEncoder() error {
+func RegisterDefaultEncoder(rer RepositoryEncoderRegistry) error {
 	uri, err := url.Parse("")
 	if err != nil {
 		return fmt.Errorf("error parsing url: %w", err)
 	}
 
-	if err := RepositoryEncoders.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
+	if err := rer.Register(uri, new(DefaultRepositoryEncoder)); err != nil {
 		return fmt.Errorf("error registering default encoder: %w", err)
 	}
 

@@ -66,13 +66,13 @@ func (c *cbpCandles) UnmarshalJSON(bytes []byte) error {
 }
 
 // RegisterCBPEncoder will register the Coinbase Pro encoder.
-func RegisterCBPEncoder() error {
+func RegisterCBPEncoder(rer RepositoryEncoderRegistry) error {
 	uri, err := url.Parse("https://api-public.sandbox.exchange.coinbase.com/candles")
 	if err != nil {
 		return fmt.Errorf("error parsing url: %w", err)
 	}
 
-	if err := RepositoryEncoders.Register(uri, new(CBPEncoder)); err != nil {
+	if err := rer.Register(uri, new(CBPEncoder)); err != nil {
 		return fmt.Errorf("error registering encoder: %w", err)
 	}
 
@@ -131,12 +131,9 @@ func (ccre *CBPEncoder) Encode(req http.Request, bytes []byte) ([]*proto.UpsertR
 	case cbpCandlesTable:
 		return cbpEncodeCandles(req, bytes)
 	default:
-		u, err := url.Parse("")
-		if err != nil {
-			return nil, fmt.Errorf("error parsing url: %w", err)
-		}
+		dre := new(DefaultRepositoryEncoder)
 
-		upsertRequest, err := RepositoryEncoders.Lookup(u).Encode(req, bytes)
+		upsertRequest, err := dre.Encode(req, bytes)
 		if err != nil {
 			return nil, fmt.Errorf("error encoding data: %w", err)
 		}

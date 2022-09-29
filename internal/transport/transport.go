@@ -185,6 +185,10 @@ type Config struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
 	Logger          *logrus.Logger
 	Truncate        bool
+
+	// RepositoryEncoderRegistry are custom encoders for atypical data returned by an web request. This should be
+	// limited and extremely rare.
+	RepositoryEncoderRegistry RepositoryEncoderRegistry
 }
 
 // New config takes a YAML byte slice and returns a new transport configuration for upserting data to storage.
@@ -322,6 +326,7 @@ type repoConfig struct {
 	jobs       chan *repoJob
 	done       chan bool
 	logger     *logrus.Logger
+	rer        RepositoryEncoderRegistry
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
@@ -336,12 +341,13 @@ func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, e
 		jobs:       make(chan *repoJob, volume*len(repos)),
 		done:       make(chan bool, volume),
 		logger:     cfg.Logger,
+		rer:        cfg.RepositoryEncoderRegistry,
 	}, nil
 }
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		reqs, err := RepositoryEncoders.Lookup(job.req.URL).Encode(job.req, job.b)
+		reqs, err := cfg.rer.Lookup(job.req.URL).Encode(job.req, job.b)
 		if err != nil {
 			cfg.logger.Fatalf("error encoding response data: %v", err)
 		}
