@@ -238,20 +238,33 @@ func (m *Mongo) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResp
 
 // ListTables will return a list of all tables in the MongoDB database.
 func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
-	cs, err := connstring.ParseAndValidate(m.dns)
+	connString, err := connstring.ParseAndValidate(m.dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	collections, err := m.Client.Database(cs.Database).ListCollectionNames(ctx, bson.D{})
+	collections, err := m.Client.Database(connString.Database).ListCollectionNames(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list collections: %w", err)
 	}
 
-	rsp := &proto.ListTablesResponse{TableSet: make(map[string]bool)}
+	rsp := &proto.ListTablesResponse{TableSet: make(map[string]*proto.Table)}
 
 	for _, collection := range collections {
-		rsp.TableSet[collection] = true
+		// Need to get the size of the collection
+		result, err := m.Client.Database(connString.Database).RunCommand(ctx, bson.D{
+			primitive.E{Key: "collStats", Value: collection},
+		}).DecodeBytes()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get collection stats: %w", err)
+		}
+
+		rawValue, err := result.LookupErr("size")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get collection size: %w", err)
+		}
+
+		rsp.TableSet[collection] = &proto.Table{Size: int64(rawValue.Int32())}
 	}
 
 	return rsp, nil

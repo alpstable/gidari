@@ -257,6 +257,77 @@ func TestListTables(t *testing.T) {
 
 			t.Fatalf("expected to find table accounts, got none")
 		})
+
+		t.Run(fmt.Sprintf("get accounts size: %s", dns), func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			testTable := "accounts"
+
+			stg, err := New(ctx, dns)
+			if err != nil {
+				t.Fatalf("failed to create client: %v", err)
+			}
+			defer stg.Close()
+
+			// Truncate the test table.
+			_, err = stg.Truncate(ctx, &proto.TruncateRequest{
+				Tables: []string{testTable},
+			})
+			if err != nil {
+				t.Fatalf("failed to truncate table: %v", err)
+			}
+
+			// Upsert some data to a random table
+			_, err = stg.Upsert(ctx, &proto.UpsertRequest{
+				Table: "accounts",
+				Data: []byte(`{
+"id": "1",
+"available": 1,
+"balance": 1,
+"hold": 0,
+"currency": "A",
+"profile_id": "1",
+"trading_enabled": true
+}`),
+				DataType: int32(tools.UpsertDataJSON),
+			})
+			if err != nil {
+				t.Fatalf("failed to upsert data: %v", err)
+			}
+
+			// Get the table data.
+			rsp, err := stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if len(rsp.GetTableSet()) == 0 {
+				t.Fatalf("expected tables, got none")
+			}
+
+			if rsp.GetTableSet()[testTable].Size == 0 {
+				t.Fatalf("expected table size to be greater than zero")
+			}
+
+			// Truncate the test table.
+			_, err = stg.Truncate(ctx, &proto.TruncateRequest{
+				Tables: []string{testTable},
+			})
+			if err != nil {
+				t.Fatalf("failed to truncate table: %v", err)
+			}
+
+			// Get the table data.
+			rsp, err = stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if rsp.GetTableSet()[testTable].Size != 0 {
+				t.Fatalf("expected table size to be zero")
+			}
+		})
 	}
 }
 

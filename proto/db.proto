@@ -36,8 +36,12 @@ message ListPrimaryKeysResponse {
 	map<string,  PrimaryKeys> PKSet = 3;
 }
 
+message Table {
+	int64 size = 1;
+}
+
 message ListTablesResponse {
-	map<string, bool> tableSet = 1;
+	map<string, Table> tableSet = 1;
 }
 
 // Read data from a table. Lookup can be by ID or via querying any field in the record.
