@@ -4,7 +4,7 @@ authentication:
     passphrase: CBP_PASSPHRASE
     secret: CBP_SECRET
     key: CBP_KEY
-dnsList:
+connectionStrings:
   - mongodb://mongo1:27017/coinbasepro-transport
 rateLimit:
   burst: 5

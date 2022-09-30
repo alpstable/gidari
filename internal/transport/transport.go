@@ -164,15 +164,15 @@ func (rl RateLimitConfig) validate() error {
 }
 
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
-// the repositories defined by the "DNSList".
+// the repositories defined by the "ConnectionStrings" list.
 type Config struct {
-	URL             string           `yaml:"url"`
-	Authentication  Authentication   `yaml:"authentication"`
-	DNSList         []string         `yaml:"dnsList"`
-	Requests        []*Request       `yaml:"requests"`
-	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
-	Logger          *logrus.Logger
-	Truncate        bool
+	URL               string           `yaml:"url"`
+	Authentication    Authentication   `yaml:"authentication"`
+	ConnectionStrings []string         `yaml:"connectionStrings"`
+	Requests          []*Request       `yaml:"requests"`
+	RateLimitConfig   *RateLimitConfig `yaml:"rateLimit"`
+	Logger            *logrus.Logger
+	Truncate          bool
 
 	// RepositoryEncoderRegistry are custom encoders for atypical data returned by an web request. This should be
 	// limited and extremely rare.
@@ -242,7 +242,7 @@ type repoCloser func()
 func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser, error) {
 	repos := []repository.Generic{}
 
-	for _, dns := range cfg.DNSList {
+	for _, dns := range cfg.ConnectionStrings {
 		repo, err := repository.NewTx(ctx, dns)
 		if err != nil {
 			return nil, nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
