@@ -1,4 +1,9 @@
 <p align="center"><img src="etc/assets/gidari-gopher.png" width="350"></p>
+<p align="center">
+	[![PkgGoDev](https://img.shields.io/badge/go.dev-docs-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alpine-hodler/gidari)
+	[![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
+</p>
+
 
 # Gidari
 
@@ -16,7 +21,7 @@ TODO
 
 TODO
 
-### SQL 
+### SQL
 
 TODO
 
