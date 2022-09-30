@@ -2,7 +2,10 @@
 
 - [Dependencies](#dependencies)
 - [Build](#build)
-- [Testing](#testing)
+- [Integration Testing](#integration-testing)
+  - [Network Updates](#network-updates)
+  - [Credential Setup](#credential-setup)
+  - [Running Integration Tests](#running-integration-tests)
 
 ## Dependencies
 To develop locally you need to install the following dependencies:
@@ -27,7 +30,7 @@ make
 
 Gidari is a web-to-storage data transport, which means that integration tests are inevitable. This is an imperfect practice and any cunstructive feedback on improving the workflow is much appreciated.
 
-## Network Updates
+### Network Updates
 
 You will also need to sync your /etc/hosts file with the docker containers:
 
@@ -39,7 +42,7 @@ You will also need to sync your /etc/hosts file with the docker containers:
 127.0.0.1 postgres1
 ```
 
-## Credential Setup
+### Credential Setup
 
 The integration tests uses the free [Coinbse Pro API](https://docs.cloud.coinbase.com/exchange/reference/exchangerestapi_getaccounts-1). To use `make tests` you must configure an environment file at `/etc/alpine-hodler/auth.env` with the test keys. It should look like this:
 
@@ -51,6 +54,6 @@ CBP_SECRET=<YOUR_SANDBOX_SECRET>
 
 To create test keys, follow the guide [here](https://help.coinbase.com/en/pro/other-topics/api/how-do-i-create-an-api-key-for-coinbase-pro) or reach out to a repository contributor. Create READ ONLY test keys for [Coinbase Pro Sandbox](https://public.sandbox.pro.coinbase.com/). DO NOT USE LIVE COINBASE PRO CREDENTIALS.
 
-## Running Integration Tests
+### Running Integration Tests
 
 To test locally first build the containers for integration tests using `make containers`. Then run `make tests`.
