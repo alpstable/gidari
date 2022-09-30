@@ -32,6 +32,9 @@ type pgmeta struct {
 
 	// pks are the primary keys for a specific table.
 	pks map[string][]string
+
+	// bytes are the size in bytes for a specific table.
+	bytes map[string]int64
 }
 
 func (meta *pgmeta) isPK(table, name string) bool {
@@ -42,12 +45,6 @@ func (meta *pgmeta) isPK(table, name string) bool {
 	}
 
 	return false
-}
-
-// isPopulated will return true if the database table information is populated. This information is considered
-// "populated" if there are columns present on the pgmeta object.
-func (meta *pgmeta) isPopulated() bool {
-	return len(meta.cols) > 0
 }
 
 // exclusionConstraints will return a string of non-primary key columns to "exclude" if they are not changed in the
@@ -87,10 +84,6 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 	pg.metaMutex.Lock()
 	defer pg.metaMutex.Unlock()
 
-	if pg.meta.isPopulated() {
-		return nil
-	}
-
 	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
 	if err != nil {
 		return fmt.Errorf("unable to prepare statement: %w", err)
@@ -104,13 +97,17 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 
 	pg.meta.cols = make(map[string][]string)
 	pg.meta.pks = make(map[string][]string)
+	pg.meta.bytes = make(map[string]int64)
 
 	for rows.Next() {
-		var table, column string
+		var (
+			table      string
+			column     string
+			primaryKey bool
+			bytes      int64
+		)
 
-		var primaryKey bool
-
-		if err := rows.Scan(&column, &table, &primaryKey); err != nil {
+		if err := rows.Scan(&column, &table, &primaryKey, &bytes); err != nil {
 			return fmt.Errorf("unable to scan row: %w", err)
 		}
 
@@ -119,6 +116,7 @@ func (pg *Postgres) loadMeta(ctx context.Context) error {
 		}
 
 		pg.meta.cols[table] = append(pg.meta.cols[table], column)
+		pg.meta.bytes[table] = bytes
 	}
 
 	return nil
@@ -171,10 +169,10 @@ func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, 
 		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
-	rsp := &proto.ListTablesResponse{TableSet: make(map[string]bool)}
+	rsp := &proto.ListTablesResponse{TableSet: make(map[string]*proto.Table)}
 
 	for table := range pg.meta.cols {
-		rsp.TableSet[table] = true
+		rsp.TableSet[table] = &proto.Table{Size: pg.meta.bytes[table]}
 	}
 
 	return rsp, nil
