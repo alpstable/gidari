@@ -28,7 +28,7 @@ make
 
 ## Integration Testing
 
-Gidari is a web-to-storage data transport, which means that integration tests are inevitable. This is an imperfect practice and any cunstructive feedback on improving the workflow is much appreciated.
+Gidari is a web-to-storage data transport, which means that integration tests are inevitable. This is an imperfect practice and any constructive feedback on improving the workflow is much appreciated.
 
 ### Network Updates
 
