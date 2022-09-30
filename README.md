@@ -1,4 +1,4 @@
-<p align="center"><img src="etc/assets/gidari-gopher.png" width="250"></p>
+<p align="center"><img src="etc/assets/gidari-gopher.png" width="350"></p>
 
 # Gidari
 
