@@ -17,7 +17,18 @@ TODO
 
 ### Configuration
 
-TODO
+| Key                 | Required | Type    | Description                                                                                                                   |
+|---------------------|----------|---------|-------------------------------------------------------------------------------------------------------------------------------|
+| `url`               | Y        | string  | The URL for the RESTful API for making requests                                                                               |
+| `authentication`    | Y        | map     | Data required for authenticating the web API requests                                                                         |
+| `connectionStrings` | Y        | list    | List of connection strings for communicating with local/remote storage                                                        |
+| `rateLimit`         | Y        | map     | Data required for limiting the number of requests per second, avoiding 429 errors                                             |
+| `rateLimit.burst`   | Y        | int     | Number of requests that can be made per second                                                                                |
+| `rateLimit.period`  | Y        | int     | Period for the `rateLimit.burst`                                                                                              |
+| `truncate`          | N        | boolean | Truncate all tables in the database before performing request upserts                                                         |
+| `requests`          | N        | list    | List of requests to receive data from the web API for upserting into local/remote storage                                     |
+| `request.endpoint`  | Y        | string  | Endpoint for making the RESTful API request                                                                                   |
+| `table`             | N        | string  | Name of the table in the remote/local storage for upserting data. This field defaults to the last string in the endpoint path |
 
 ### SQL
 
