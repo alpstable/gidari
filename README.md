@@ -33,5 +33,9 @@ The `repository` and `proto` packages are the only packages within the applicati
 
 ## Contributing
 
-To get a development environment configured, see [here](docs/development.md).
+To get a development environment configured, see [here](docs/development.md). See the [Gidari MVP](https://github.com/orgs/alpine-hodler/projects/3) project list for open issues. Issues labeled with "good first issue" are excellent starting points for new engineers. If you have completed an issue:
+
+1. Create a pull request pointing to "main"
+2. Add a reviewer
+3. Make sure the CI passes
 
