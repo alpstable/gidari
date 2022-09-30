@@ -2,7 +2,7 @@ url: https://api.polygon.io
 authentication:
   auth2:
     bearer: POL_BEARER_TOKEN
-dnsList:
+connectionString:
   - mongodb://mongo1:27017/polygon-transport
 rateLimit:
   burst: 99
