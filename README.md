@@ -1,7 +1,6 @@
 <p align="center"><img src="etc/assets/gidari-gopher.png" width="350"></p>
-<p align="center">
-	[![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
-</p>
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
 
 
 # Gidari
