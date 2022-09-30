@@ -7,11 +7,6 @@ default:
 containers:
 	scripts/build-storage.sh
 
-# hosts sets up the hosts file for integration tests. This only needs to be run once.
-.PHONY: hosts
-hosts:
-	scripts/build-hosts.sh
-
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:

@@ -1,8 +1,11 @@
-<p align="center"><img src="etc/assets/gidari-gopher.png" width="350"></p>
-
 # Gidari
 
-Gidari is a tool for querying web APIs and persisting resultant data onto local storage. A configuraiton file is used to define how this querying and storing should occur. Once you have a configure file, you can intiate this transport using the command `gidari --config <configuration.yml>`.
+[![PkgGoDev](https://img.shields.io/badge/go.dev-docs-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alpine-hodler/gidari)
+[![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
+
+<p align="center"><img src="https://raw.githubusercontent.com/alpine-hodler/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
+
+Gidari is a "web-to-storage" tool for querying web APIs and persisting the resulting data onto local storage. A configuraiton file is used to define how this querying and storing should occur. Once you have a configuration file, you can intiate this transport using the command `gidari --config <configuration.yml>`.
 
 ## Installation
 
@@ -16,7 +19,7 @@ TODO
 
 TODO
 
-### SQL 
+### SQL
 
 TODO
 
@@ -28,6 +31,11 @@ TODO
 
 The `repository` and `proto` packages are the only packages within the application that are public-facing stable API with the purpose of communicating CRUD requests to the storage devices used in the web-to-storage transfers.
 
-## Contribution
+## Contributing
 
-TODO
+Follow [this guide](docs/development.md) to configure a development environment. See the [Gidari MVP](https://github.com/orgs/alpine-hodler/projects/3) project list for open issues, please only focus on issues in the "Scheduled" column. Issues labeled with "good first issue" are excellent starting points for new engineers. If you have completed an issue:
+
+1. Create a pull request pointing to "main"
+2. Add a reviewer
+3. Make sure the CI passes
+
