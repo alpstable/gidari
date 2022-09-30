@@ -422,10 +422,64 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 	}
 }
 
+// TruncateRequests will truncate the requests that have "Truncate" set to true. This is a finer version of the
+// "Truncate" routine.
+func TruncateRequests(ctx context.Context, cfg *Config) error {
+	start := time.Now()
+
+	// Get the requests to truncate.
+	truncateRequest := new(proto.TruncateRequest)
+
+	for _, req := range cfg.Requests {
+		if table := req.Table; req.Truncate && req.Table != nil {
+			truncateRequest.Tables = append(truncateRequest.Tables, *table)
+		}
+	}
+
+	if len(truncateRequest.Tables) == 0 {
+		return nil
+	}
+
+	repos, closeRepos, err := cfg.repos(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer closeRepos()
+
+	for _, repo := range repos {
+		start := time.Now()
+
+		_, err := repo.Truncate(ctx, truncateRequest)
+		if err != nil {
+			return fmt.Errorf("unable to truncate tables: %w", err)
+		}
+
+		rt := repo.Type()
+		tables := strings.Join(truncateRequest.Tables, ", ")
+		msg := fmt.Sprintf("truncated tables on %q: %v", storage.Scheme(rt), tables)
+
+		logInfo := tools.LogFormatter{
+			Duration: time.Since(start),
+			Msg:      msg,
+		}
+		cfg.Logger.Infof(logInfo.String())
+	}
+
+	logInfo := tools.LogFormatter{
+		Duration: time.Since(start),
+		Msg:      fmt.Sprintf("truncate completed: %s", strings.Join(truncateRequest.Tables, ", ")),
+	}
+	cfg.Logger.Info(logInfo.String())
+
+	return nil
+}
+
 // Truncate will truncate the defined tables in the configuration.
 func Truncate(ctx context.Context, cfg *Config) error {
 	if !cfg.Truncate {
-		return nil
+		// In this case, truncate any requests-specific truncate logic.
+		return TruncateRequests(ctx, cfg)
 	}
 
 	start := time.Now()

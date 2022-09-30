@@ -26,8 +26,12 @@ type Request struct {
 	// Table is the name of the table/collection to insert the data fetched from the web API.
 	Table *string
 
-	//
+	// RateLimitConfig is the configuration for the rate limiter used to limit the number of requests to the web
+	// API. This is a required field.
 	RateLimitConfig *RateLimitConfig `yaml:"rate_limit"`
+
+	// Truncate indicates that the request should truncate the table before inserting new data.
+	Truncate bool `yaml:"truncate"`
 }
 
 // newFetchConfig will constrcut a new HTTP request from the transport request.

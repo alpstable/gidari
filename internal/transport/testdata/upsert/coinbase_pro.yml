@@ -9,9 +9,9 @@ connectionStrings:
 rateLimit:
   burst: 5
   period: 1
-truncate: true
 requests:
   - endpoint: /accounts
+    truncate: true
   - endpoint: /currencies
   - endpoint: /products
   - endpoint: /products/BTC-USD/stats
