@@ -1,4 +1,29 @@
-CREATE TABLE tests (
+-- We create many test tables so that we can test in parallel without deadlocks.
+CREATE TABLE tests1 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE tests2 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE tests3 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE tests4 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE tests5 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
