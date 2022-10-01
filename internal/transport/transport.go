@@ -1,3 +1,10 @@
+// Copyright 2022 The Gidari Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
 package transport
 
 import (
@@ -28,7 +35,6 @@ var (
 	ErrMissingTimeseriesField   = fmt.Errorf("missing timeseries field")
 	ErrSettingTimeseriesChunks  = fmt.Errorf("failed to set timeseries chunks")
 	ErrUnableToParse            = fmt.Errorf("unable to parse")
-	ErrNoAuthenticator          = fmt.Errorf("no authenticator")
 )
 
 // MissingConfigFieldError is returned when a configuration field is missing.
@@ -233,7 +239,13 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 		return client, nil
 	}
 
-	return nil, ErrNoAuthenticator
+	// In the case of no authentication, create a client without an auth transport.
+	client, err := web.NewClient(ctx, nil)
+	if err != nil {
+		return nil, WrapWebError(web.FailedToCreateClientError(err))
+	}
+
+	return client, nil
 }
 
 type repoCloser func()

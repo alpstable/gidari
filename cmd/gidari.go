@@ -1,3 +1,10 @@
+// Copyright 2022 The Gidari Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
 package main
 
 import (
@@ -67,13 +74,6 @@ func run(configFilepath string, verboseLogging bool, _ []string) {
 	// If the user has not set the verbose flag, only log fatals.
 	if !verboseLogging {
 		cfg.Logger.SetLevel(logrus.FatalLevel)
-	}
-
-	// Register supported encoders.
-	err = transport.RegisterEncoders(cfg.RepositoryEncoderRegistry, transport.RegisterDefaultEncoder,
-		transport.RegisterCBPEncoder)
-	if err != nil {
-		log.Fatalf("error registering encoders: %v", err)
 	}
 
 	if err := transport.Upsert(ctx, cfg); err != nil {
