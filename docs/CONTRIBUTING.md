@@ -39,6 +39,8 @@ To build run the default make:
 make
 ```
 
+To test the binary locally run `make containers`. See [Integration Testing](#integration-testing) for more information.
+
 ## Integration Testing
 
 Gidari is a web-to-storage data transport, which means that integration tests are inevitable. This is an imperfect practice and any constructive feedback on improving the workflow is much appreciated.
