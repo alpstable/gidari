@@ -1,0 +1,11 @@
+url: https://openlibrary.org
+connectionStrings:
+  - mongodb://mongo1:27017/open-library
+rateLimit:
+  burst: 5
+  period: 1
+requests:
+  - endpoint: /api/books
+    query:
+      bibkeys: "ISBN:0201558025,LCCN:93005405"
+      format: "json"
