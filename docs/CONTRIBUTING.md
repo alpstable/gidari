@@ -14,7 +14,7 @@ Thank you for your intest in contributing to Gidari! Please make sure to fork th
 
 See the [Gidari MVP](https://github.com/orgs/alpine-hodler/projects/3) project list for open issues, please only focus on issues in the "Scheduled" column. Issues labeled with "good first issue" are excellent starting points for new engineers. If you have completed an issue:
 
-1. For this repository
+1. Fork this repository
 2. Create a pull request pointing to "main"
 3. Add a reviewer
 
