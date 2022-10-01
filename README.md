@@ -31,12 +31,12 @@ The configuration is a YAML file used to define a set of rules for making RESTfu
 | `requests`             | N        | list    | List of requests to receive data from the web API for upserting into local/remote storage                                                                                                                                              |
 | `request.endpoint`     | Y        | string  | Endpoint for making the RESTful API request                                                                                                                                                                                            |
 | `table`                | N        | string  | Name of the table in the remote/local storage for upserting data. This field defaults to the last string in the endpoint path                                                                                                          |
-| `timeseries`           | N        | map     | Data required for upserting time series data, which can be very resource intensive.                                                                                                                                                    |
+| `timeseries`           | N        | map     | Data required for upserting time series data, which can be very resource intensive                                                                                                                                                    |
 | `timeseries.startName` | Y        | string  | Name of the query/path parameter for the "start" date of the time series                                                                                                                                                               |
 | `timeseries.endName`   | Y        | string  | Name of the query/path parameter for the "end" date of the time series                                                                                                                                                                 |
 | `timeseries.period`    | Y        | int     | How often (in seconds) to build a new datetime range to batch over. For example, if your datetime range spans 24 hours and your period is 3600 then the request will be broken up into 24 smaller requests spanning the datetime range |
 | `timseries.layout`     | Y        | string  | The layout for how to build a datetime to query over. For example, if your time series uses RFC3339 then the layout should be "2006-01-02T15:04:05Z07:00"                                                                              |
-| `query`                | N        | map     | This is a non-deterministic map that holds the query parameters for a request.
+| `query`                | N        | map     | This is a non-deterministic map that holds the query parameters for a request
 
 ### SQL
 
