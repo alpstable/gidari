@@ -61,3 +61,7 @@ Follow [this guide](docs/development.md) to configure a development environment.
 2. Add a reviewer
 3. Make sure the CI passes
 
+
+## Resources
+
+- Public REST APIs: https://documenter.getpostman.com/view/8854915/Szf7znEe
