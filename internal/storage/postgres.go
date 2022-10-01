@@ -16,7 +16,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
@@ -26,8 +25,7 @@ import (
 
 const (
 	postgresPartitionSize  = 1000
-	postgresGCBackoffLimit = 3
-	postgresGCBackoffBase  = 2
+	postgresGCBackoffLimit = 10
 )
 
 // postgresTxType is a type alias for the postgres transaction type.
@@ -99,13 +97,10 @@ func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8) error 
 
 	// Execute the garbage collection query.
 	if _, err := stmt.ExecContext(ctx); err != nil {
-		// If the garbage collection failes due to a deadlock, we will retry the operation. We should not
+		// If the garbage collection fails due to a deadlock, we will retry the operation. We should not
 		// retry more than 3 times.
 		var pqErr *pq.Error
 		if retryCount <= postgresGCBackoffLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
-			// Cheap exponential backoff. This should be refactored.
-			time.Sleep(time.Duration(math.Pow(postgresGCBackoffBase, float64(retryCount))) * time.Second)
-
 			return pg.garbageCollect(ctx, retryCount+1)
 		}
 
