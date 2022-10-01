@@ -55,7 +55,6 @@ You will also need to sync your /etc/hosts file with the docker containers:
 127.0.0.1 mongo2
 127.0.0.1 mongo3
 127.0.0.1 postgres1
-127.0.0.1 postgres2
 ```
 
 ### Running Integration Tests
