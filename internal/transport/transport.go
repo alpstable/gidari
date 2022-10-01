@@ -440,7 +440,7 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
-			Msg:        fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
+			Msg:        fmt.Sprintf("web request completed: %s", url.PathEscape(rsp.Request.URL.Path)),
 		}
 		job.logger.Infof(logInfo.String())
 	}
