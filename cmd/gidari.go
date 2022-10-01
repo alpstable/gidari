@@ -35,7 +35,7 @@ func main() {
 
 		Use:                    "gidari",
 		Short:                  "Persisted data from the web to your database",
-		Example:                "gidari -c config.yaml -v",
+		Example:                "gidari --config config.yaml",
 		BashCompletionFunction: bashCompletion,
 		Deprecated:             "",
 		Version:                version.Gidari,
