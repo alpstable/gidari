@@ -76,13 +76,6 @@ func run(configFilepath string, verboseLogging bool, _ []string) {
 		cfg.Logger.SetLevel(logrus.FatalLevel)
 	}
 
-	// Register supported encoders.
-	err = transport.RegisterEncoders(cfg.RepositoryEncoderRegistry, transport.RegisterDefaultEncoder,
-		transport.RegisterCBPEncoder)
-	if err != nil {
-		log.Fatalf("error registering encoders: %v", err)
-	}
-
 	if err := transport.Upsert(ctx, cfg); err != nil {
 		log.Fatalf("error upserting data: %v", err)
 	}
