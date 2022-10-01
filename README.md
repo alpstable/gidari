@@ -17,6 +17,8 @@ TODO
 
 ### Configuration
 
+The configuration is a YAML file used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpine-hodler/gidari/tree/main/internal/transport/testdata/upsert) for example configurations.
+
 | Key                    | Required | Type    | Description                                                                                                                                                                                                                            |
 |------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `url`                  | Y        | string  | The URL for the RESTful API for making requests                                                                                                                                                                                        |
@@ -35,6 +37,7 @@ TODO
 | `timeseries.period`    | Y        | int     | How often (in seconds) to build a new datetime range to batch over. For example, if your datetime range spans 24 hours and your period is 3600 then the request will be broken up into 24 smaller requests spanning the datetime range |
 | `timseries.layout`     | Y        | string  | The layout for how to build a datetime to query over. For example, if your time series uses RFC3339 then the layout should be "2006-01-02T15:04:05Z07:00"                                                                              |
 | `query`                | N        | map     | This is a non-deterministic map that holds the query parameters for a request.
+
 ### SQL
 
 TODO
