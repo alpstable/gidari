@@ -10,6 +10,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"runtime"
@@ -19,11 +20,12 @@ import (
 	"github.com/alpine-hodler/gidari/proto"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq" // postgres driver
+	"github.com/lib/pq" // postgres driver
 )
 
 const (
-	postgresPartitionSize = 1000
+	pgPartitionSize = 1000
+	pgGCRetryLimit  = 10
 )
 
 // postgresTxType is a type alias for the postgres transaction type.
@@ -85,11 +87,38 @@ func (meta *pgmeta) upsertStmt(ctx context.Context, table string, pcf sqlPrepare
 	return stmt, nil
 }
 
+// garbageCollect will garbage collect the database. This will return disk space to the OS by running `VACUUM FULL`.
+// For more information, see: https://www.postgresql.org/docs/current/sql-vacuum.html
+func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8) error {
+	stmt, err := pg.DB.PrepareContext(ctx, string(pgGarbageCollect))
+	if err != nil {
+		return fmt.Errorf("unable to prepare statement: %w", err)
+	}
+
+	// Execute the garbage collection query.
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		// If the garbage collection fails due to a deadlock, we will retry the operation. We should not
+		// retry more than a deterministic number of times, defined by "pgGCRetryLimit".
+		var pqErr *pq.Error
+		if retryCount <= pgGCRetryLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
+			return pg.garbageCollect(ctx, retryCount+1)
+		}
+
+		return fmt.Errorf("unable to execute statement: %w", err)
+	}
+
+	return nil
+}
+
 // loadMeta will load the postgres metadata for the database. If the data has already been loaded, this method will do
 // nothing.
 func (pg *Postgres) loadMeta(ctx context.Context) error {
 	pg.metaMutex.Lock()
 	defer pg.metaMutex.Unlock()
+
+	if err := pg.garbageCollect(ctx, 0); err != nil {
+		return fmt.Errorf("unable to garbage collect postgres database: %w", err)
+	}
 
 	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
 	if err != nil {
@@ -257,7 +286,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 
 	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
 	// postgres database.
-	for _, partition := range tools.PartitionStructs(postgresPartitionSize, records) {
+	for _, partition := range tools.PartitionStructs(pgPartitionSize, records) {
 		stmt, err := pg.meta.upsertStmt(ctx, table, prepareContextFn, len(partition))
 		if err != nil {
 			return nil, fmt.Errorf("unable to prepare statement: %w", err)
@@ -398,11 +427,9 @@ func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 			return
 		}
 
-		// Await the decision to commit or rollback.
-		select {
-		case <-txn.commit:
+		if <-txn.commit {
 			txn.done <- pgtx.Commit()
-		default:
+		} else {
 			txn.done <- pgtx.Rollback()
 		}
 	}()

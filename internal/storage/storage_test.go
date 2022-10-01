@@ -18,73 +18,38 @@ import (
 	"github.com/alpine-hodler/gidari/tools"
 )
 
-// storageTestCase is a test case for generic storage operations.
-type storageTestCase struct {
-	dns string
-}
+func truncateStorage(ctx context.Context, t *testing.T, stg Storage, tables ...string) {
+	t.Helper()
 
-type listPKStorageTestCase struct {
-	storageTestCase
-
-	// Map a table to a list of primary keys we expect to find on that table.
-	expectedPKSet map[string][]string
-}
-
-var testCases = []storageTestCase{
-	{"mongodb://mongo1:27017/cbp-stg"},
-	{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-}
-
-var listPKTestCases = []listPKStorageTestCase{
-	{
-		storageTestCase{"mongodb://mongo1:27017/cbp-stg"},
-		map[string][]string{
-			"accounts": {"_id"},
-		},
-	},
-	{
-		storageTestCase{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-		map[string][]string{
-			"accounts":       {"id"},
-			"candle_minutes": {"product_id", "unix"},
-		},
-	},
+	if _, err := stg.Truncate(ctx, &proto.TruncateRequest{Tables: tables}); err != nil {
+		t.Fatalf("failed to truncate storage: %v", err)
+	}
 }
 
 func TestTruncate(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range testCases {
+	for _, tcase := range []struct{ dns string }{
+		{"mongodb://mongo1:27017/db1"},
+		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	} {
 		dns := tcase.dns
 		t.Run(fmt.Sprintf("empty case: %s", dns), func(t *testing.T) {
-			ctx := context.Background()
 			t.Parallel()
+
+			ctx := context.Background()
+			testTable := "tests1"
+
 			stg, err := New(ctx, dns)
 			if err != nil {
 				t.Fatalf("failed to create storage: %v", err)
 			}
-			defer stg.Close()
 
-			if _, err := stg.Truncate(ctx, &proto.TruncateRequest{}); err != nil {
-				t.Fatalf("failed to truncate storage: %v", err)
-			}
-		})
-		t.Run(dns, func(t *testing.T) {
-			t.Parallel()
-			ctx := context.Background()
-			stg, err := New(ctx, dns)
-			if err != nil {
-				t.Fatalf("failed to create new storage service: %v", err)
-			}
-			defer stg.Close()
-
-			rsp, err := stg.Truncate(ctx, &proto.TruncateRequest{Tables: []string{"tests"}})
-			if err != nil {
-				t.Fatalf("failed to truncate collection: %v", err)
-			}
-			if rsp == nil {
-				t.Fatalf("truncate response is nil")
-			}
+			truncateStorage(ctx, t, stg, testTable)
+			t.Cleanup(func() {
+				truncateStorage(ctx, t, stg)
+				stg.Close()
+			})
 		})
 	}
 }
@@ -92,16 +57,32 @@ func TestTruncate(t *testing.T) {
 func TestStartTx(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range testCases {
+	for _, tcase := range []struct{ dns string }{
+		{"mongodb://mongo1:27017/db2"},
+		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	} {
 		dns := tcase.dns
+		ctx := context.Background()
+
+		stg, err := New(ctx, dns)
+		if err != nil {
+			t.Fatalf("failed to create client: %v", err)
+		}
+
+		const (
+			testTable2 = "tests2"
+			testTable3 = "tests3"
+			testTable4 = "tests4"
+		)
+
+		truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
+		t.Cleanup(func() {
+			truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
+			stg.Close()
+		})
+
 		t.Run(fmt.Sprintf("tx should commit %s", dns), func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
-			stg, err := New(ctx, dns)
-			if err != nil {
-				t.Fatalf("failed to create client: %v", err)
-			}
-			defer stg.Close()
 
 			txn, err := stg.StartTx(ctx)
 			if err != nil {
@@ -118,7 +99,7 @@ func TestStartTx(t *testing.T) {
 			// Insert some data.
 			txn.Send(func(sctx context.Context, stg Storage) error {
 				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    "tests",
+					Table:    testTable2,
 					Data:     bytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
@@ -133,22 +114,18 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to commit transaction: %v", err)
 			}
 
-			// Truncate the test table
-			truncateReq := new(proto.TruncateRequest)
-			truncateReq.Tables = []string{"tests"}
-			_, err = stg.Truncate(ctx, truncateReq)
+			// Check that the data was inserted.
+			tableInfo, err := stg.ListTables(ctx)
 			if err != nil {
-				t.Fatalf("failed to truncate table: %v", err)
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if tableInfo.GetTableSet()[testTable2].GetSize() == 0 {
+				t.Fatalf("expected data to be inserted")
 			}
 		})
 		t.Run(fmt.Sprintf("tx should rollback %s", dns), func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
-			stg, err := New(ctx, dns)
-			if err != nil {
-				t.Fatalf("failed to create client: %v", err)
-			}
-			defer stg.Close()
 
 			txn, err := stg.StartTx(ctx)
 			if err != nil {
@@ -165,7 +142,7 @@ func TestStartTx(t *testing.T) {
 			// Insert some data.
 			txn.Send(func(sctx context.Context, stg Storage) error {
 				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    "tests",
+					Table:    testTable3,
 					Data:     dataBytes,
 					DataType: int32(tools.UpsertDataJSON),
 				})
@@ -180,22 +157,18 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("failed to rollback transaction: %v", err)
 			}
 
-			// Truncate the test table
-			truncateReq := new(proto.TruncateRequest)
-			truncateReq.Tables = []string{"tests"}
-			_, err = stg.Truncate(ctx, truncateReq)
+			// Check that the data was inserted.
+			tableInfo, err := stg.ListTables(ctx)
 			if err != nil {
-				t.Fatalf("failed to truncate table: %v", err)
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if tableInfo.GetTableSet()[testTable3].GetSize() != 0 {
+				t.Fatalf("expected data to be rolled back")
 			}
 		})
 		t.Run(fmt.Sprintf("tx should rollback on error %s", dns), func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
-			stg, err := New(ctx, dns)
-			if err != nil {
-				t.Fatalf("failed to create client: %v", err)
-			}
-			defer stg.Close()
 
 			txn, err := stg.StartTx(ctx)
 			if err != nil {
@@ -213,6 +186,16 @@ func TestStartTx(t *testing.T) {
 			if err := txn.Commit(); err == nil {
 				t.Fatalf("expected error, got nil")
 			}
+
+			// Check that the data was inserted.
+			tableInfo, err := stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if tableInfo.GetTableSet()[testTable4].GetSize() != 0 {
+				t.Fatalf("expected data to be rolled back")
+			}
 		})
 	}
 }
@@ -220,51 +203,11 @@ func TestStartTx(t *testing.T) {
 func TestListTables(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range testCases {
+	for _, tcase := range []struct{ dns string }{
+		{"mongodb://mongo1:27017/db4"},
+		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	} {
 		dns := tcase.dns
-		t.Run(fmt.Sprintf("list tables %s", dns), func(t *testing.T) {
-			t.Parallel()
-
-			ctx := context.Background()
-
-			stg, err := New(ctx, dns)
-			if err != nil {
-				t.Fatalf("failed to create client: %v", err)
-			}
-			defer stg.Close()
-
-			// If the type is mongodb, then we need to seed some collections.
-			if stg.Type() == MongoType {
-				// Upsert some data to a random table
-				_, err := stg.Upsert(ctx, &proto.UpsertRequest{
-					Table:    "accounts",
-					Data:     []byte(`{"test": "test"}`),
-					DataType: int32(tools.UpsertDataJSON),
-				})
-				if err != nil {
-					t.Fatalf("failed to upsert data: %v", err)
-				}
-			}
-
-			rsp, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if len(rsp.GetTableSet()) == 0 {
-				t.Fatalf("expected tables, got none")
-			}
-
-			// Make sure that one of the records has the table "accounts".
-			for table := range rsp.GetTableSet() {
-				if table == "accounts" {
-					return
-				}
-			}
-
-			t.Fatalf("expected to find table accounts, got none")
-		})
-
 		t.Run(fmt.Sprintf("get accounts size: %s", dns), func(t *testing.T) {
 			t.Parallel()
 
@@ -277,10 +220,8 @@ func TestListTables(t *testing.T) {
 			}
 			defer stg.Close()
 
-			// Truncate the test table.
-			_, err = stg.Truncate(ctx, &proto.TruncateRequest{
-				Tables: []string{testTable},
-			})
+			truncateStorage(ctx, t, stg)
+
 			if err != nil {
 				t.Fatalf("failed to truncate table: %v", err)
 			}
@@ -341,7 +282,24 @@ func TestListTables(t *testing.T) {
 func TestListPrimaryKeys(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range listPKTestCases {
+	for _, tcase := range []struct {
+		dns           string
+		expectedPKSet map[string][]string
+	}{
+		{
+			"mongodb://mongo1:27017/db3",
+			map[string][]string{
+				"tests5": {"_id"},
+			},
+		},
+		{
+			"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable",
+			map[string][]string{
+				"tests5":         {"id"},
+				"candle_minutes": {"product_id", "unix"},
+			},
+		},
+	} {
 		dns := tcase.dns
 		expectedPKSet := tcase.expectedPKSet
 
@@ -354,7 +312,20 @@ func TestListPrimaryKeys(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
-			defer stg.Close()
+
+			t.Cleanup(func() {
+				stg.Close()
+			})
+
+			// Insert some data.
+			_, err = stg.Upsert(ctx, &proto.UpsertRequest{
+				Table:    "tests5",
+				Data:     []byte(`{"id": 1, "test_string":"test"}`),
+				DataType: int32(tools.UpsertDataJSON),
+			})
+			if err != nil {
+				t.Fatalf("failed to upsert data: %v", err)
+			}
 
 			pks, err := stg.ListPrimaryKeys(ctx)
 			if err != nil {

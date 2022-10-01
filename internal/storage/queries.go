@@ -16,3 +16,6 @@ var pgColumns []byte
 
 //go:embed queries/pg_truncate_tables.sql
 var pgTruncatedTables []byte
+
+//go:embed queries/pg_garbage_collect.sql
+var pgGarbageCollect []byte
