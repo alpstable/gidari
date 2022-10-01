@@ -59,7 +59,7 @@ func TestStartTx(t *testing.T) {
 
 	for _, tcase := range []struct{ dns string }{
 		{"mongodb://mongo1:27017/db2"},
-		{"postgresql://root:root@postgres1:5433/defaultdb?sslmode=disable"},
+		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
 	} {
 		dns := tcase.dns
 		ctx := context.Background()
@@ -205,7 +205,7 @@ func TestListTables(t *testing.T) {
 
 	for _, tcase := range []struct{ dns string }{
 		{"mongodb://mongo1:27017/db4"},
-		{"postgresql://root:root@postgres1:5433/defaultdb?sslmode=disable"},
+		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
 	} {
 		dns := tcase.dns
 		t.Run(fmt.Sprintf("get accounts size: %s", dns), func(t *testing.T) {
