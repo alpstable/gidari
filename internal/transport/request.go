@@ -10,6 +10,7 @@ package transport
 import (
 	"fmt"
 	"net/url"
+	"path"
 
 	"github.com/alpine-hodler/gidari/internal/web"
 	"golang.org/x/time/rate"
@@ -31,32 +32,24 @@ type Request struct {
 	Timeseries *timeseries `yaml:"timeseries"`
 
 	// Table is the name of the table/collection to insert the data fetched from the web API.
-	Table *string
+	Table string `yaml:"table"`
 
 	//
 	RateLimitConfig *RateLimitConfig `yaml:"rate_limit"`
 }
 
 // newFetchConfig will constrcut a new HTTP request from the transport request.
-func (req *Request) newFetchConfig(rawURI string, client *web.Client) (*web.FetchConfig, error) {
-	rawURIWithEndpoint, err := url.JoinPath(rawURI, req.Endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to join URI and endpoint: %w", err)
-	}
-
-	uri, err := url.Parse(rawURIWithEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse URL: %w", err)
-	}
+func (req *Request) newFetchConfig(rurl url.URL, client *web.Client) *web.FetchConfig {
+	rurl.Path = path.Join(rurl.Path, req.Endpoint)
 
 	// Add the query params to the URL.
 	if req.Query != nil {
-		query := uri.Query()
+		query := rurl.Query()
 		for key, value := range req.Query {
 			query.Set(key, value)
 		}
 
-		uri.RawQuery = query.Encode()
+		rurl.RawQuery = query.Encode()
 	}
 
 	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
@@ -66,48 +59,56 @@ func (req *Request) newFetchConfig(rawURI string, client *web.Client) (*web.Fetc
 
 	return &web.FetchConfig{
 		Method:      req.Method,
-		URL:         uri,
+		URL:         &rurl,
 		C:           client,
 		RateLimiter: rateLimiter,
-	}, nil
+	}
 }
 
 // flattenedRequest contains all of the request information to create a web job. The number of flattened request  for an
 // operation should be 1-1 with the number of requests to the web API.
 type flattenedRequest struct {
 	fetchConfig *web.FetchConfig
-	table       *string
+	table       string
 }
 
 // flatten will compress the request information into a "web.FetchConfig" request and a "table" name for storage
 // interaction.
-func (req *Request) flatten(rawURI string, client *web.Client) (*flattenedRequest, error) {
-	fetchConfig, err := req.newFetchConfig(rawURI, client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fetch config: %w", err)
-	}
+func (req *Request) flatten(rurl url.URL, client *web.Client) *flattenedRequest {
+	fetchConfig := req.newFetchConfig(rurl, client)
 
 	return &flattenedRequest{
 		fetchConfig: fetchConfig,
 		table:       req.Table,
-	}, nil
+	}
 }
 
 // flattenTimeseries will compress the request information into a "web.FetchConfig" request and a "table" name for
 // storage interaction. This function will create a flattened request for each time series in the request. If no
 // timeseries are defined, this function will return a single flattened request.
-func (req *Request) flattenTimeseries(rawURI string, client *web.Client) ([]*flattenedRequest, error) {
+func (req *Request) flattenTimeseries(rurl url.URL, client *web.Client) ([]*flattenedRequest, error) {
 	timeseries := req.Timeseries
 	if timeseries == nil {
-		flatReq, err := req.flatten(rawURI, client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to flatten request: %w", err)
-		}
+		flatReq := req.flatten(rurl, client)
 
 		return []*flattenedRequest{flatReq}, nil
 	}
 
 	requests := make([]*flattenedRequest, 0, len(timeseries.chunks))
+
+	// Add the query params to the URL.
+	if req.Query != nil {
+		query := rurl.Query()
+		for key, value := range req.Query {
+			query.Set(key, value)
+		}
+
+		rurl.RawQuery = query.Encode()
+	}
+
+	if err := timeseries.chunk(rurl); err != nil {
+		return nil, fmt.Errorf("failed to set time series chunks: %w", err)
+	}
 
 	for _, chunk := range timeseries.chunks {
 		// copy the request and update it to reflect the partitioned timeseries
@@ -115,10 +116,7 @@ func (req *Request) flattenTimeseries(rawURI string, client *web.Client) ([]*fla
 		chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
 		chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
 
-		fetchConfig, err := chunkReq.newFetchConfig(rawURI, client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create fetch config: %w", err)
-		}
+		fetchConfig := chunkReq.newFetchConfig(rurl, client)
 
 		requests = append(requests, &flattenedRequest{
 			fetchConfig: fetchConfig,
