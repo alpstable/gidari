@@ -35,6 +35,7 @@ var (
 	ErrMissingTimeseriesField   = fmt.Errorf("missing timeseries field")
 	ErrSettingTimeseriesChunks  = fmt.Errorf("failed to set timeseries chunks")
 	ErrUnableToParse            = fmt.Errorf("unable to parse")
+	ErrNoRequests               = fmt.Errorf("no requests defined")
 )
 
 // MissingConfigFieldError is returned when a configuration field is missing.
@@ -103,16 +104,16 @@ type timeseries struct {
 	chunks [][2]time.Time
 }
 
-// setChunks will attempt to use the query string of a URL to partition the timeseries into "chunks" of time for queying
+// chunk will attempt to use the query string of a URL to partition the timeseries into "chunks" of time for queying
 // a web API.
-func (ts *timeseries) setChunks(url *url.URL) error {
+func (ts *timeseries) chunk(rurl url.URL) error {
 	// If layout is not set, then default it to be RFC3339
 	if ts.Layout == nil {
 		str := time.RFC3339
 		ts.Layout = &str
 	}
 
-	query := url.Query()
+	query := rurl.Query()
 
 	startSlice := query[ts.StartName]
 	if len(startSlice) != 1 {
@@ -172,7 +173,7 @@ func (rl RateLimitConfig) validate() error {
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
 // the repositories defined by the "ConnectionStrings" list.
 type Config struct {
-	URL               string           `yaml:"url"`
+	RawURL            string           `yaml:"url"`
 	Authentication    Authentication   `yaml:"authentication"`
 	ConnectionStrings []string         `yaml:"connectionStrings"`
 	Requests          []*Request       `yaml:"requests"`
@@ -180,9 +181,7 @@ type Config struct {
 	Logger            *logrus.Logger
 	Truncate          bool
 
-	// RepositoryEncoderRegistry are custom encoders for atypical data returned by an web request. This should be
-	// limited and extremely rare.
-	RepositoryEncoderRegistry RepositoryEncoderRegistry
+	URL *url.URL `yaml:"-"`
 }
 
 // New config takes a YAML byte slice and returns a new transport configuration for upserting data to storage.
@@ -200,6 +199,14 @@ func NewConfig(yamlBytes []byte) (*Config, error) {
 		return nil, err
 	}
 
+	// Parse the raw URL
+	var err error
+
+	cfg.URL, err = url.Parse(cfg.RawURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse URL: %w", err)
+	}
+
 	// Update default request data.
 	for _, req := range cfg.Requests {
 		if req.Method == "" {
@@ -208,6 +215,11 @@ func NewConfig(yamlBytes []byte) (*Config, error) {
 
 		if req.RateLimitConfig == nil {
 			req.RateLimitConfig = cfg.RateLimitConfig
+		}
+
+		if req.Table == "" {
+			endpointParts := strings.Split(req.Endpoint, "/")
+			req.Table = endpointParts[len(endpointParts)-1]
 		}
 	}
 
@@ -219,7 +231,7 @@ func NewConfig(yamlBytes []byte) (*Config, error) {
 func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	if apiKey := cfg.Authentication.APIKey; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAPIKey().
-			SetURL(cfg.URL).
+			SetURL(cfg.RawURL).
 			SetKey(apiKey.Key).
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
@@ -231,7 +243,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	}
 
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
-		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.URL))
+		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.RawURL))
 		if err != nil {
 			return nil, WrapWebError(web.FailedToCreateClientError(err))
 		}
@@ -303,12 +315,16 @@ func (cfg *Config) flattenRequests(ctx context.Context) ([]*flattenedRequest, er
 	var flattenedRequests []*flattenedRequest
 
 	for _, req := range cfg.Requests {
-		flatReqs, err := req.flattenTimeseries(cfg.URL, client)
+		flatReqs, err := req.flattenTimeseries(*cfg.URL, client)
 		if err != nil {
 			return nil, err
 		}
 
 		flattenedRequests = append(flattenedRequests, flatReqs...)
+	}
+
+	if len(flattenedRequests) == 0 {
+		return nil, ErrNoRequests
 	}
 
 	return flattenedRequests, nil
@@ -317,7 +333,7 @@ func (cfg *Config) flattenRequests(ctx context.Context) ([]*flattenedRequest, er
 type repoJob struct {
 	req   http.Request
 	b     []byte
-	table *string
+	table string
 }
 
 type repoConfig struct {
@@ -326,7 +342,6 @@ type repoConfig struct {
 	jobs       chan *repoJob
 	done       chan bool
 	logger     *logrus.Logger
-	rer        RepositoryEncoderRegistry
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
@@ -341,23 +356,20 @@ func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, e
 		jobs:       make(chan *repoJob, volume*len(repos)),
 		done:       make(chan bool, volume),
 		logger:     cfg.Logger,
-		rer:        cfg.RepositoryEncoderRegistry,
 	}, nil
 }
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-		reqs, err := cfg.rer.Lookup(job.req.URL).Encode(job.req, job.b)
-		if err != nil {
-			cfg.logger.Fatalf("error encoding response data: %v", err)
+		reqs := []*proto.UpsertRequest{
+			{
+				Table:    job.table,
+				Data:     job.b,
+				DataType: int32(tools.UpsertDataJSON),
+			},
 		}
 
 		for _, req := range reqs {
-			// If a table is defined for the job, then replace the table name in the raw data.
-			if table := job.table; table != nil {
-				req.Table = *table
-			}
-
 			for _, repo := range cfg.repos {
 				txfn := func(sctx context.Context, repo repository.Generic) error {
 					start := time.Now()
@@ -454,9 +466,7 @@ func Truncate(ctx context.Context, cfg *Config) error {
 
 	for _, req := range cfg.Requests {
 		// Add the table to the list of tables to truncate.
-		if table := req.Table; table != nil {
-			truncateRequest.Tables = append(truncateRequest.Tables, *table)
-		}
+		truncateRequest.Tables = append(truncateRequest.Tables, req.Table)
 	}
 
 	for _, repo := range repos {

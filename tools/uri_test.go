@@ -27,7 +27,7 @@ func TestURLHelpers(t *testing.T) {
 
 			req := http.Request{URL: uri}
 
-			table, err := ParseDBTableFromURL(req)
+			table, err := ParseDBTableFromRequest(req)
 			if err != nil {
 				t.Errorf("expected error to be nil, got %v", err)
 			}
@@ -46,7 +46,7 @@ func TestURLHelpers(t *testing.T) {
 
 			req := http.Request{URL: uri}
 
-			_, err = ParseDBTableFromURL(req)
+			_, err = ParseDBTableFromRequest(req)
 			if err == nil {
 				t.Error("expected error to not be nil")
 			}
@@ -63,7 +63,7 @@ func TestURLHelpers(t *testing.T) {
 
 			req := http.Request{URL: uri}
 
-			parts := SplitURLPath(req)
+			parts := SplitURLFromRequest(req)
 			if parts[0] != "v1" {
 				t.Errorf("expected parts[0] to be %s, got %s", "v1", parts[0])
 			}
@@ -87,7 +87,7 @@ func TestURLHelpers(t *testing.T) {
 
 			req := http.Request{URL: uri}
 
-			parts := SplitURLPath(req)
+			parts := SplitURLFromRequest(req)
 			if len(parts) != 0 {
 				t.Errorf("expected parts to be empty, got %v", parts)
 			}

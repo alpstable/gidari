@@ -40,7 +40,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T00:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.setChunks(testURL)
+		err = timeseries.chunk(*testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -92,7 +92,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T01:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.setChunks(testURL)
+		err = timeseries.chunk(*testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -143,7 +143,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T02:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.setChunks(testURL)
+		err = timeseries.chunk(*testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
