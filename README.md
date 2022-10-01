@@ -25,7 +25,7 @@ The configuration is a YAML file used to define a set of rules for making RESTfu
 | Key                    | Required | Type    | Description                                                                                                                                                                                                                            |
 |------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `url`                  | Y        | string  | The URL for the RESTful API for making requests                                                                                                                                                                                        |
-| `authentication`       | Y        | map     | Data required for authenticating the web API requests                                                                                                                                                                                  |
+| `authentication`       | N        | map     | Data required for authenticating the web API requests                                                                                                                                                                                  |
 | `connectionStrings`    | Y        | list    | List of connection strings for communicating with local/remote storage                                                                                                                                                                 |
 | `rateLimit`            | Y        | map     | Data required for limiting the number of requests per second, avoiding 429 errors                                                                                                                                                      |
 | `rateLimit.burst`      | Y        | int     | Number of requests that can be made per second                                                                                                                                                                                         |
@@ -61,3 +61,7 @@ Follow [this guide](docs/development.md) to configure a development environment.
 2. Add a reviewer
 3. Make sure the CI passes
 
+
+## Resources
+
+- Public REST APIs: https://documenter.getpostman.com/view/8854915/Szf7znEe
