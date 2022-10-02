@@ -3,9 +3,6 @@
 [![PkgGoDev](https://img.shields.io/badge/go.dev-docs-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alpine-hodler/gidari)
 ![Build Status](https://github.com/alpine-hodler/gidari/actions/workflows/ci.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
-![Discord Banner 1](https://discordapp.com/api/guilds/987810353767403550/widget.png?style=banner1)
-
-
 
 <p align="center"><img src="https://raw.githubusercontent.com/alpine-hodler/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
