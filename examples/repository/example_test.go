@@ -19,8 +19,7 @@ func TestExamples(t *testing.T) {
 	t.Parallel()
 
 	for _, tcase := range []struct{ mongoURI string }{
-		// {"mongodb://mongo1:27017/coinbasepro"},
-		{"mongodb+srv://gidari:pVbWK0qaHOsSPSSc@clustertwitter.vd6bg.mongodb.net/GidariExample?retryWrites=true&w=majority"},
+		{"mongodb://mongo1:27017/coinbasepro"},
 	} {
 		err := os.Setenv("DATABASE_URL", tcase.mongoURI)
 		if err != nil {
