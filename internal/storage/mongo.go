@@ -20,6 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"golang.org/x/sync/errgroup"
 )
 
 const defaultMDBLifetime = 60 * time.Second
@@ -69,39 +70,44 @@ func (m *Mongo) Close() {
 
 // ReceiveWrites will listen for writes to the transaction and commit them to the database every time the lifetime
 // limit is reached, or when the transaction is committed through the commit channel.
-func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) error {
+func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) *errgroup.Group {
 	lifetimeTicker := time.NewTicker(m.lifetime)
+	errs, _ := errgroup.WithContext(context.Background())
 
-	var err error
+	errs.Go(func() error {
+		var err error
 
-	// Receive write requests.
-	for opr := range txn.ch {
-		select {
-		case <-lifetimeTicker.C:
-			// If the transaction has exceeded the lifetime, commit the transaction and start a new
-			// one.
-			if err := ctx.CommitTransaction(ctx); err != nil {
-				panic(fmt.Errorf("commit transaction: %w", err))
+		// Receive write requests.
+		for opr := range txn.ch {
+			select {
+			case <-lifetimeTicker.C:
+				// If the transaction has exceeded the lifetime, commit the transaction and start a new
+				// one.
+				if err := ctx.CommitTransaction(ctx); err != nil {
+					panic(fmt.Errorf("commit transaction: %w", err))
+				}
+
+				// Start a new transaction on the context.
+				if err := ctx.StartTransaction(); err != nil {
+					panic(fmt.Errorf("error starting transaction: %w", err))
+				}
+			default:
+				if err != nil {
+					continue
+				}
+
+				err = opr(ctx, m)
 			}
-
-			// Start a new transaction on the context.
-			if err := ctx.StartTransaction(); err != nil {
-				panic(fmt.Errorf("error starting transaction: %w", err))
-			}
-		default:
-			if err != nil {
-				continue
-			}
-
-			err = opr(ctx, m)
 		}
-	}
 
-	if err != nil {
-		return fmt.Errorf("error in transaction: %w", err)
-	}
+		if err != nil {
+			return fmt.Errorf("error in transaction: %w", err)
+		}
 
-	return nil
+		return nil
+	})
+
+	return errs
 }
 
 // startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
@@ -114,8 +120,10 @@ func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 			return fmt.Errorf("error starting transaction: %w", err)
 		}
 
-		if err := m.receiveWrites(sctx, txn); err != nil {
-			return fmt.Errorf("error receiving writes: %w", err)
+		errs := m.receiveWrites(sctx, txn)
+		err = errs.Wait()
+		if err != nil {
+			return fmt.Errorf("error in transaction: %w", err)
 		}
 
 		// Await the decision to commit or rollback.
