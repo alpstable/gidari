@@ -1,0 +1,12 @@
+url: https://chroniclingamerica.loc.gov
+connectionStrings:
+  - mongodb://mongo1:27017/histam
+rateLimit:
+  burst: 1
+  period: 1
+requests:
+  - endpoint: /search/titles/results
+    query:
+      terms: oakland
+      format: json
+      page: 5
