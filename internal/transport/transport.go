@@ -509,6 +509,7 @@ func Truncate(ctx context.Context, cfg *Config) error {
 // for some repository transactions to succeed and others to fail.
 func Upsert(ctx context.Context, cfg *Config) error {
 	start := time.Now()
+	threads := runtime.NumCPU()
 
 	if err := Truncate(ctx, cfg); err != nil {
 		return err
@@ -527,7 +528,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	defer repoConfig.closeRepos()
 
 	// Start the repository workers.
-	for id := 1; id <= runtime.NumCPU(); id++ {
+	for id := 1; id <= threads; id++ {
 		go repositoryWorker(ctx, id, repoConfig)
 	}
 
@@ -536,7 +537,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 	webWorkerJobs := make(chan *webJob, len(cfg.Requests))
 
 	// Start the same number of web workers as the cores on the machine.
-	for id := 1; id <= runtime.NumCPU(); id++ {
+	for id := 1; id <= threads; id++ {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
 
@@ -561,10 +562,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		}
 	}
 
-	logInfo := tools.LogFormatter{
-		Duration: time.Since(start),
-		Msg:      "upsert completed",
-	}
+	logInfo := tools.LogFormatter{Duration: time.Since(start), Msg: "upsert completed"}
 	cfg.Logger.Info(logInfo.String())
 
 	return nil
