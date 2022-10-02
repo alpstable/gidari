@@ -90,7 +90,7 @@ func ExampleNewTx() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table:    "TxnExampleTable",
+		Table:    "ExampleTable",
 		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 		DataType: int32(tools.UpsertDataJSON),
 	}
@@ -176,7 +176,7 @@ func ExampleGenericService_ListTables() {
 
 	fmt.Println(len(rsp.TableSet))
 	// Output:
-	// 3
+	// 2
 }
 
 func ExampleGenericService_ListPrimaryKeys() {
@@ -202,5 +202,5 @@ func ExampleGenericService_ListPrimaryKeys() {
 
 	fmt.Println(totalPKeys)
 	// Output:
-	// 3
+	// 2
 }
