@@ -63,3 +63,4 @@ Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
 ## Resources
 
 - Public REST APIs: https://documenter.getpostman.com/view/8854915/Szf7znEe
+- Artwork by [Victoria Trum](https://www.fiverr.com/victoria_trum?source=order_page_user_message_link)
