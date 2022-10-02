@@ -437,8 +437,8 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
 		// strings.Replace is used to ensure no line endings are present in the user input.
-		escapedPath := strings.Replace(rsp.Request.URL.Path, "\n", "", -1)
-		escapedPath = strings.Replace(escapedPath, "\r", "", -1)
+		escapedPath := strings.ReplaceAll(rsp.Request.URL.Path, "\n", "")
+		escapedPath = strings.ReplaceAll(escapedPath, "\r", "")
 
 		logInfo := tools.LogFormatter{
 			WorkerID:   workerID,
