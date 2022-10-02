@@ -2,7 +2,11 @@
 
 [![PkgGoDev](https://img.shields.io/badge/go.dev-docs-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alpine-hodler/gidari)
 ![Build Status](https://github.com/alpine-hodler/gidari/actions/workflows/ci.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alpine-hodler/gidari)](https://goreportcard.com/report/github.com/alpine-hodler/gidari)
+![Discord Shield](https://discord.com/api/guilds/987810353767403550/widget.png?style=shield)
+<a href="https://discord.gg/HjJCwm5">
+    <img src="https://img.shields.io/discord/987810353767403550?logo=discord"
+        alt="chat on Discord"></a>
+
 
 <p align="center"><img src="https://raw.githubusercontent.com/alpine-hodler/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
