@@ -9,6 +9,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -23,7 +24,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const defaultMDBLifetime = 60 * time.Second
+const (
+	mdbLifetime              = 60 * time.Second
+	mdbTransactionRetryLimit = 3
+	mdbWriteConflicErrCode   = 112
+)
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
 type Mongo struct {
@@ -47,7 +52,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
-	mdb.lifetime = defaultMDBLifetime
+	mdb.lifetime = mdbLifetime
 	mdb.writeMutex = sync.Mutex{}
 
 	return mdb, nil
@@ -68,9 +73,25 @@ func (m *Mongo) Close() {
 	}
 }
 
+// commitTransactionWithRetry will commit the transaction on the context, and retry the transaction if the commit
+// fails due to a transient error.
+func (m *Mongo) commitTransactionWithRetry(ctx mongo.SessionContext, retryCount int) error {
+	if err := ctx.CommitTransaction(ctx); err != nil {
+		// Check if the transaction error is a "mongo.ServerError".
+		var mdbErr mongo.ServerError
+		if retryCount <= mdbTransactionRetryLimit && errors.As(err, &mdbErr) &&
+			mdbErr.HasErrorCode(mdbWriteConflicErrCode) {
+			// Check if the server error is a "WriteConflict", if so then retry the transaction.
+			return m.commitTransactionWithRetry(ctx, retryCount+1)
+		}
+	}
+
+	return nil
+}
+
 // ReceiveWrites will listen for writes to the transaction and commit them to the database every time the lifetime
 // limit is reached, or when the transaction is committed through the commit channel.
-func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) *errgroup.Group {
+func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *Txn) *errgroup.Group {
 	lifetimeTicker := time.NewTicker(m.lifetime)
 	errs, _ := errgroup.WithContext(context.Background())
 
@@ -83,12 +104,12 @@ func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) *errgroup.Grou
 			case <-lifetimeTicker.C:
 				// If the transaction has exceeded the lifetime, commit the transaction and start a new
 				// one.
-				if err := ctx.CommitTransaction(ctx); err != nil {
+				if err := m.commitTransactionWithRetry(sctx, 0); err != nil {
 					panic(fmt.Errorf("commit transaction: %w", err))
 				}
 
 				// Start a new transaction on the context.
-				if err := ctx.StartTransaction(); err != nil {
+				if err := sctx.StartTransaction(); err != nil {
 					panic(fmt.Errorf("error starting transaction: %w", err))
 				}
 			default:
@@ -96,7 +117,7 @@ func (m *Mongo) receiveWrites(ctx mongo.SessionContext, txn *Txn) *errgroup.Grou
 					continue
 				}
 
-				err = opr(ctx, m)
+				err = opr(sctx, m)
 			}
 		}
 
@@ -129,7 +150,7 @@ func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 		// Await the decision to commit or rollback.
 		switch {
 		case <-txn.commit:
-			if err := sctx.CommitTransaction(sctx); err != nil {
+			if err := m.commitTransactionWithRetry(sctx, 0); err != nil {
 				return fmt.Errorf("commit transaction: %w", err)
 			}
 		default:
@@ -209,8 +230,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 			return nil, fmt.Errorf("failed to assign record to bson document: %w", err)
 		}
 
-		models = append(models, mongo.NewUpdateOneModel().
-			SetFilter(doc).
+		models = append(models, mongo.NewUpdateOneModel().SetFilter(doc).
 			SetUpdate(bson.D{primitive.E{Key: "$set", Value: doc}}).
 			SetUpsert(true))
 	}
@@ -227,12 +247,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 		return nil, fmt.Errorf("bulk write error: %w", err)
 	}
 
-	rsp := &proto.UpsertResponse{
-		MatchedCount:  bwr.MatchedCount,
-		UpsertedCount: bwr.UpsertedCount,
-	}
-
-	return rsp, nil
+	return &proto.UpsertResponse{MatchedCount: bwr.MatchedCount, UpsertedCount: bwr.UpsertedCount}, nil
 }
 
 // ListPrimaryKeys will return a "proto.ListPrimaryKeysResponse" containing a list of primary keys data for all tables
