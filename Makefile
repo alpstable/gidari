@@ -6,8 +6,7 @@ TESTPKGS = $(shell env GO111MODULE=on $(GC) list -f \
             '{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' \
             $(PKGS))
 
-
-# GC is the go compiler/binary for compiling Go data.
+# GC is the go compiler.
 GC = go
 
 export GO111MODULE=on
