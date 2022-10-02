@@ -19,7 +19,8 @@ func TestExamples(t *testing.T) {
 	t.Parallel()
 
 	for _, tcase := range []struct{ mongoURI string }{
-		{"mongodb://mongo1:27017/coinbasepro"},
+		// {"mongodb://mongo1:27017/coinbasepro"},
+		{"mongodb+srv://gidari:pVbWK0qaHOsSPSSc@clustertwitter.vd6bg.mongodb.net/GidariExample?retryWrites=true&w=majority"},
 	} {
 		err := os.Setenv("DATABASE_URL", tcase.mongoURI)
 		if err != nil {
@@ -176,6 +177,7 @@ func ExampleGenericService_ListTables() {
 
 	fmt.Println(len(rsp.TableSet))
 	// Output:
+
 	// 2
 }
 
@@ -202,5 +204,6 @@ func ExampleGenericService_ListPrimaryKeys() {
 
 	fmt.Println(totalPKeys)
 	// Output:
+
 	// 2
 }
