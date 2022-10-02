@@ -2,9 +2,6 @@
 
 set -e
 
-# Try to export the environment if it exists.
-[[ -f /etc/alpine-hodler/auth.env ]] && export $(cat /etc/alpine-hodler/auth.env | xargs)
-
 docker-compose -f "docker-compose.yml" up -d \
 	--remove-orphans \
 	--force-recreate \
