@@ -436,11 +436,15 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
 
+		// strings.Replace is used to ensure no line endings are present in the user input.
+		escapedPath := strings.ReplaceAll(rsp.Request.URL.Path, "\n", "")
+		escapedPath = strings.ReplaceAll(escapedPath, "\r", "")
+
 		logInfo := tools.LogFormatter{
 			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
-			Msg:        fmt.Sprintf("web request completed: %s", rsp.Request.URL.Path),
+			Msg:        fmt.Sprintf("web request completed: %s", escapedPath),
 		}
 		job.logger.Infof(logInfo.String())
 	}
