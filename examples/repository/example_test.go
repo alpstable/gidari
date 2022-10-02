@@ -90,7 +90,7 @@ func ExampleNewTx() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table:    "ExampleTable",
+		Table:    "TxnExampleTable",
 		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 		DataType: int32(tools.UpsertDataJSON),
 	}
