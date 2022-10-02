@@ -10,6 +10,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/alpine-hodler/gidari/proto"
@@ -26,8 +27,9 @@ const defaultMDBLifetime = 60 * time.Second
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
 type Mongo struct {
 	*mongo.Client
-	dns      string
-	lifetime time.Duration
+	dns        string
+	lifetime   time.Duration
+	writeMutex sync.Mutex
 }
 
 // NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
@@ -45,6 +47,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb.Client = client
 	mdb.dns = uri
 	mdb.lifetime = defaultMDBLifetime
+	mdb.writeMutex = sync.Mutex{}
 
 	return mdb, nil
 }
@@ -177,6 +180,9 @@ func (m *Mongo) Truncate(ctx context.Context, req *proto.TruncateRequest) (*prot
 
 // Upsert will insert or update a record in a collection.
 func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
+	m.writeMutex.Lock()
+	defer m.writeMutex.Unlock()
+
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode records: %w", err)

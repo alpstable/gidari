@@ -263,6 +263,9 @@ func (pg *Postgres) getPrepareContextFn(ctx context.Context) (sqlPrepareContextF
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
 func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
+	pg.writeMutext.Lock()
+	defer pg.writeMutext.Unlock()
+
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode records: %w", err)
@@ -307,8 +310,10 @@ type Postgres struct {
 	*sql.DB
 
 	// meta hold metdata about the database.
-	meta      *pgmeta
-	metaMutex sync.Mutex
+	meta *pgmeta
+
+	metaMutex   sync.Mutex
+	writeMutext sync.Mutex
 
 	// activeTx are the transactions that are currently active on this connection. When a user calls "StartTx" on
 	// a Postgres intance, a transaction is created and added to this map. Afterward, if the user calls a write
@@ -333,6 +338,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	postgres.setMaxOpenConns()
 	postgres.meta = new(pgmeta)
 	postgres.metaMutex = sync.Mutex{}
+	postgres.writeMutext = sync.Mutex{}
 	postgres.activeTx = sync.Map{}
 
 	return postgres, nil
