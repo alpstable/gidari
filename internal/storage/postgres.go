@@ -89,8 +89,10 @@ func (meta *pgmeta) upsertStmt(ctx context.Context, table string, pcf sqlPrepare
 
 // garbageCollect will garbage collect the database. This will return disk space to the OS by running `VACUUM FULL`.
 // For more information, see: https://www.postgresql.org/docs/current/sql-vacuum.html
-func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8) error {
-	stmt, err := pg.DB.PrepareContext(ctx, string(pgGarbageCollect))
+func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8, tables ...string) error {
+	query := fmt.Sprintf(string(pgGarbageCollect), strings.Join(tables, ","))
+
+	stmt, err := pg.DB.PrepareContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("unable to prepare statement: %w", err)
 	}
@@ -101,7 +103,7 @@ func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8) error 
 		// retry more than a deterministic number of times, defined by "pgGCRetryLimit".
 		var pqErr *pq.Error
 		if retryCount <= pgGCRetryLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
-			return pg.garbageCollect(ctx, retryCount+1)
+			return pg.garbageCollect(ctx, retryCount+1, tables...)
 		}
 
 		return fmt.Errorf("unable to execute statement: %w", err)
@@ -112,12 +114,15 @@ func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8) error 
 
 // loadMeta will load the postgres metadata for the database. If the data has already been loaded, this method will do
 // nothing.
-func (pg *Postgres) loadMeta(ctx context.Context) error {
+func (pg *Postgres) loadMeta(ctx context.Context, garbageC bool) error {
 	pg.metaMutex.Lock()
 	defer pg.metaMutex.Unlock()
 
-	if err := pg.garbageCollect(ctx, 0); err != nil {
-		return fmt.Errorf("unable to garbage collect postgres database: %w", err)
+	if garbageC {
+		// Need to garbage collected the database before making this query.
+		if err := pg.garbageCollect(ctx, 0); err != nil {
+			return fmt.Errorf("unable to garbage collect: %w", err)
+		}
 	}
 
 	stmt, err := pg.DB.PrepareContext(ctx, string(pgColumns))
@@ -167,7 +172,7 @@ func (pg *Postgres) Close() {
 
 // ListColumns will set a complete list of available columns per table on the response.
 func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse, error) {
-	if err := pg.loadMeta(ctx); err != nil {
+	if err := pg.loadMeta(ctx, false); err != nil {
 		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
@@ -182,7 +187,7 @@ func (pg *Postgres) ListColumns(ctx context.Context) (*proto.ListColumnsResponse
 // ListPrimaryKeys will list all primary keys for all of the tables in the database defined by the DNS used to create
 // the postgres instance.
 func (pg *Postgres) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error) {
-	if err := pg.loadMeta(ctx); err != nil {
+	if err := pg.loadMeta(ctx, false); err != nil {
 		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
@@ -201,7 +206,9 @@ func (pg *Postgres) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeys
 
 // ListTables will set a complete list of available tables on the response.
 func (pg *Postgres) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
-	if err := pg.loadMeta(ctx); err != nil {
+	// Since tables have a "size" associated with them, we need to garbage collect the database before we can
+	// get a complete list of tables.
+	if err := pg.loadMeta(ctx, true); err != nil {
 		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
@@ -263,8 +270,8 @@ func (pg *Postgres) getPrepareContextFn(ctx context.Context) (sqlPrepareContextF
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
 func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.UpsertResponse, error) {
-	pg.writeMutext.Lock()
-	defer pg.writeMutext.Unlock()
+	pg.writeMutex.Lock()
+	defer pg.writeMutex.Unlock()
 
 	records, err := tools.DecodeUpsertRecords(req)
 	if err != nil {
@@ -281,7 +288,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		return nil, fmt.Errorf("unable to get preparer: %w", err)
 	}
 
-	if err := pg.loadMeta(ctx); err != nil {
+	if err := pg.loadMeta(ctx, false); err != nil {
 		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
 	}
 
@@ -312,8 +319,8 @@ type Postgres struct {
 	// meta hold metdata about the database.
 	meta *pgmeta
 
-	metaMutex   sync.Mutex
-	writeMutext sync.Mutex
+	metaMutex  sync.Mutex
+	writeMutex sync.Mutex
 
 	// activeTx are the transactions that are currently active on this connection. When a user calls "StartTx" on
 	// a Postgres intance, a transaction is created and added to this map. Afterward, if the user calls a write
@@ -338,7 +345,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 	postgres.setMaxOpenConns()
 	postgres.meta = new(pgmeta)
 	postgres.metaMutex = sync.Mutex{}
-	postgres.writeMutext = sync.Mutex{}
+	postgres.writeMutex = sync.Mutex{}
 	postgres.activeTx = sync.Map{}
 
 	return postgres, nil
@@ -410,7 +417,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 
 	pg.activeTx.Store(txnID, pgtx)
 
-	// Add the transaction ID to the context.
+	// Create a copy of the parent context with a transaction ID.
 	pgCtx := context.WithValue(ctx, basicPostgressTxID, txnID)
 
 	go func() {

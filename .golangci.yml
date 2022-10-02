@@ -45,3 +45,4 @@ issues:
         - funlen
         - gochecknoglobals
         - goerr113
+        - maintidx

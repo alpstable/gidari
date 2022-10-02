@@ -29,6 +29,40 @@ CREATE TABLE tests5 (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE tests6 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE tests7 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE tests8 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE tests9 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE tests10 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE accounts (
 	available DECIMAL(20, 8) NOT NULL,
 	balance DECIMAL(20, 8) NOT NULL,
