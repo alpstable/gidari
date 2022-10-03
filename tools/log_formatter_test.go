@@ -42,6 +42,13 @@ func TestLogFormatter(t *testing.T) {
 			t.Errorf("expected '{d:1s}', got '%s'", lf.String())
 		}
 	})
+	t.Run("host", func(t *testing.T) {
+		t.Parallel()
+		lf := LogFormatter{Host: "localhost:8080"}
+		if lf.String() != "{host:localhost:8080}" {
+			t.Errorf("expected '{host:localhost:8080}', got '%s'", lf.String())
+		}
+	})
 	t.Run("msg", func(t *testing.T) {
 		t.Parallel()
 		lf := LogFormatter{Msg: "hello"}
