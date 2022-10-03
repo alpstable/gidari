@@ -9,12 +9,13 @@ package web
 
 import (
 	"context"
-	"github.com/alpine-hodler/gidari/internal/web/auth"
-	"golang.org/x/time/rate"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/alpine-hodler/gidari/internal/web/auth"
+	"golang.org/x/time/rate"
 )
 
 func TestFetchWithBasicAuth(t *testing.T) {
@@ -26,22 +27,22 @@ func TestFetchWithBasicAuth(t *testing.T) {
 		const username = "test@email.com"
 		const password = "test"
 
-		ts := createTestServerWithBasicAuth(username, password)
-		defer ts.Close()
+		testServer := createTestServerWithBasicAuth(username, password)
+		defer testServer.Close()
 
 		ctx := context.Background()
 
 		basicAuth := auth.NewBasic()
 		basicAuth.SetEmail(username)
 		basicAuth.SetPassword(password)
-		basicAuth.SetURL(ts.URL)
+		basicAuth.SetURL(testServer.URL)
 
 		client, err := NewClient(ctx, basicAuth)
 		if err != nil {
 			t.Fatalf("error creating client: %v", err)
 		}
 
-		uri, err := url.Parse(ts.URL)
+		uri, err := url.Parse(testServer.URL)
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
@@ -63,8 +64,8 @@ func TestFetchWithBasicAuth(t *testing.T) {
 		const username = "test@email.com"
 		const password = "test"
 
-		ts := createTestServerWithBasicAuth(username, password)
-		defer ts.Close()
+		testServer := createTestServerWithBasicAuth(username, password)
+		defer testServer.Close()
 
 		for _, tcase := range []struct {
 			username, password string
@@ -79,14 +80,14 @@ func TestFetchWithBasicAuth(t *testing.T) {
 			basicAuth := auth.NewBasic()
 			basicAuth.SetEmail(tcase.username)
 			basicAuth.SetPassword(tcase.password)
-			basicAuth.SetURL(ts.URL)
+			basicAuth.SetURL(testServer.URL)
 
 			client, err := NewClient(ctx, basicAuth)
 			if err != nil {
 				t.Fatalf("error creating client: %v", err)
 			}
 
-			uri, err := url.Parse(ts.URL)
+			uri, err := url.Parse(testServer.URL)
 			if err != nil {
 				t.Fatalf("error parsing url: %v", err)
 			}
@@ -109,8 +110,8 @@ func TestFetchWithBasicAuth(t *testing.T) {
 		const username = "test@email.com"
 		const password = "test"
 
-		ts := createTestServerWithBasicAuth(username, password)
-		defer ts.Close()
+		testServer := createTestServerWithBasicAuth(username, password)
+		defer testServer.Close()
 
 		ctx := context.Background()
 
@@ -124,7 +125,7 @@ func TestFetchWithBasicAuth(t *testing.T) {
 			t.Fatalf("error creating client: %v", err)
 		}
 
-		uri, err := url.Parse(ts.URL)
+		uri, err := url.Parse(testServer.URL)
 		if err != nil {
 			t.Fatalf("error parsing url: %v", err)
 		}
@@ -141,14 +142,15 @@ func TestFetchWithBasicAuth(t *testing.T) {
 	})
 }
 
-// createTestServerWithBasicAuth is a helper that creates a httptest.Server with a handler that has basic authentication.
+// createTestServerWithBasicAuth is a helper that creates a httptest.Server with a handler that has basic auth.
 func createTestServerWithBasicAuth(username, password string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqUsername, reqPassword, ok := r.BasicAuth()
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok || reqUsername != username || reqPassword != password {
-			w.WriteHeader(http.StatusUnauthorized)
+			writer.WriteHeader(http.StatusUnauthorized)
+
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		writer.WriteHeader(http.StatusOK)
 	}))
 }
