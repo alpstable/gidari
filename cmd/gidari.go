@@ -69,8 +69,6 @@ func run(configFilepath string, verboseLogging bool, _ []string) {
 		log.Fatalf("error creating config: %v", err)
 	}
 
-	cfg.Logger = logrus.New()
-
 	// If the user has not set the verbose flag, only log fatals.
 	if !verboseLogging {
 		cfg.Logger.SetLevel(logrus.FatalLevel)

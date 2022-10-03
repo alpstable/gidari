@@ -191,6 +191,8 @@ type Config struct {
 func NewConfig(yamlBytes []byte) (*Config, error) {
 	var cfg Config
 
+	cfg.Logger = logrus.New()
+
 	if err := yaml.Unmarshal(yamlBytes, &cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal YAML: %w", err)
 	}
@@ -300,6 +302,10 @@ func (cfg *Config) validate() error {
 
 	if err := cfg.RateLimitConfig.validate(); err != nil {
 		return ErrInvalidRateLimit
+	}
+
+	if cfg.ConnectionStrings == nil {
+		cfg.Logger.Warn("No connectionStrings specified in the config file.")
 	}
 
 	return nil
