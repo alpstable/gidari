@@ -13,7 +13,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/alpine-hodler/gidari/internal/transport"
+	"github.com/alpine-hodler/gidari"
 	"github.com/alpine-hodler/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -56,24 +56,23 @@ func main() {
 }
 
 func run(configFilepath string, verboseLogging bool, _ []string) {
-	ctx := context.Background()
-
-	bytes, err := os.ReadFile(configFilepath)
+	file, err := os.Open(configFilepath)
 	if err != nil {
-		log.Fatalf("error reading config file  %s: %v", configFilepath, err)
+		log.Fatalf("error opening config file  %s: %v", configFilepath, err)
 	}
 
-	cfg, err := transport.NewConfig(bytes)
+	cfg, err := gidari.NewConfig(context.Background(), file)
 	if err != nil {
-		log.Fatalf("error creating config: %v", err)
+		log.Fatalf("error creating new config: %v", err)
 	}
 
-	// If the user has not set the verbose flag, only log fatals.
-	if !verboseLogging {
-		cfg.Logger.SetLevel(logrus.FatalLevel)
+	if verboseLogging {
+		cfg.Logger.SetOutput(os.Stdout)
+		cfg.Logger.SetLevel(logrus.InfoLevel)
 	}
 
-	if err := transport.Upsert(ctx, cfg); err != nil {
-		log.Fatalf("error upserting data: %v", err)
+	err = gidari.Transport(context.Background(), cfg)
+	if err != nil {
+		log.Fatalf("failed to transport data: %v", err)
 	}
 }
