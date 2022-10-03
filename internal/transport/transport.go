@@ -305,7 +305,10 @@ func (cfg *Config) validate() error {
 	}
 
 	if cfg.ConnectionStrings == nil {
-		cfg.Logger.Warn("No connectionStrings specified in the config file.")
+		logWarn := tools.LogFormatter{
+			Msg: fmt.Sprintf("no connectionStrings specified in the config file"),
+		}
+		cfg.Logger.Warn(logWarn.String())
 	}
 
 	return nil
