@@ -72,9 +72,9 @@ func TestLogFormatter(t *testing.T) {
 	})
 	t.Run("all", func(t *testing.T) {
 		t.Parallel()
-		lf := LogFormatter{WorkerID: 1, WorkerName: "worker", Duration: time.Second, Msg: "hello", UpsertedCount: 1}
-		if lf.String() != "{w:1, worker:worker, d:1s, u:1, m:hello}" {
-			t.Errorf("expected '{w:1, worker:worker, d:1s, u:1, m:hello}', got '%s'", lf.String())
+		lf := LogFormatter{WorkerID: 1, WorkerName: "worker", Duration: time.Second, Host: "localhost", Msg: "hello", UpsertedCount: 1}
+		if lf.String() != "{w:1, worker:worker, d:1s, host:localhost, u:1, m:hello}" {
+			t.Errorf("expected '{w:1, worker:worker, d:1s, host:localhost, u:1, m:hello}', got '%s'", lf.String())
 		}
 	})
 }
