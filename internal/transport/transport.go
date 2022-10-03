@@ -449,10 +449,14 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 		escapedPath := strings.ReplaceAll(rsp.Request.URL.Path, "\n", "")
 		escapedPath = strings.ReplaceAll(escapedPath, "\r", "")
 
+		escapedHost := strings.ReplaceAll(rsp.Request.URL.Host, "\n", "")
+		escapedHost = strings.ReplaceAll(escapedHost, "\r", "")
+
 		logInfo := tools.LogFormatter{
 			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
+			Host:       escapedHost,
 			Msg:        fmt.Sprintf("web request completed: %s", escapedPath),
 		}
 		job.logger.Infof(logInfo.String())

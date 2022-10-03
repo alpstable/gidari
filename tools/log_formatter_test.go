@@ -42,6 +42,13 @@ func TestLogFormatter(t *testing.T) {
 			t.Errorf("expected '{d:1s}', got '%s'", lf.String())
 		}
 	})
+	t.Run("host", func(t *testing.T) {
+		t.Parallel()
+		lf := LogFormatter{Host: "localhost:8080"}
+		if lf.String() != "{host:localhost:8080}" {
+			t.Errorf("expected '{host:localhost:8080}', got '%s'", lf.String())
+		}
+	})
 	t.Run("msg", func(t *testing.T) {
 		t.Parallel()
 		lf := LogFormatter{Msg: "hello"}
@@ -65,9 +72,12 @@ func TestLogFormatter(t *testing.T) {
 	})
 	t.Run("all", func(t *testing.T) {
 		t.Parallel()
-		lf := LogFormatter{WorkerID: 1, WorkerName: "worker", Duration: time.Second, Msg: "hello", UpsertedCount: 1}
-		if lf.String() != "{w:1, worker:worker, d:1s, u:1, m:hello}" {
-			t.Errorf("expected '{w:1, worker:worker, d:1s, u:1, m:hello}', got '%s'", lf.String())
+		lf := LogFormatter{
+			WorkerID: 1, WorkerName: "worker", Duration: time.Second, Host: "localhost",
+			Msg: "hello", UpsertedCount: 1,
+		}
+		if lf.String() != "{w:1, worker:worker, d:1s, host:localhost, u:1, m:hello}" {
+			t.Errorf("expected '{w:1, worker:worker, d:1s, host:localhost, u:1, m:hello}', got '%s'", lf.String())
 		}
 	})
 }
