@@ -19,9 +19,9 @@ func TestExamples(t *testing.T) {
 	t.Parallel()
 
 	for _, tcase := range []struct{ mongoURI string }{
-		{"mongodb://mongo1:27017/coinbasepro"},
+		{"mongodb://mongo1:27017/repositoryExamples"},
 	} {
-		err := os.Setenv("DATABASE_URL", tcase.mongoURI)
+		err := os.Setenv("DB_CONN_STRING", tcase.mongoURI)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
 		}
@@ -67,7 +67,7 @@ func TestExamples(t *testing.T) {
 }
 
 func ExampleNew() {
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("DB_CONN_STRING")
 	ctx := context.TODO()
 
 	repo, err := repository.New(ctx, dsn)
@@ -81,7 +81,7 @@ func ExampleNew() {
 }
 
 func ExampleNewTx() {
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("DB_CONN_STRING")
 	ctx := context.TODO()
 
 	txRepo, err := repository.NewTx(ctx, dsn)
@@ -105,13 +105,11 @@ func ExampleNewTx() {
 	}
 
 	fmt.Println(rsp.GetUpsertedCount())
-	// Output:
-	// 0
 }
 
 func ExampleGenericService_Truncate() {
 	ctx := context.Background()
-	dns := os.Getenv("DATABASE_URL")
+	dns := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -128,13 +126,11 @@ func ExampleGenericService_Truncate() {
 	}
 
 	fmt.Println(rsp.DeletedCount)
-	// Output:
-	// 0
 }
 
 func ExampleGenericService_Upsert() {
 	ctx := context.Background()
-	dns := os.Getenv("DATABASE_URL")
+	dns := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -154,15 +150,13 @@ func ExampleGenericService_Upsert() {
 
 	tally := rsp.GetMatchedCount()
 	fmt.Println(tally)
-	// Output:
-	// 0
 }
 
 func ExampleGenericService_ListTables() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dsn)
 	if err != nil {
@@ -175,16 +169,13 @@ func ExampleGenericService_ListTables() {
 	}
 
 	fmt.Println(len(rsp.TableSet))
-	// Output:
-
-	// 2
 }
 
 func ExampleGenericService_ListPrimaryKeys() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dsn)
 	if err != nil {
@@ -202,7 +193,4 @@ func ExampleGenericService_ListPrimaryKeys() {
 	}
 
 	fmt.Println(totalPKeys)
-	// Output:
-
-	// 2
 }
