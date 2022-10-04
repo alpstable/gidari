@@ -107,7 +107,6 @@ func ExampleNewTx() {
 	fmt.Println(rsp.GetUpsertedCount())
 
 	// Output:
-	
 	// Not Deterministic
 }
 
@@ -130,9 +129,8 @@ func ExampleGenericService_Truncate() {
 	}
 
 	fmt.Println(rsp.DeletedCount)
-	
-	// Output: 
-	
+
+	// Output:
 	// Not Deterministic
 }
 
@@ -160,7 +158,6 @@ func ExampleGenericService_Upsert() {
 	fmt.Println(tally)
 
 	// Output:
-
 	// Not Deterministic
 }
 
@@ -183,7 +180,6 @@ func ExampleGenericService_ListTables() {
 	fmt.Println(len(rsp.TableSet))
 
 	// Output:
-
 	// Not Deterministic
 }
 
@@ -211,6 +207,5 @@ func ExampleGenericService_ListPrimaryKeys() {
 	fmt.Println(totalPKeys)
 
 	// Output:
-
 	// Not Deterministic
 }
