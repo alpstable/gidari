@@ -15,12 +15,11 @@ TODO
 
 ## Usage
 
-Using Gidari is a two step process:
+Document how to use the package with `gidari.Transport` 
 
-1. Create a configuraiton file to instruct the binary on how to make the RESful HTTP requests and where to store the data
-2. Run `gidari --config your_configuration.yml --verbose`
+### Command Mode
 
-### Configuration
+All the existing CLI logic stays here, remove the "Configuration" header.
 
 The configuration is a YAML file used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpine-hodler/gidari/tree/main/internal/transport/testdata/upsert) for example configurations.
 
