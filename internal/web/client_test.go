@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/alpine-hodler/gidari/internal/web/auth"
@@ -152,5 +153,18 @@ func createTestServerWithBasicAuth(username, password string) *httptest.Server {
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
+	}))
+}
+
+// createTestServerWithOAuth2 is a helper that creates a httptest.Server with a handler that has OAuth 2.
+func createTestServerWithOAuth2(bearer string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		authHeader := strings.Split(req.Header.Get("Authorization"), "Bearer ")
+		if len(authHeader) == 2 && authHeader[1] == bearer { // authHeader[1] contains token.
+			writer.WriteHeader(http.StatusOK)
+
+			return
+		}
+		writer.WriteHeader(http.StatusUnauthorized)
 	}))
 }
