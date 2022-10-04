@@ -95,7 +95,7 @@ func ExampleNewTx() {
 		DataType: int32(tools.UpsertDataJSON),
 	}
 
-	rsp, err := txRepo.Upsert(ctx, req)
+	_, err = txRepo.Upsert(ctx, req)
 	if err != nil {
 		panic(err)
 	}
@@ -103,11 +103,6 @@ func ExampleNewTx() {
 	if err := txRepo.Commit(); err != nil {
 		panic(err)
 	}
-
-	fmt.Println(rsp.GetUpsertedCount())
-
-	// Output:
-	// Not Deterministic
 }
 
 func ExampleGenericService_Truncate() {
@@ -123,15 +118,10 @@ func ExampleGenericService_Truncate() {
 		Tables: []string{"ExampleTable"},
 	}
 
-	rsp, err := repo.Truncate(ctx, req)
+	_, err = repo.Truncate(ctx, req)
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(rsp.DeletedCount)
-
-	// Output:
-	// Not Deterministic
 }
 
 func ExampleGenericService_Upsert() {
@@ -149,16 +139,10 @@ func ExampleGenericService_Upsert() {
 		DataType: int32(tools.UpsertDataJSON),
 	}
 
-	rsp, err := repo.Upsert(ctx, req)
+	_, err = repo.Upsert(ctx, req)
 	if err != nil {
 		panic(err)
 	}
-
-	tally := rsp.GetMatchedCount()
-	fmt.Println(tally)
-
-	// Output:
-	// Not Deterministic
 }
 
 func ExampleGenericService_ListTables() {
@@ -177,10 +161,9 @@ func ExampleGenericService_ListTables() {
 		panic(err)
 	}
 
-	fmt.Println(len(rsp.TableSet))
-
-	// Output:
-	// Not Deterministic
+	for table := range rsp.TableSet {
+		fmt.Printf("Table: %q\n", table)
+	}
 }
 
 func ExampleGenericService_ListPrimaryKeys() {
@@ -199,13 +182,7 @@ func ExampleGenericService_ListPrimaryKeys() {
 		panic(err)
 	}
 
-	totalPKeys := 0
 	for _, keys := range rsp.PKSet {
-		totalPKeys += len(keys.GetList())
+		fmt.Printf("Primary Keys: %q\n", keys)
 	}
-
-	fmt.Println(totalPKeys)
-
-	// Output:
-	// Not Deterministic
 }
