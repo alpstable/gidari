@@ -22,6 +22,8 @@ Using Gidari in command mode is a two step process:
 
 The `configuration.yml` file is used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpine-hodler/gidari/tree/main/internal/transport/testdata/upsert) for example configurations.
 
+### Configurations
+
 | Key                              | Required | Type   | Description                                                                                                      |
 |----------------------------------|----------|--------|------------------------------------------------------------------------------------------------------------------|
 | url                              | T        | string | The API base URL                                                                                                 |
