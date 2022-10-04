@@ -5,7 +5,8 @@ rateLimit:
   burst: 5
   period: 1
 requests:
-  - endpoint: /api/books
+  -
+    endpoint: /api/books
     query:
       bibkeys: "ISBN:0201558025,LCCN:93005405"
       format: "json"
