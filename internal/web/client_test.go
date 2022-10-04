@@ -265,6 +265,58 @@ func TestFetchWithAuth2(t *testing.T) {
 	})
 }
 
+func TestFetchWithAPIKey(t *testing.T) {
+	t.Parallel()
+
+	t.Run("authorization success", func(t *testing.T) {
+		t.Parallel()
+
+		const key = "apikey"
+		const passphrase = "passphrase"
+		const secret = "secret01"
+
+		testServer := createTestServerWithAPIKey(key, passphrase, secret)
+		defer testServer.Close()
+
+		ctx := context.Background()
+
+		tripper := auth.NewAPIKey()
+		tripper.SetKey(key)
+		tripper.SetPassphrase(passphrase)
+		tripper.SetSecret(secret)
+		tripper.SetURL(testServer.URL)
+
+		client, err := NewClient(ctx, tripper)
+		if err != nil {
+			t.Fatalf("error creating client: %v", err)
+		}
+
+		uri, err := url.Parse(testServer.URL)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
+
+		for _, tcase := range []struct {
+			method string
+		}{
+			{method: http.MethodGet},
+			{method: http.MethodPost},
+			{method: http.MethodPut},
+			{method: http.MethodDelete},
+		} {
+			_, err = Fetch(ctx, &FetchConfig{
+				C:           client,
+				Method:      tcase.method,
+				URL:         uri,
+				RateLimiter: rate.NewLimiter(1, 1),
+			})
+			if err != nil {
+				t.Fatalf("fetch error: %v", err)
+			}
+		}
+	})
+}
+
 // createTestServerWithBasicAuth is a helper that creates a httptest.Server with a handler that has basic auth.
 func createTestServerWithBasicAuth(username, password string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
