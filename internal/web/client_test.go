@@ -180,6 +180,48 @@ func TestFetchWithAuth2(t *testing.T) {
 			t.Fatalf("fetch error: %v", err)
 		}
 	})
+
+	t.Run("authorization failed", func(t *testing.T) {
+		t.Parallel()
+
+		const bearer = "AbCd1234"
+
+		testServer := createTestServerWithOAuth2(bearer)
+		defer testServer.Close()
+
+		for _, tcase := range []struct {
+			bearer string
+		}{
+			{bearer: ""},
+			{bearer: "wrong"},
+		} {
+			ctx := context.Background()
+
+			tripper := auth.NewAuth2()
+			tripper.SetBearer(tcase.bearer)
+			tripper.SetURL(testServer.URL)
+
+			client, err := NewClient(ctx, tripper)
+			if err != nil {
+				t.Fatalf("error creating client: %v", err)
+			}
+
+			uri, err := url.Parse(testServer.URL)
+			if err != nil {
+				t.Fatalf("error parsing url: %v", err)
+			}
+
+			_, err = Fetch(ctx, &FetchConfig{
+				C:           client,
+				Method:      http.MethodGet,
+				URL:         uri,
+				RateLimiter: rate.NewLimiter(1, 1),
+			})
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+		}
+	})
 }
 
 // createTestServerWithBasicAuth is a helper that creates a httptest.Server with a handler that has basic auth.
