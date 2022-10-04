@@ -41,10 +41,10 @@ The `configuration.yml` file is used to define a set of rules for making RESTful
 | request.endpoint                 | T        | string | Endpoint for making the RESTful API request                                                                      |
 | request.table                    | F        | string | Name of the table in the storage for upserting data. This field defaults to the last string in the endpoint path |
 | request.timseries                | F        | map    | Data required for upserting timeseries data, which are batched and can be resource intensive                     |
-| request.timeseries.startName     | T        | string | "Name of the query/path parameter for the ""start"" datetime of the timeseries"                                  |
-| request.timeseries.endName       | T        | string | "Name of the query/path parameter for the ""end"" datetime of the timeseries"                                    |
+| request.timeseries.startName     | T        | string | "Name of the query/path parameter for the "start" datetime of the timeseries"                                  |
+| request.timeseries.endName       | T        | string | "Name of the query/path parameter for the "end" datetime of the timeseries"                                    |
 | request.timeseries.period        | T        | uint   | How often (in seconds) to build a new datetime range to batch.                                                   |
-| request.timeseries.layout        | T        | string | "The layout for how to build a datetime to query over (e.g. RFC3339 would be ""2006-01-02T15:04:05Z07:00"")"     |
+| request.timeseries.layout        | T        | string | The layout for how to build a datetime to query over (e.g. RFC3339 would be "2006-01-02T15:04:05Z07:00")     |
 | request.query                    | N        | map    | A hash of data that holds the query parameters for a request                                                     |
 
 ### SQL
