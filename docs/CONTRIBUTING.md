@@ -32,13 +32,11 @@ To develop locally you need to install the following dependencies:
 
 ## Build
 
-To build a binary:
+To build a binary (this is not a required step):
 
 ```
 make
 ```
-
-To test the binary locally run `make containers`. See [Integration Testing](#integration-testing) for more information.
 
 ## Integration Testing
 
