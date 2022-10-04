@@ -11,14 +11,14 @@ func TestPGMeta(t *testing.T) {
 
 	mockPgMeta := pgmeta{
 		cols: map[string][]string{
-			"table1": []string{"0", "jason", "big ben"},
-			"table2": []string{"1", "john", "bakers street"},
-			"table3": []string{"2", "harry", "leicester square"},
+			"table1": {"0", "jason", "big ben"},
+			"table2": {"1", "john", "bakers street"},
+			"table3": {"2", "harry", "leicester square"},
 		},
 		pks: map[string][]string{
-			"table1": []string{"id"},
-			"table2": []string{"id", "name"},
-			"table3": []string{"id", "name", "address"},
+			"table1": {"id"},
+			"table2": {"id", "name"},
+			"table3": {"id", "name", "address"},
 		},
 		bytes: map[string]int64{
 			"table1": 1234,
@@ -91,13 +91,10 @@ func TestPGMeta(t *testing.T) {
 		test := test
 		t.Run(fmt.Sprintf("tableName=%s,column=%s,isPK=%v", test.tableName, test.column, test.isPk), func(t *testing.T) {
 			t.Parallel()
-
 			actual := pdb.meta.isPK(test.tableName, test.column)
 			if actual != test.isPk {
 				t.Fatalf("expected: %v, got: %v", test.isPk, actual)
 			}
 		})
-
 	}
-
 }
