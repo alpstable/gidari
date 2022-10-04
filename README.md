@@ -11,7 +11,7 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 
 ## Installation
 
-TODO
+go install github.com/alpine-hodler/gidari/cmd/gidari@latest
 
 ## Usage
 
