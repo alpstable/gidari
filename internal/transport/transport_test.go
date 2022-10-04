@@ -239,6 +239,31 @@ func TestUpsert(t *testing.T) {
 			if err := Upsert(context.Background(), cfg); err != nil {
 				t.Fatalf("error upserting: %v", err)
 			}
+
+			// cleanup
+			t.Cleanup(func() {
+				if err := Truncate(context.Background(), cfg); err != nil {
+					t.Fatalf("error in truncating tables %v", err)
+				}
+			})
+			// checking if the data was actually inserted.
+			repos, repocloser, err := cfg.repos(context.Background())
+			if err != nil {
+				t.Error(err)
+			}
+
+			defer repocloser()
+
+			for _, repo := range repos {
+				rsp, err := repo.ListTables(context.Background())
+				if err != nil {
+					t.Fatalf("failed to list tables: %v", err)
+				}
+				if len(rsp.GetTableSet()) == 0 {
+					t.Fatalf("expected tables, got none")
+				}
+			}
+
 		})
 	}
 }
