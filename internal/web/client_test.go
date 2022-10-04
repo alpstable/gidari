@@ -8,7 +8,13 @@
 package web
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -283,4 +289,80 @@ func createTestServerWithOAuth2(bearer string) *httptest.Server {
 		}
 		writer.WriteHeader(http.StatusUnauthorized)
 	}))
+}
+
+// createTestServerWithAPIKey is a helper that creates a httptest.Server with a handler that has api key auth.
+func createTestServerWithAPIKey(key, passphrase, secret string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		reqContentType := req.Header.Get("content-type")
+		if reqContentType != "application/json" {
+			writer.WriteHeader(http.StatusUnsupportedMediaType)
+
+			return
+		}
+
+		reqKey := req.Header.Get("cb-access-key")
+		reqPassphrase := req.Header.Get("cb-access-passphrase")
+		reqSign := req.Header.Get("cb-access-sign")
+		if reqKey != key || reqPassphrase != passphrase || reqSign == "" {
+			writer.WriteHeader(http.StatusUnauthorized)
+
+			return
+		}
+
+		// generate sign
+		msg := generageMsg(req, req.Header.Get("cb-access-timestamp"))
+
+		sign, err := generateSign(secret, msg)
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		// compare signatures
+		if reqSign != sign {
+			writer.WriteHeader(http.StatusUnauthorized)
+
+			return
+		}
+
+		writer.WriteHeader(http.StatusOK)
+	}))
+}
+
+// generateSign is a helper to generate signature for request.
+func generateSign(secret, message string) (string, error) {
+	key, err := base64.StdEncoding.DecodeString(secret)
+	if err != nil {
+		return "", fmt.Errorf("error decoding secret: %w", err)
+	}
+
+	signature := hmac.New(sha256.New, key)
+
+	_, err = signature.Write([]byte(message))
+	if err != nil {
+		return "", fmt.Errorf("error writing signature: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
+}
+
+// generageMsg makes the message to be signed.
+func generageMsg(req *http.Request, timestamp string) string {
+	postAuthority := strings.TrimSuffix(req.URL.String(), "/")
+
+	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
+}
+
+// parsebytes will return the byte stream for the body.
+func parsebytes(req *http.Request) []byte {
+	if req.Body == nil {
+		return []byte{}
+	}
+
+	body, _ := io.ReadAll(req.Body)
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	return body
 }
