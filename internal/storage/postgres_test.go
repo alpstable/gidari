@@ -88,6 +88,7 @@ func TestPGMeta(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(fmt.Sprintf("tableName=%s,column=%s,isPK=%v", test.tableName, test.column, test.isPk), func(t *testing.T) {
 			t.Parallel()
 
