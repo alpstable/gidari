@@ -1,13 +1,15 @@
 package storage
 
 import (
-	"context"
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"sync"
 	"testing"
 )
 
 func TestPGMeta(t *testing.T) {
-	dummyPgMeta := pgmeta{
+	t.Parallel()
+
+	mockPgMeta := pgmeta{
 		cols: map[string][]string{
 			"table1": []string{"0", "jason", "big ben"},
 			"table2": []string{"1", "john", "bakers street"},
@@ -25,13 +27,9 @@ func TestPGMeta(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
-	pdb, err := NewPostgres(ctx, "postgres://postgres:localhost:5432")
-	if err != nil {
-		t.Fatalf("failed to create postgres client: %v", err)
-	}
-	pdb.meta = &dummyPgMeta
-	_, err = pdb.StartTx(ctx)
+	pdb := &Postgres{}
+	pdb.meta = &mockPgMeta
+	pdb.metaMutex = sync.Mutex{}
 
 	// testing out isPk method
 	tests := []struct {
@@ -90,8 +88,15 @@ func TestPGMeta(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := pdb.meta.isPK(test.tableName, test.column)
-		assert.Equal(t, actual, test.isPk)
+		t.Run(fmt.Sprintf("tableName=%s,column=%s,isPK=%v", test.tableName, test.column, test.isPk), func(t *testing.T) {
+			t.Parallel()
+
+			actual := pdb.meta.isPK(test.tableName, test.column)
+			if actual != test.isPk {
+				t.Fatalf("expected: %v, got: %v", test.isPk, actual)
+			}
+		})
+
 	}
 
 }
