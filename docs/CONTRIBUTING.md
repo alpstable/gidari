@@ -57,7 +57,3 @@ You will also need to sync your /etc/hosts file with the docker containers:
 ### Running Integration Tests
 
 To test locally first build the containers for integration tests using `make containers`. Then run `make tests`.
-
-## Socials
-
-We have a very bare-bones Discord server [here](https://discord.gg/duttjEpb). Please reach out if you have any questions!
