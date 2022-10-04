@@ -32,7 +32,7 @@ To develop locally you need to install the following dependencies:
 
 ## Build
 
-To build run the default make:
+To build a binary:
 
 ```
 make
