@@ -72,3 +72,12 @@ services:
       - ./.db/postgres1:/var/lib/postgresql/dat
       - ./scripts/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"
+
+  protoc-gen-go1:
+    hostname: protoc-gen-go1
+    build:
+      context: .
+      dockerfile: docker/protec-gen.Dockerfile
+
+
+

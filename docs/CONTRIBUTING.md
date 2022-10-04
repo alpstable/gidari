@@ -26,9 +26,8 @@ To develop locally you need to install the following dependencies:
 1. Docker: https://docs.docker.com/get-docker/
 2. Go: https://go.dev/doc/install
 3. protobuf: http://google.github.io/proto-lens/installing-protoc.html
-4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
-5. golangci-lint (test only): https://golangci-lint.run/usage/install/#local-installation
-6. gofumt (test only): https://github.com/mvdan/gofumpt
+4. golangci-lint (test only): https://golangci-lint.run/usage/install/#local-installation
+5. gofumt (test only): https://github.com/mvdan/gofumpt
 
 ## Build
 
