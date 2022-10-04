@@ -116,7 +116,7 @@ func TestFetchWithBasicAuth(t *testing.T) {
 
 		ctx := context.Background()
 
-		// Don't set url for tripper
+		// Don't set url for tripper.
 		tripper := auth.NewBasic()
 		tripper.SetEmail(username)
 		tripper.SetPassword(password)
@@ -220,6 +220,41 @@ func TestFetchWithAuth2(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error, got nil")
 			}
+		}
+	})
+
+	t.Run("empty url only in auth2 tripper", func(t *testing.T) {
+		t.Parallel()
+
+		const bearer = "AbCd1234"
+
+		testServer := createTestServerWithOAuth2(bearer)
+		defer testServer.Close()
+
+		ctx := context.Background()
+
+		// Don't set url for tripper.
+		tripper := auth.NewAuth2()
+		tripper.SetBearer(bearer)
+
+		client, err := NewClient(ctx, tripper)
+		if err != nil {
+			t.Fatalf("error creating client: %v", err)
+		}
+
+		uri, err := url.Parse(testServer.URL)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
+
+		_, err = Fetch(ctx, &FetchConfig{
+			C:           client,
+			Method:      http.MethodGet,
+			URL:         uri,
+			RateLimiter: rate.NewLimiter(1, 1),
+		})
+		if err == nil {
+			t.Fatalf("expected error, got nil")
 		}
 	})
 }
