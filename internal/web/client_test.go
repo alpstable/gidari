@@ -33,12 +33,12 @@ func TestFetchWithBasicAuth(t *testing.T) {
 
 		ctx := context.Background()
 
-		basicAuth := auth.NewBasic()
-		basicAuth.SetEmail(username)
-		basicAuth.SetPassword(password)
-		basicAuth.SetURL(testServer.URL)
+		tripper := auth.NewBasic()
+		tripper.SetEmail(username)
+		tripper.SetPassword(password)
+		tripper.SetURL(testServer.URL)
 
-		client, err := NewClient(ctx, basicAuth)
+		client, err := NewClient(ctx, tripper)
 		if err != nil {
 			t.Fatalf("error creating client: %v", err)
 		}
@@ -78,12 +78,12 @@ func TestFetchWithBasicAuth(t *testing.T) {
 		} {
 			ctx := context.Background()
 
-			basicAuth := auth.NewBasic()
-			basicAuth.SetEmail(tcase.username)
-			basicAuth.SetPassword(tcase.password)
-			basicAuth.SetURL(testServer.URL)
+			tripper := auth.NewBasic()
+			tripper.SetEmail(tcase.username)
+			tripper.SetPassword(tcase.password)
+			tripper.SetURL(testServer.URL)
 
-			client, err := NewClient(ctx, basicAuth)
+			client, err := NewClient(ctx, tripper)
 			if err != nil {
 				t.Fatalf("error creating client: %v", err)
 			}
@@ -117,11 +117,11 @@ func TestFetchWithBasicAuth(t *testing.T) {
 		ctx := context.Background()
 
 		// Don't set url for tripper
-		basicAuth := auth.NewBasic()
-		basicAuth.SetEmail(username)
-		basicAuth.SetPassword(password)
+		tripper := auth.NewBasic()
+		tripper.SetEmail(username)
+		tripper.SetPassword(password)
 
-		client, err := NewClient(ctx, basicAuth)
+		client, err := NewClient(ctx, tripper)
 		if err != nil {
 			t.Fatalf("error creating client: %v", err)
 		}
