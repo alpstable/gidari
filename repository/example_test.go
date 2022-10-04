@@ -21,7 +21,7 @@ func TestExamples(t *testing.T) {
 	for _, tcase := range []struct{ mongoURI string }{
 		{"mongodb://mongo1:27017/repositoryExamples"},
 	} {
-		err := os.Setenv("MONGODB_URI", tcase.mongoURI)
+		err := os.Setenv("DB_CONN_STRING", tcase.mongoURI)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
 		}
@@ -67,7 +67,7 @@ func TestExamples(t *testing.T) {
 }
 
 func ExampleNew() {
-	dsn := os.Getenv("MONGODB_URI")
+	dsn := os.Getenv("DB_CONN_STRING")
 	ctx := context.TODO()
 
 	repo, err := repository.New(ctx, dsn)
@@ -81,7 +81,7 @@ func ExampleNew() {
 }
 
 func ExampleNewTx() {
-	dsn := os.Getenv("MONGODB_URI")
+	dsn := os.Getenv("DB_CONN_STRING")
 	ctx := context.TODO()
 
 	txRepo, err := repository.NewTx(ctx, dsn)
@@ -109,7 +109,7 @@ func ExampleNewTx() {
 
 func ExampleGenericService_Truncate() {
 	ctx := context.Background()
-	dns := os.Getenv("MONGODB_URI")
+	dns := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -130,7 +130,7 @@ func ExampleGenericService_Truncate() {
 
 func ExampleGenericService_Upsert() {
 	ctx := context.Background()
-	dns := os.Getenv("MONGODB_URI")
+	dns := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -156,7 +156,7 @@ func ExampleGenericService_ListTables() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("MONGODB_URI")
+	dsn := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dsn)
 	if err != nil {
@@ -175,7 +175,7 @@ func ExampleGenericService_ListPrimaryKeys() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("MONGODB_URI")
+	dsn := os.Getenv("DB_CONN_STRING")
 
 	repo, err := repository.New(ctx, dsn)
 	if err != nil {
