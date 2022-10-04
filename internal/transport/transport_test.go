@@ -263,7 +263,6 @@ func TestUpsert(t *testing.T) {
 					t.Fatalf("expected tables, got none")
 				}
 			}
-
 		})
 	}
 }
