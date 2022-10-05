@@ -24,6 +24,7 @@ import (
 	"github.com/alpine-hodler/gidari/repository"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	"gopkg.in/yaml.v2"
 )
 
@@ -209,20 +210,23 @@ func NewConfig(yamlBytes []byte) (*Config, error) {
 		return nil, fmt.Errorf("unable to parse URL: %w", err)
 	}
 
+	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
+	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
+	// different endpoints could cause a rate limit error on a web API.
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
+
 	// Update default request data.
 	for _, req := range cfg.Requests {
 		if req.Method == "" {
 			req.Method = http.MethodGet
 		}
 
-		if req.RateLimitConfig == nil {
-			req.RateLimitConfig = cfg.RateLimitConfig
-		}
-
 		if req.Table == "" {
 			endpointParts := strings.Split(req.Endpoint, "/")
 			req.Table = endpointParts[len(endpointParts)-1]
 		}
+
+		req.rateLimiter = rateLimiter
 	}
 
 	return &cfg, nil
