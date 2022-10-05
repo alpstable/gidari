@@ -121,28 +121,25 @@ func TestPGMeta(t *testing.T) {
 		},
 	}
 
-
-	mockPCF := func(_ context.Context, actualQuery string) (*sql.Stmt, error) {
-		if actualQuery != expectedSQL {
-			return nil, fmt.Errorf("expected and actual query not same")
-		}
-
-		actualSQL = actualQuery
-
-		return &sql.Stmt{}, nil
-	}
-
 	for _, test := range upsertTests {
 		test := test
 		t.Run(fmt.Sprintf("upsertStmt for %q", test.tableName), func(t *testing.T) {
 			t.Parallel()
 
-			expectedSQL = test.expectedSQL
+			expectedSQL := test.expectedSQL
+
+			mockPCF := func(_ context.Context, actualQuery string) (*sql.Stmt, error) {
+				if actualQuery != expectedSQL {
+					return nil, fmt.Errorf("expected and actual query not same")
+				}
+
+				return &sql.Stmt{}, nil
+			}
+
 			_, err := pdb.meta.upsertStmt(ctx, test.tableName, mockPCF, 1)
 			if err != nil {
 				t.Fatalf("failed to create upsert statement: %v", err)
 			}
-
 		})
 	}
 }
