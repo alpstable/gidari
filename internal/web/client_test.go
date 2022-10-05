@@ -363,6 +363,45 @@ func TestFetchWithAPIKey(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("empty url only in api key tripper", func(t *testing.T) {
+		t.Parallel()
+
+		const key = "apikey"
+		const passphrase = "passphrase"
+		const secret = "secret01"
+
+		testServer := createTestServerWithAPIKey(key, passphrase, secret)
+		defer testServer.Close()
+
+		ctx := context.Background()
+
+		// Don't set url for tripper.
+		tripper := auth.NewAPIKey()
+		tripper.SetKey(key)
+		tripper.SetPassphrase(passphrase)
+		tripper.SetSecret(secret)
+
+		client, err := NewClient(ctx, tripper)
+		if err != nil {
+			t.Fatalf("error creating client: %v", err)
+		}
+
+		uri, err := url.Parse(testServer.URL)
+		if err != nil {
+			t.Fatalf("error parsing url: %v", err)
+		}
+
+		_, err = Fetch(ctx, &FetchConfig{
+			C:           client,
+			Method:      http.MethodGet,
+			URL:         uri,
+			RateLimiter: rate.NewLimiter(1, 1),
+		})
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+	})
 }
 
 // createTestServerWithBasicAuth is a helper that creates a httptest.Server with a handler that has basic auth.
