@@ -16,6 +16,13 @@ services:
     networks:
       - mongo_network
       - postgres_network
+    
+  fmt:
+    build:
+      context: .
+      dockerfile: scripts/fmt.Dockerfile
+    volumes:
+      - .:/app
 
   mongo1:
     hostname: mongo1

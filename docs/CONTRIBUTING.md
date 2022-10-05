@@ -7,7 +7,7 @@
   - [Running Integration Tests](#running-integration-tests)
 - [Socials](#socials)
 
-Thank you for your intest in contributing to Gidari! Please make sure to fork this repository before working through issues.
+Thank you for your interest in contributing to Gidari! Please make sure to fork this repository before working through issues.
 
 ## Bug Fixes and New Features
 
@@ -28,7 +28,6 @@ To develop locally you need to install the following dependencies:
 3. protobuf: http://google.github.io/proto-lens/installing-protoc.html
 4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
 5. golangci-lint (test only): https://golangci-lint.run/usage/install/#local-installation
-6. gofumt (test only): https://github.com/mvdan/gofumpt
 
 ## Build
 

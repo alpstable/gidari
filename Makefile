@@ -45,7 +45,8 @@ lint:
 # fmt runs the formatter.
 .PHONY: fmt
 fmt:
-	gofumpt -l -w .
+	docker build -t gofumpt -f scripts/fmt.Dockerfile .
+	docker run -t -v $(PWD):/app gofumpt 
 	golangci-lint run --fix
 
 # add-license adds the license to all the top of all the .go files.
