@@ -8,12 +8,7 @@
 package web
 
 import (
-	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/alpine-hodler/gidari/internal/web/auth"
+	"github.com/alpine-hodler/gidari/tools"
 	"golang.org/x/time/rate"
 )
 
@@ -450,9 +446,16 @@ func createTestServerWithAPIKey(key, passphrase, secret string) *httptest.Server
 		}
 
 		// generate sign
-		msg := generageMsg(req, req.Header.Get("cb-access-timestamp"))
+		var msg tools.HTTPMessage
 
-		sign, err := generateSign(secret, msg)
+		// When generating a request with nil body, we get an empty message.
+		// If the request has a body, then a message should be generated for request.
+		body, _ := io.ReadAll(req.Body)
+		if req.Method != http.MethodGet && len(body) != 0 {
+			msg = tools.NewHTTPMessage(req, req.Header.Get("cb-access-timestamp"))
+		}
+
+		sign, err := msg.Sign(secret)
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 
@@ -468,40 +471,4 @@ func createTestServerWithAPIKey(key, passphrase, secret string) *httptest.Server
 
 		writer.WriteHeader(http.StatusOK)
 	}))
-}
-
-// generateSign is a helper to generate signature for request.
-func generateSign(secret, message string) (string, error) {
-	key, err := base64.StdEncoding.DecodeString(secret)
-	if err != nil {
-		return "", fmt.Errorf("error decoding secret: %w", err)
-	}
-
-	signature := hmac.New(sha256.New, key)
-
-	_, err = signature.Write([]byte(message))
-	if err != nil {
-		return "", fmt.Errorf("error writing signature: %w", err)
-	}
-
-	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
-}
-
-// generageMsg makes the message to be signed.
-func generageMsg(req *http.Request, timestamp string) string {
-	postAuthority := strings.TrimSuffix(req.URL.String(), "/")
-
-	return fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(parsebytes(req)))
-}
-
-// parsebytes will return the byte stream for the body.
-func parsebytes(req *http.Request) []byte {
-	if req.Body == nil {
-		return []byte{}
-	}
-
-	body, _ := io.ReadAll(req.Body)
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-	return body
 }
