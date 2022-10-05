@@ -121,8 +121,6 @@ func TestPGMeta(t *testing.T) {
 		},
 	}
 
-	expectedSQL := ""
-	actualSQL := ""
 
 	mockPCF := func(_ context.Context, actualQuery string) (*sql.Stmt, error) {
 		if actualQuery != expectedSQL {
