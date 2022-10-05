@@ -145,9 +145,6 @@ func TestPGMeta(t *testing.T) {
 				t.Fatalf("failed to create upsert statement: %v", err)
 			}
 
-			if actualSQL != expectedSQL {
-				t.Fatalf("expected: %v, got: %v", expectedSQL, actualQuery)
-			}
 		})
 	}
 }
