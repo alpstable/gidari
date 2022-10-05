@@ -141,9 +141,12 @@ func TestPGMeta(t *testing.T) {
 
 			expectedSQL = test.expectedSQL
 			actualQuery, err := pdb.meta.upsertStmt(ctx, test.tableName, mockPCF, 1)
+			if err != nil {
+				t.Fatalf("failed to create upsert statement: %v", err)
+			}
 
-			if err != nil && actualSQL != expectedSQL {
-				t.Fatalf("expected: %v, got: %v, err: %v", expectedSQL, actualQuery, err)
+			if actualSQL != expectedSQL {
+				t.Fatalf("expected: %v, got: %v", expectedSQL, actualQuery)
 			}
 		})
 	}
