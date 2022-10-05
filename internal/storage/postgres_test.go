@@ -105,39 +105,42 @@ func TestPGMeta(t *testing.T) {
 
 	upsertTests := []struct {
 		tableName   string
-		expectedSql string
+		expectedSQL string
 	}{
 		{
 			tableName:   "table1",
-			expectedSql: `INSERT INTO table1(0,jason,big ben) VALUES ($1,$2,$3) ON CONFLICT (id) DO UPDATE SET "0" = EXCLUDED."0","jason" = EXCLUDED."jason","big ben" = EXCLUDED."big ben"`,
+			expectedSQL: `INSERT INTO table1(0,jason,big ben) VALUES ($1,$2,$3) ON CONFLICT (id) DO UPDATE SET "0" = EXCLUDED."0","jason" = EXCLUDED."jason","big ben" = EXCLUDED."big ben"`,
 		},
 		{
 			tableName:   "table2",
-			expectedSql: `INSERT INTO table2(1,john,bakers street) VALUES ($1,$2,$3) ON CONFLICT (id,name) DO UPDATE SET "1" = EXCLUDED."1","john" = EXCLUDED."john","bakers street" = EXCLUDED."bakers street"`,
+			expectedSQL: `INSERT INTO table2(1,john,bakers street) VALUES ($1,$2,$3) ON CONFLICT (id,name) DO UPDATE SET "1" = EXCLUDED."1","john" = EXCLUDED."john","bakers street" = EXCLUDED."bakers street"`,
 		},
 		{
 			tableName:   "table3",
-			expectedSql: `INSERT INTO table3(2,harry,leicester square) VALUES ($1,$2,$3) ON CONFLICT (id,name,address) DO UPDATE SET "2" = EXCLUDED."2","harry" = EXCLUDED."harry","leicester square" = EXCLUDED."leicester square"`,
+			expectedSQL: `INSERT INTO table3(2,harry,leicester square) VALUES ($1,$2,$3) ON CONFLICT (id,name,address) DO UPDATE SET "2" = EXCLUDED."2","harry" = EXCLUDED."harry","leicester square" = EXCLUDED."leicester square"`,
 		},
 	}
 
 	expectedSQL := ""
 	actualSQL := ""
 
-	mockPCF := func(ctx context.Context, actualQuery string) (*sql.Stmt, error) {
+	mockPCF := func(_ context.Context, actualQuery string) (*sql.Stmt, error) {
 		if actualQuery != expectedSQL {
 			return nil, fmt.Errorf("expected and actual query not same")
 		}
 
 		actualSQL = actualQuery
+
 		return nil, nil
+
 	}
 
 	for _, test := range upsertTests {
+		test := test
 		t.Run(fmt.Sprintf("upsertStmt for %q", test.tableName), func(t *testing.T) {
 			t.Parallel()
 
-			expectedSQL = test.expectedSql
+			expectedSQL = test.expectedSQL
 			actualQuery, err := pdb.meta.upsertStmt(ctx, test.tableName, mockPCF, 1)
 
 			if err != nil && actualSQL != expectedSQL {
