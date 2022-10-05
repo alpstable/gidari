@@ -22,12 +22,12 @@ func NewHTTPMessage(req *http.Request, timestamp string) HTTPMessage {
 	body, _ := io.ReadAll(req.Body)
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
-	path := req.URL.Path
+	requestPath := req.URL.Path
 	if req.URL.RawQuery != "" {
-		path = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawQuery)
+		requestPath = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawQuery)
 	}
 
-	return HTTPMessage(fmt.Sprintf("%s%s%s%s", timestamp, req.Method, path, string(body)))
+	return HTTPMessage(fmt.Sprintf("%s%s%s%s", timestamp, req.Method, requestPath, string(body)))
 }
 
 // Sign generates the base64-encoded signature required to make requests. In particular, the signed header is generated
