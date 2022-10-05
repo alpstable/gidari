@@ -34,6 +34,9 @@ type Request struct {
 	// Table is the name of the table/collection to insert the data fetched from the web API.
 	Table string `yaml:"table"`
 
+	// Truncate before upserting on single request
+	Truncate *bool `yaml:"truncate"`
+
 	//
 	RateLimitConfig *RateLimitConfig `yaml:"rate_limit"`
 }
