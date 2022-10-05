@@ -11,6 +11,21 @@ import (
 	"github.com/alpine-hodler/gidari/tools"
 )
 
+func truncateGenericRepo(ctx context.Context, t *testing.T, connectionString string, tables ...string) {
+	t.Helper()
+
+	t.Cleanup(func() {
+		repo, err := repository.New(context.Background(), connectionString)
+		if err != nil {
+			t.Fatalf("failed to create repository: %v", err)
+		}
+
+		if _, err := repo.Truncate(ctx, &proto.TruncateRequest{Tables: tables}); err != nil {
+			t.Fatalf("failed to truncate storage: %v", err)
+		}
+	})
+}
+
 // The Example configuration used in for examples is a MongoDB replica set and has the following:
 // - One database: "GidariExample".
 // - Three collections: "ExampleTable", "TxnExampleTable", "AnotherExampleTable".
@@ -21,7 +36,7 @@ func TestExamples(t *testing.T) {
 	for _, tcase := range []struct{ mongoURI string }{
 		{"mongodb://mongo1:27017/repositoryExamples"},
 	} {
-		err := os.Setenv("DB_CONN_STRING", tcase.mongoURI)
+		err := os.Setenv("MONGODB_URI", tcase.mongoURI)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
 		}
@@ -31,43 +46,55 @@ func TestExamples(t *testing.T) {
 		t.Run("Example_New",
 			func(t *testing.T) {
 				t.Parallel()
+
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table1")
 				ExampleNew()
 			})
 
 		t.Run("Example_NewTx",
 			func(t *testing.T) {
 				t.Parallel()
+
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table2")
 				ExampleNewTx()
 			})
 
 		t.Run("ExampleGenericService_Truncate",
 			func(t *testing.T) {
 				t.Parallel()
+
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table3")
 				ExampleGenericService_Truncate()
 			})
 
 		t.Run("ExampleGenericService_Upsert",
 			func(t *testing.T) {
 				t.Parallel()
+
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table4")
 				ExampleGenericService_Upsert()
 			})
 
-		t.Run("ExampleGenericService_ListTables",
-			func(t *testing.T) {
-				t.Parallel()
-				ExampleGenericService_ListTables()
-			})
+		//	t.Run("ExampleGenericService_ListTables",
+		//		func(t *testing.T) {
+		//			t.Parallel()
 
-		t.Run("ExampleGenericService_ListPrimaryKeys",
-			func(t *testing.T) {
-				t.Parallel()
-				ExampleGenericService_ListPrimaryKeys()
-			})
+		//			truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table5")
+		//			ExampleGenericService_ListTables()
+		//		})
+
+		//	t.Run("ExampleGenericService_ListPrimaryKeys",
+		//		func(t *testing.T) {
+		//			t.Parallel()
+
+		//			truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table6")
+		//			ExampleGenericService_ListPrimaryKeys()
+		//		})
 	}
 }
 
 func ExampleNew() {
-	dsn := os.Getenv("DB_CONN_STRING")
+	dsn := os.Getenv("MONGODB_URI")
 	ctx := context.TODO()
 
 	repo, err := repository.New(ctx, dsn)
@@ -81,8 +108,10 @@ func ExampleNew() {
 }
 
 func ExampleNewTx() {
-	dsn := os.Getenv("DB_CONN_STRING")
+	dsn := os.Getenv("MONGODB_URI")
 	ctx := context.TODO()
+
+	table := "table2"
 
 	txRepo, err := repository.NewTx(ctx, dsn)
 	if err != nil {
@@ -90,7 +119,7 @@ func ExampleNewTx() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table:    "TxnExampleTable",
+		Table:    table,
 		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 		DataType: int32(tools.UpsertDataJSON),
 	}
@@ -103,11 +132,29 @@ func ExampleNewTx() {
 	if err := txRepo.Commit(); err != nil {
 		panic(err)
 	}
+
+	repo, err := repository.New(ctx, dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	tresp, err := repo.ListTables(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Print the table size in bits
+	fmt.Println(tresp.TableSet[table].Size)
+
+	// Output:
+	// 67
 }
 
 func ExampleGenericService_Truncate() {
 	ctx := context.Background()
-	dns := os.Getenv("DB_CONN_STRING")
+	dns := os.Getenv("MONGODB_URI")
+
+	table := "table3"
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -115,18 +162,25 @@ func ExampleGenericService_Truncate() {
 	}
 
 	req := &proto.TruncateRequest{
-		Tables: []string{"ExampleTable"},
+		Tables: []string{table},
 	}
 
-	_, err = repo.Truncate(ctx, req)
+	rsp, err := repo.Truncate(ctx, req)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println(rsp.GetDeletedCount())
+
+	// Output:
+	// 0
 }
 
 func ExampleGenericService_Upsert() {
 	ctx := context.Background()
-	dns := os.Getenv("DB_CONN_STRING")
+	dns := os.Getenv("MONGODB_URI")
+
+	table := "table4"
 
 	repo, err := repository.New(ctx, dns)
 	if err != nil {
@@ -134,7 +188,7 @@ func ExampleGenericService_Upsert() {
 	}
 
 	req := &proto.UpsertRequest{
-		Table:    "ExampleTable",
+		Table:    table,
 		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
 		DataType: int32(tools.UpsertDataJSON),
 	}
@@ -143,13 +197,24 @@ func ExampleGenericService_Upsert() {
 	if err != nil {
 		panic(err)
 	}
+
+	tresp, err := repo.ListTables(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Print the table size in bits
+	fmt.Println(tresp.TableSet[table].Size)
+
+	// Output:
+	// 67
 }
 
 func ExampleGenericService_ListTables() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("DB_CONN_STRING")
+	dsn := os.Getenv("MONGODB_URI")
 
 	repo, err := repository.New(ctx, dsn)
 	if err != nil {
@@ -161,18 +226,38 @@ func ExampleGenericService_ListTables() {
 		panic(err)
 	}
 
+	tables := []string{}
 	for table := range rsp.TableSet {
-		fmt.Printf("Table: %q\n", table)
+		tables = append(tables, table)
 	}
+
+	fmt.Println(len(tables) > 1)
+
+	// Output:
+	// true
 }
 
 func ExampleGenericService_ListPrimaryKeys() {
 	var err error
 
 	ctx := context.TODO()
-	dsn := os.Getenv("DB_CONN_STRING")
+	dsn := os.Getenv("MONGODB_URI")
+
+	table := "table6"
 
 	repo, err := repository.New(ctx, dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	// Upsert data so that we have a collection to query on.
+	req := &proto.UpsertRequest{
+		Table:    table,
+		Data:     []byte(`[{"id": "7fd0abc0-e5ad-4cbb-8d54-f2b3f43364da"}]`),
+		DataType: int32(tools.UpsertDataJSON),
+	}
+
+	_, err = repo.Upsert(ctx, req)
 	if err != nil {
 		panic(err)
 	}
@@ -182,7 +267,9 @@ func ExampleGenericService_ListPrimaryKeys() {
 		panic(err)
 	}
 
-	for _, keys := range rsp.PKSet {
-		fmt.Printf("Primary Keys: %q\n", keys)
-	}
+	tablePKs := rsp.GetPKSet()[table].GetList()
+	fmt.Println(tablePKs[0])
+
+	// Output:
+	// _id
 }
