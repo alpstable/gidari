@@ -16,7 +16,8 @@ services:
     networks:
       - mongo_network
       - postgres_network
-    
+
+  # This is not currently being used in the Makefile.
   fmt:
     build:
       context: .
