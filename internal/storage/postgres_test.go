@@ -131,8 +131,7 @@ func TestPGMeta(t *testing.T) {
 
 		actualSQL = actualQuery
 
-		return nil, nil
-
+		return &sql.Stmt{}, nil
 	}
 
 	for _, test := range upsertTests {
