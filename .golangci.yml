@@ -46,3 +46,4 @@ issues:
         - gochecknoglobals
         - goerr113
         - maintidx
+        - lll
