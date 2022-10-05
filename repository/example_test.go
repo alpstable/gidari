@@ -15,7 +15,7 @@ func truncateGenericRepo(ctx context.Context, t *testing.T, connectionString str
 	t.Helper()
 
 	t.Cleanup(func() {
-		repo, err := repository.New(context.Background(), connectionString)
+		repo, err := repository.New(ctx, connectionString)
 		if err != nil {
 			t.Fatalf("failed to create repository: %v", err)
 		}
@@ -36,6 +36,8 @@ func TestExamples(t *testing.T) {
 	for _, tcase := range []struct{ mongoURI string }{
 		{"mongodb://mongo1:27017/repositoryExamples"},
 	} {
+		tcase := tcase
+
 		err := os.Setenv("MONGODB_URI", tcase.mongoURI)
 		if err != nil {
 			t.Fatalf("failed to set environment variable: %v", err)
@@ -75,21 +77,21 @@ func TestExamples(t *testing.T) {
 				ExampleGenericService_Upsert()
 			})
 
-		//	t.Run("ExampleGenericService_ListTables",
-		//		func(t *testing.T) {
-		//			t.Parallel()
+		t.Run("ExampleGenericService_ListTables",
+			func(t *testing.T) {
+				t.Parallel()
 
-		//			truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table5")
-		//			ExampleGenericService_ListTables()
-		//		})
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table5")
+				ExampleGenericService_ListTables()
+			})
 
-		//	t.Run("ExampleGenericService_ListPrimaryKeys",
-		//		func(t *testing.T) {
-		//			t.Parallel()
+		t.Run("ExampleGenericService_ListPrimaryKeys",
+			func(t *testing.T) {
+				t.Parallel()
 
-		//			truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table6")
-		//			ExampleGenericService_ListPrimaryKeys()
-		//		})
+				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table6")
+				ExampleGenericService_ListPrimaryKeys()
+			})
 	}
 }
 
