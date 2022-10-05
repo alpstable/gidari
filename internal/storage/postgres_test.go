@@ -140,7 +140,7 @@ func TestPGMeta(t *testing.T) {
 			t.Parallel()
 
 			expectedSQL = test.expectedSQL
-			actualQuery, err := pdb.meta.upsertStmt(ctx, test.tableName, mockPCF, 1)
+			_, err := pdb.meta.upsertStmt(ctx, test.tableName, mockPCF, 1)
 			if err != nil {
 				t.Fatalf("failed to create upsert statement: %v", err)
 			}
