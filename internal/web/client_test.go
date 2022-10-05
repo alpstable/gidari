@@ -9,7 +9,6 @@ package web
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -445,15 +444,13 @@ func createTestServerWithAPIKey(key, passphrase, secret string) *httptest.Server
 			return
 		}
 
-		// generate sign
-		var msg tools.HTTPMessage
+		// The httptest.Server handler has a trailing slash.
+		// We have to remove it because otherwise the paths will be different,
+		// and we will generate the wrong signature.
+		req.URL.Path = strings.TrimRight(req.URL.Path, "/")
 
-		// When generating a request with nil body, we get an empty message.
-		// If the request has a body, then a message should be generated for request.
-		body, _ := io.ReadAll(req.Body)
-		if req.Method != http.MethodGet && len(body) != 0 {
-			msg = tools.NewHTTPMessage(req, req.Header.Get("cb-access-timestamp"))
-		}
+		// generate sign
+		msg := tools.NewHTTPMessage(req, req.Header.Get("cb-access-timestamp"))
 
 		sign, err := msg.Sign(secret)
 		if err != nil {
