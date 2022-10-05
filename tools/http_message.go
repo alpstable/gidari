@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 // HTTPMessage represents data exchanged between server and client, typed for encryption purposes.
@@ -23,9 +22,12 @@ func NewHTTPMessage(req *http.Request, timestamp string) HTTPMessage {
 	body, _ := io.ReadAll(req.Body)
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
-	postAuthority := strings.TrimSuffix(req.URL.String(), "/")
+	path := req.URL.Path
+	if req.URL.RawQuery != "" {
+		path = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawPath)
+	}
 
-	return HTTPMessage(fmt.Sprintf("%s%s%s%s", timestamp, req.Method, postAuthority, string(body)))
+	return HTTPMessage(fmt.Sprintf("%s%s%s%s", timestamp, req.Method, path, string(body)))
 }
 
 // Sign generates the base64-encoded signature required to make requests. In particular, the signed header is generated
