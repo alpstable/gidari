@@ -15,12 +15,11 @@ type HTTPMessage string
 
 // NewHTTPMessage generates the base64-encoded message required to make API-Key-Authenticated requests.
 func NewHTTPMessage(req *http.Request, timestamp string) HTTPMessage {
-	if req.Body == nil {
-		return HTTPMessage([]byte{})
+	var body []byte
+	if req.Body != nil {
+		body, _ = io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
-
-	body, _ := io.ReadAll(req.Body)
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	requestPath := req.URL.Path
 	if req.URL.RawQuery != "" {
