@@ -155,6 +155,8 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 		return nil, fmt.Errorf("rate limiter error: %w", err)
 	}
 
+	fmt.Println("how are you not waiting?")
+
 	req, err := newHTTPRequest(ctx, cfg.Method, cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)

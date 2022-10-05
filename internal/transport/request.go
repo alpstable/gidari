@@ -37,8 +37,9 @@ type Request struct {
 	// Truncate before upserting on single request
 	Truncate *bool `yaml:"truncate"`
 
-	//
-	RateLimitConfig *RateLimitConfig `yaml:"rate_limit"`
+	// Chunks of requests should share a rate limiter, probably all of them; inheriting the rate limiter from the
+	// root configuration.
+	rateLimiter *rate.Limiter
 }
 
 // newFetchConfig will constrcut a new HTTP request from the transport request.
@@ -55,16 +56,11 @@ func (req *Request) newFetchConfig(rurl url.URL, client *web.Client) *web.FetchC
 		rurl.RawQuery = query.Encode()
 	}
 
-	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
-	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
-	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(*req.RateLimitConfig.Period), *req.RateLimitConfig.Burst)
-
 	return &web.FetchConfig{
 		Method:      req.Method,
 		URL:         &rurl,
 		C:           client,
-		RateLimiter: rateLimiter,
+		RateLimiter: req.rateLimiter,
 	}
 }
 
