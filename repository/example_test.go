@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/alpine-hodler/gidari/proto"
@@ -33,9 +34,22 @@ func TestExamples(t *testing.T) {
 	t.Cleanup(tools.Quiet()) // This will suppress the `fmt` print statements in CI
 	t.Parallel()
 
-	for _, tcase := range []struct{ mongoURI string }{
-		{"mongodb://mongo1:27017/repositoryExamples"},
+	mux := sync.Mutex{}
+
+	for _, tcase := range []struct {
+		name     string
+		mongoURI string
+		table    string
+		ex       func()
+	}{
+		{"New", "mongodb://mongo1:27017/coll1", "table1", ExampleNew},
+		{"NewTx", "mongodb://mongo1:27017/coll2", "table2", ExampleNewTx},
+		{"Truncate", "mongodb://mongo1:27017/coll3", "table3", ExampleGenericService_Truncate},
+		{"Upsert", "mongodb://mongo1:27017/coll4", "table4", ExampleGenericService_Upsert},
+		{"ListTables", "mongodb://mongo1:27017/coll5", "table5", ExampleGenericService_ListTables},
 	} {
+		mux.Lock()
+
 		tcase := tcase
 
 		err := os.Setenv("MONGODB_URI", tcase.mongoURI)
@@ -44,54 +58,16 @@ func TestExamples(t *testing.T) {
 		}
 
 		// Register the example tests
+		t.Run(tcase.name, func(t *testing.T) {
+			t.Parallel()
 
-		t.Run("Example_New",
-			func(t *testing.T) {
-				t.Parallel()
+			ctx := context.Background()
+			truncateGenericRepo(ctx, t, tcase.mongoURI, tcase.table)
 
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table1")
-				ExampleNew()
-			})
+			tcase.ex()
+		})
 
-		t.Run("Example_NewTx",
-			func(t *testing.T) {
-				t.Parallel()
-
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table2")
-				ExampleNewTx()
-			})
-
-		t.Run("ExampleGenericService_Truncate",
-			func(t *testing.T) {
-				t.Parallel()
-
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table3")
-				ExampleGenericService_Truncate()
-			})
-
-		t.Run("ExampleGenericService_Upsert",
-			func(t *testing.T) {
-				t.Parallel()
-
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table4")
-				ExampleGenericService_Upsert()
-			})
-
-		t.Run("ExampleGenericService_ListTables",
-			func(t *testing.T) {
-				t.Parallel()
-
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table5")
-				ExampleGenericService_ListTables()
-			})
-
-		t.Run("ExampleGenericService_ListPrimaryKeys",
-			func(t *testing.T) {
-				t.Parallel()
-
-				truncateGenericRepo(context.TODO(), t, tcase.mongoURI, "table6")
-				ExampleGenericService_ListPrimaryKeys()
-			})
+		mux.Unlock()
 	}
 }
 
