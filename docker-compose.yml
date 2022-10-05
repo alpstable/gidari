@@ -28,6 +28,7 @@ services:
       - mongo_network
     volumes:
       - ./.db/mongo1:/data/db
+      - ./scripts/wait-for-mongodb.sh:/scripts/wait-for-mongodb.sh
       - ./scripts/rs-init.sh:/scripts/rs-init.sh
     links:
       - mongo2

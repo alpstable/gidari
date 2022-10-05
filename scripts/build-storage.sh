@@ -26,8 +26,8 @@ docker-compose -f "docker-compose.yml" up -d \
 	--force-recreate \
 	--build mongo3
 
-echo "Waiting for MongoDB to start..."
-sleep 5
+echo -n "Waiting for MongoDB to start..."
+docker-compose -f "docker-compose.yml" exec -T mongo1 /scripts/wait-for-mongodb.sh
 
 echo "Creating replica set..."
 docker-compose -f "docker-compose.yml" exec -T mongo1 /scripts/rs-init.sh
