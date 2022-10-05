@@ -40,7 +40,8 @@ ci:
 # lint runs the linter.
 .PHONY: lint
 lint:
-	golangci-lint run --config .golangci.yml
+	docker rmi -f gidari_lint || true
+	docker-compose -f docker-compose.yml run --rm lint
 
 # fmt runs the formatter.
 .PHONY: fmt

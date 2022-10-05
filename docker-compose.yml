@@ -17,6 +17,11 @@ services:
       - mongo_network
       - postgres_network
 
+  lint:
+    build:
+      context: .
+      dockerfile: scripts/lint.Dockerfile
+
   mongo1:
     hostname: mongo1
     image: mongo
