@@ -40,8 +40,8 @@ ci:
 # lint runs the linter.
 .PHONY: lint
 lint:
-	docker rmi -f gidari_lint || true
-	docker-compose -f docker-compose.yml run --rm lint
+	chmod +rwx scripts/*.sh
+	scripts/lint.sh
 
 # fmt runs the formatter.
 .PHONY: fmt
