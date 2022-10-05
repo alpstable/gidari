@@ -24,7 +24,7 @@ func NewHTTPMessage(req *http.Request, timestamp string) HTTPMessage {
 
 	path := req.URL.Path
 	if req.URL.RawQuery != "" {
-		path = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawPath)
+		path = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawQuery)
 	}
 
 	return HTTPMessage(fmt.Sprintf("%s%s%s%s", timestamp, req.Method, path, string(body)))
