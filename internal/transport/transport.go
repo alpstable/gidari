@@ -24,6 +24,7 @@ import (
 	"github.com/alpine-hodler/gidari/repository"
 	"github.com/alpine-hodler/gidari/tools"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	"gopkg.in/yaml.v2"
 )
 
@@ -209,20 +210,23 @@ func NewConfig(yamlBytes []byte) (*Config, error) {
 		return nil, fmt.Errorf("unable to parse URL: %w", err)
 	}
 
+	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
+	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
+	// different endpoints could cause a rate limit error on a web API.
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
+
 	// Update default request data.
 	for _, req := range cfg.Requests {
 		if req.Method == "" {
 			req.Method = http.MethodGet
 		}
 
-		if req.RateLimitConfig == nil {
-			req.RateLimitConfig = cfg.RateLimitConfig
-		}
-
 		if req.Table == "" {
 			endpointParts := strings.Split(req.Endpoint, "/")
 			req.Table = endpointParts[len(endpointParts)-1]
 		}
+
+		req.rateLimiter = rateLimiter
 	}
 
 	return &cfg, nil
@@ -449,22 +453,21 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 		escapedPath := strings.ReplaceAll(rsp.Request.URL.Path, "\n", "")
 		escapedPath = strings.ReplaceAll(escapedPath, "\r", "")
 
+		escapedHost := strings.ReplaceAll(rsp.Request.URL.Host, "\n", "")
+		escapedHost = strings.ReplaceAll(escapedHost, "\r", "")
+
 		logInfo := tools.LogFormatter{
 			WorkerID:   workerID,
 			WorkerName: "web",
 			Duration:   time.Since(start),
+			Host:       escapedHost,
 			Msg:        fmt.Sprintf("web request completed: %s", escapedPath),
 		}
 		job.logger.Infof(logInfo.String())
 	}
 }
 
-// Truncate will truncate the defined tables in the configuration.
-func Truncate(ctx context.Context, cfg *Config) error {
-	if !cfg.Truncate {
-		return nil
-	}
-
+func truncate(ctx context.Context, cfg *Config, truncateRequest *proto.TruncateRequest) error {
 	start := time.Now()
 
 	repos, closeRepos, err := cfg.repos(ctx)
@@ -473,14 +476,6 @@ func Truncate(ctx context.Context, cfg *Config) error {
 	}
 
 	defer closeRepos()
-
-	// truncateRequest is a special request that will truncate the table before upserting data.
-	truncateRequest := new(proto.TruncateRequest)
-
-	for _, req := range cfg.Requests {
-		// Add the table to the list of tables to truncate.
-		truncateRequest.Tables = append(truncateRequest.Tables, req.Table)
-	}
 
 	for _, repo := range repos {
 		start := time.Now()
@@ -508,6 +503,30 @@ func Truncate(ctx context.Context, cfg *Config) error {
 	cfg.Logger.Info(logInfo.String())
 
 	return nil
+}
+
+// Truncate will truncate the defined tables in the configuration.
+func Truncate(ctx context.Context, cfg *Config) error {
+	// truncateRequest is a special request that will truncate the table before upserting data.
+	truncateRequest := new(proto.TruncateRequest)
+
+	if cfg.Truncate {
+		for _, req := range cfg.Requests {
+			// Add the table to the list of tables to truncate.
+			if req.Truncate != nil && *req.Truncate {
+				truncateRequest.Tables = append(truncateRequest.Tables, req.Table)
+			}
+		}
+	} else {
+		// checking for request-specific truncate
+		for _, req := range cfg.Requests {
+			if table := req.Table; req.Truncate != nil && *req.Truncate && table != "" {
+				truncateRequest.Tables = append(truncateRequest.Tables, table)
+			}
+		}
+	}
+
+	return truncate(ctx, cfg, truncateRequest)
 }
 
 // Upsert will use the configuration file to upsert data from the

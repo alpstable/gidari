@@ -8,3 +8,9 @@ requests:
   -
     endpoint: /us/98121
     table: seatle
+    truncate: false
+  -
+    endpoint: /us/94701
+    table: berkeley
+    truncate: true
+    

@@ -17,10 +17,19 @@ services:
       - mongo_network
       - postgres_network
 
+
   lint:
     build:
       context: .
       dockerfile: scripts/lint.Dockerfile
+
+# This is not currently being used in the Makefile.
+  fmt:
+    build:
+      context: .
+      dockerfile: scripts/fmt.Dockerfile
+    volumes:
+      - .:/app
 
   mongo1:
     hostname: mongo1
@@ -33,6 +42,7 @@ services:
       - mongo_network
     volumes:
       - ./.db/mongo1:/data/db
+      - ./scripts/wait-for-mongodb.sh:/scripts/wait-for-mongodb.sh
       - ./scripts/rs-init.sh:/scripts/rs-init.sh
     links:
       - mongo2

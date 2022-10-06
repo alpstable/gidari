@@ -18,6 +18,7 @@ type LogFormatter struct {
 	WorkerID      int
 	WorkerName    string
 	Duration      time.Duration
+	Host          string
 	Msg           string
 	UpsertedCount int64
 	MatchedCount  int64
@@ -32,6 +33,9 @@ const (
 
 	// LogFormatterDuration the label of the duration.
 	LogFormatterDuration = "d"
+
+	// LogFormatterHostName the label of the host name.
+	LogFormatterHostName = "host"
 
 	// LogFormatterMsg the label of the message.
 	LogFormatterMsg = "m"
@@ -57,6 +61,10 @@ func (lf LogFormatter) String() string {
 
 	if lf.Duration > 0 {
 		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterDuration, lf.Duration))
+	}
+
+	if lf.Host != "" {
+		bldr.WriteString(fmt.Sprintf("%s:%s, ", LogFormatterHostName, lf.Host))
 	}
 
 	if lf.UpsertedCount > 0 {
