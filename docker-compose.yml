@@ -12,22 +12,20 @@ services:
   ci:
     build:
       context: .
-      dockerfile: scripts/ci.Dockerfile
+      dockerfile: docker/ci.Dockerfile
     networks:
       - mongo_network
       - postgres_network
 
-
   lint:
     build:
       context: .
-      dockerfile: scripts/lint.Dockerfile
+      dockerfile: docker/lint.Dockerfile
 
-# This is not currently being used in the Makefile.
   fmt:
     build:
       context: .
-      dockerfile: scripts/fmt.Dockerfile
+      dockerfile: docker/fmt.Dockerfile
     volumes:
       - .:/app
 
