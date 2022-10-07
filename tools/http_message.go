@@ -48,10 +48,8 @@ func (msg HTTPMessage) Sign(secret string) (string, error) {
 
 	signature := hmac.New(sha256.New, key)
 
-	_, err = signature.Write([]byte(msg))
-	if err != nil {
-		return "", fmt.Errorf("error writing signature: %w", err)
-	}
+	// Don't handle error because hash.Write method never returns an error.
+	signature.Write([]byte(msg))
 
 	return base64.StdEncoding.EncodeToString(signature.Sum(nil)), nil
 }
