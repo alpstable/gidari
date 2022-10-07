@@ -40,7 +40,8 @@ ci:
 # lint runs the linter.
 .PHONY: lint
 lint:
-	golangci-lint run --config .golangci.yml
+	chmod +rwx scripts/*.sh
+	scripts/lint.sh
 
 # fmt runs the formatter.
 .PHONY: fmt
