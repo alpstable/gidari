@@ -9,7 +9,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"strings"
 
@@ -24,44 +24,47 @@ const (
 	flagVerbose = "verbose"
 )
 
-var (
-	configFilepath string // configFilepath is the path to the configuration file.
-	verbose        bool   // verbose is a flag that enables verbose logging.
-)
+func RootCommand() *cobra.Command {
+	var (
+		configFilepath string // configFilepath is the path to the configuration file.
+		verbose        bool   // verbose is a flag that enables verbose logging.
+	)
 
-var rootCMD = &cobra.Command{
-	Long: "Gidari is a tool for querying web APIs and persisting resultant data onto local storage\n" +
-		"using a configuration file.",
+	rootCMD := &cobra.Command{
+		Long: "Gidari is a tool for querying web APIs and persisting resultant data onto local storage\n" +
+			"using a configuration file.",
 
-	Use:     "gidari",
-	Short:   "Persist data from the web to your database",
-	Example: "gidari --config config.yaml",
-	Version: version.Gidari,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		v, err := cmd.Flags().GetString(flagConfig)
-		if err != nil {
-			return err
-		}
+		Use:     "gidari",
+		Short:   "Persist data from the web to your database",
+		Example: "gidari --config config.yaml",
+		Version: version.Gidari,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			value, err := cmd.Flags().GetString(flagConfig)
+			if err != nil {
+				//nolint:wrapcheck // need not wrap the error
+				return err
+			}
 
-		if !strings.HasSuffix(v, ".yaml") && !strings.HasSuffix(v, ".yml") {
-			return fmt.Errorf("configuration must be a YAML document")
-		}
+			if !strings.HasSuffix(value, ".yaml") && !strings.HasSuffix(value, ".yml") {
+				//nolint:goerr113 // don't have static error
+				return errors.New("configuration must be a YAML document")
+			}
 
-		return nil
-	},
-	RunE: runE,
-}
+			return nil
+		},
+		RunE: func(_ *cobra.Command, args []string) error { return runE(configFilepath, verbose) },
+	}
 
-func Execute() error {
 	rootCMD.PersistentFlags().StringVarP(&configFilepath, flagConfig, "c", "", "path to configuration")
 	rootCMD.PersistentFlags().BoolVar(&verbose, flagVerbose, false, "print log data as the binary executes")
 
 	_ = rootCMD.MarkPersistentFlagRequired(flagConfig)
 
-	return rootCMD.Execute()
+	return rootCMD
 }
 
-func runE(cmd *cobra.Command, _ []string) error {
+//nolint:wrapcheck // need not wrap the error
+func runE(configFilepath string, verbose bool) error {
 	file, err := os.Open(configFilepath)
 	if err != nil {
 		return err
