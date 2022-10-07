@@ -33,11 +33,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 			timestamp := currentTimestamp()
 
-			msg := NewHTTPMessage(req, timestamp)
+			message := NewHTTPMessage(req, timestamp)
 
 			expected := HTTPMessage(fmt.Sprintf("%s%s/path", timestamp, tcase.method))
-			if msg != expected {
-				t.Fatalf("expected %s, got %s", expected, msg)
+			if message != expected {
+				t.Fatalf("expected %s, got %s", expected, message)
 			}
 		}
 	})
@@ -54,11 +54,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		timestamp := currentTimestamp()
 
-		msg := NewHTTPMessage(req, timestamp)
+		message := NewHTTPMessage(req, timestamp)
 
 		expected := HTTPMessage(fmt.Sprintf("%sGET/path", timestamp))
-		if msg != expected {
-			t.Fatalf("expected %s, got %s", expected, msg)
+		if message != expected {
+			t.Fatalf("expected %s, got %s", expected, message)
 		}
 	})
 
@@ -74,11 +74,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		timestamp := currentTimestamp()
 
-		msg := NewHTTPMessage(req, timestamp)
+		message := NewHTTPMessage(req, timestamp)
 
 		expected := HTTPMessage(fmt.Sprintf("%sGET/path?param=1", timestamp))
-		if msg != expected {
-			t.Fatalf("expected %s, got %s", expected, msg)
+		if message != expected {
+			t.Fatalf("expected %s, got %s", expected, message)
 		}
 	})
 
@@ -96,11 +96,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		timestamp := currentTimestamp()
 
-		msg := NewHTTPMessage(req, timestamp)
+		message := NewHTTPMessage(req, timestamp)
 
 		expected := HTTPMessage(fmt.Sprintf("%sGET{\"username\":\"john doe\"}", timestamp))
-		if msg != expected {
-			t.Fatalf("expected %s, got %s", expected, msg)
+		if message != expected {
+			t.Fatalf("expected %s, got %s", expected, message)
 		}
 	})
 
@@ -118,11 +118,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		timestamp := currentTimestamp()
 
-		msg := NewHTTPMessage(req, timestamp)
+		message := NewHTTPMessage(req, timestamp)
 
 		expected := HTTPMessage(fmt.Sprintf("%sGET/path?param=1{\"username\":\"john doe\"}", timestamp))
-		if msg != expected {
-			t.Fatalf("expected %s, got %s", expected, msg)
+		if message != expected {
+			t.Fatalf("expected %s, got %s", expected, message)
 		}
 	})
 
@@ -138,11 +138,11 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		timestamp := currentTimestamp()
 
-		msg := NewHTTPMessage(req, timestamp)
+		message := NewHTTPMessage(req, timestamp)
 
 		expected := HTTPMessage(fmt.Sprintf("%sGET", timestamp))
-		if msg != expected {
-			t.Fatalf("expected %s, got %s", expected, msg)
+		if message != expected {
+			t.Fatalf("expected %s, got %s", expected, message)
 		}
 	})
 }
