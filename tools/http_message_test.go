@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -143,6 +144,53 @@ func TestNewHTTPMessage(t *testing.T) {
 		expected := HTTPMessage(fmt.Sprintf("%sGET", timestamp))
 		if message != expected {
 			t.Fatalf("expected %s, got %s", expected, message)
+		}
+	})
+}
+
+func TestHTTPMessage_Sign(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sign", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tcase := range []struct {
+			message HTTPMessage
+			secret  string
+		}{
+			{message: HTTPMessage("first"), secret: "1234"},
+			{message: HTTPMessage("second"), secret: "12341234"},
+			{message: HTTPMessage("third"), secret: "123412341234"},
+		} {
+			signature, err := tcase.message.Sign(tcase.secret)
+			if err != nil {
+				t.Fatalf("signature creation error: %v", err)
+			}
+			if signature == "" {
+				t.Fatal("expected signature, got empty string")
+			}
+			if _, err = base64.StdEncoding.DecodeString(signature); err != nil {
+				t.Fatalf("signature decoding error: %v", err)
+			}
+		}
+	})
+
+	t.Run("invalid secret", func(t *testing.T) {
+		t.Parallel()
+
+		message := HTTPMessage("message")
+
+		for _, tcase := range []struct {
+			secret string
+		}{
+			{secret: "1"},
+			{secret: "12345"},
+			{secret: "@@@@"},
+			{secret: "\\\\\\\\"},
+		} {
+			if _, err := message.Sign(tcase.secret); err == nil {
+				t.Fatalf("expected error, got nil")
+			}
 		}
 	})
 }
