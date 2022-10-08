@@ -202,74 +202,75 @@ func TestStartTx(t *testing.T) {
 				t.Fatalf("expected data to be rolled back")
 			}
 		})
-		t.Run("tx should commit in parallel with the same context", func(t *testing.T) {
+		t.Run(fmt.Sprintf("tx should commit in parallel %s", dns), func(t *testing.T) {
 			t.Parallel()
 
 			// Run this test 3 times.
-			for j := 0; j < 3; j++ {
-				errs, ctx := errgroup.WithContext(context.Background())
-				for i := 0; i < 10; i++ {
-					errs.Go(func() error {
-						// Get a random number between 5 and 10.
-						byts := []byte{0}
-						if _, err := rand.Reader.Read(byts); err != nil {
-							panic(err)
-						}
-						randNum := byts[0]%5 + 5
+			errs, _ := errgroup.WithContext(context.Background())
 
-						testTable := fmt.Sprintf("tests%d", randNum)
+			ctx := context.Background()
+			for itr := 0; itr < 10; itr++ {
+				errs.Go(func() error {
+					// Get a random number between 5 and 10.
+					byts := []byte{0}
+					if _, err := rand.Reader.Read(byts); err != nil {
+						panic(err)
+					}
+					randNum := byts[0]%5 + 5
 
-						// Wait for a random amount of milliseconds.
+					testTable := fmt.Sprintf("tests%d", randNum)
 
-						sleepDuration := time.Duration(byts[0]) * time.Millisecond
-						time.Sleep(sleepDuration)
+					// Wait for a random amount of milliseconds.
 
-						txn, err := stg.StartTx(ctx)
-						if err != nil {
-							return fmt.Errorf("failed to start transaction: %w", err)
-						}
+					sleepDuration := time.Duration(byts[0]) * time.Millisecond
+					time.Sleep(sleepDuration)
 
-						// Encode some JSON data to test with.
-						data := map[string]interface{}{"test_string": "test", "id": "1"}
-						bytes, err := json.Marshal(data)
-						if err != nil {
-							return fmt.Errorf("failed to marshal data: %w", err)
-						}
+					txn, err := stg.StartTx(ctx)
+					if err != nil {
+						return fmt.Errorf("failed to start transaction: %w", err)
+					}
 
-						// Insert some data.
-						txn.Send(func(sctx context.Context, stg Storage) error {
-							_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-								Table:    testTable,
-								Data:     bytes,
-								DataType: int32(tools.UpsertDataJSON),
-							})
-							if err != nil {
-								return fmt.Errorf("failed to upsert data: %w", err)
-							}
+					// Encode some JSON data to test with.
+					data := map[string]interface{}{"test_string": "test", "id": "1"}
+					bytes, err := json.Marshal(data)
+					if err != nil {
+						return fmt.Errorf("failed to marshal data: %w", err)
+					}
 
-							return nil
+					// Insert some data.
+					txn.Send(func(sctx context.Context, stg Storage) error {
+						_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+							Table:    testTable,
+							Data:     bytes,
+							DataType: int32(tools.UpsertDataJSON),
 						})
-
-						if err := txn.Commit(); err != nil {
-							return fmt.Errorf("failed to commit transaction: %w", err)
-						}
-
-						// Check that the data was inserted.
-						tableInfo, err := stg.ListTables(ctx)
 						if err != nil {
-							return fmt.Errorf("failed to list tables: %w", err)
-						}
-
-						if tableInfo.GetTableSet()[testTable].GetSize() == 0 {
-							return fmt.Errorf("expected data to be inserted for %q", testTable2)
+							return fmt.Errorf("failed to upsert data: %w", err)
 						}
 
 						return nil
 					})
-				}
+
+					if err := txn.Commit(); err != nil {
+						return fmt.Errorf("failed to commit transaction: %w", err)
+					}
+
+					// Check that the data was inserted.
+					tableInfo, err := stg.ListTables(ctx)
+					if err != nil {
+						return fmt.Errorf("failed to list tables: %w", err)
+					}
+
+					if tableInfo.GetTableSet()[testTable].GetSize() == 0 {
+						return fmt.Errorf("expected data to be inserted for %q",
+							testTable)
+					}
+
+					return nil
+				})
 
 				if err := errs.Wait(); err != nil {
-					t.Fatalf("failed to commit transaction: %v", err)
+					t.Fatal(err)
 				}
 			}
 		})
