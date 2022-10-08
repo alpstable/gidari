@@ -34,7 +34,7 @@ func TestNewHTTPMessage(t *testing.T) {
 			{method: http.MethodPut},
 			{method: http.MethodDelete},
 		} {
-			req, err := http.NewRequestWithContext(ctx, tcase.method, "https://someurl.com/path", nil)
+			req, err := http.NewRequestWithContext(ctx, tcase.method, "https://foo/path", nil)
 			if err != nil {
 				t.Fatalf("error creating request: %v", err)
 			}
@@ -55,7 +55,7 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		ctx := context.Background()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://someurl.com/path", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo/path", nil)
 		if err != nil {
 			t.Fatalf("error creating request: %v", err)
 		}
@@ -75,7 +75,7 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		ctx := context.Background()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://someurl.com/path?param=1", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo/path?param=1", nil)
 		if err != nil {
 			t.Fatalf("error creating request: %v", err)
 		}
@@ -97,7 +97,7 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		body := strings.NewReader(`{"username":"john doe"}`)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://someurl.com", body)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo", body)
 		if err != nil {
 			t.Fatalf("error creating request: %v", err)
 		}
@@ -119,7 +119,7 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		body := strings.NewReader(`{"username":"john doe"}`)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://someurl.com/path?param=1", body)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo/path?param=1", body)
 		if err != nil {
 			t.Fatalf("error creating request: %v", err)
 		}
@@ -139,7 +139,7 @@ func TestNewHTTPMessage(t *testing.T) {
 
 		ctx := context.Background()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://someurl.com", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo", nil)
 		if err != nil {
 			t.Fatalf("error creating request: %v", err)
 		}
