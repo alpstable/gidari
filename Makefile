@@ -40,14 +40,12 @@ ci:
 # lint runs the linter.
 .PHONY: lint
 lint:
-	chmod +rwx scripts/*.sh
 	scripts/lint.sh
 
 # fmt runs the formatter.
 .PHONY: fmt
 fmt:
-	docker build -t gofumpt -f scripts/fmt.Dockerfile .
-	docker run -t -v $(PWD):/app gofumpt
+	./scripts/fmt.sh
 
 # add-license adds the license to all the top of all the .go files.
 .PHONY: add-license
