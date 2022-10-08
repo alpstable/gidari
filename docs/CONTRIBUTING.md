@@ -23,10 +23,10 @@ All pull requests are subject to the GitHub workflow CI defined in the Actions s
 
 To develop locally you need to install the following dependencies:
 
-1. Docker: https://docs.docker.com/get-docker/
-2. Go: https://go.dev/doc/install
-3. protobuf: http://google.github.io/proto-lens/installing-protoc.html
-4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
+1. [Docker](https://docs.docker.com/get-docker/)
+2. [Go](https://go.dev/doc/install)
+3. [protobuf](http://google.github.io/proto-lens/installing-protoc.html)
+4. [protoc-gen-go](https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers)
 
 ## Build
 
