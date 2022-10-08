@@ -136,14 +136,11 @@ func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *Txn) *errgroup.Gro
 func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 		// Start the transaction, if there is an error break the go routine.
-		err := sctx.StartTransaction()
-		if err != nil {
+		if err := sctx.StartTransaction(); err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)
 		}
 
-		errs := m.receiveWrites(sctx, txn)
-		err = errs.Wait()
-		if err != nil {
+		if err := m.receiveWrites(sctx, txn).Wait(); err != nil {
 			return fmt.Errorf("error in transaction: %w", err)
 		}
 
