@@ -17,8 +17,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alpine-hodler/gidari/proto"
-	"github.com/alpine-hodler/gidari/tools"
+	"github.com/alpstable/gidari/proto"
+	"github.com/alpstable/gidari/tools"
 	"github.com/google/uuid"
 	"github.com/lib/pq" // postgres driver
 )
@@ -380,7 +380,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	// 	sessionBusyRatio = *pg.opts.SessionBusyRatio
 	// } else {
 	// These queries for this db are typically expected to be 1-1 with upserting and finding records definied in the
-	// alpine-hodler/web API. That is, they should be extremely simple and devoid of business logic, and so the default
+	// alpstable/web API. That is, they should be extremely simple and devoid of business logic, and so the default
 	// value for this ratio is 1.
 	// }
 
@@ -389,7 +389,7 @@ func (pg *Postgres) setMaxOpenConns() {
 	// 	avgParallelism = *pg.opts.AvgParallelism
 	// } else {
 	// These queries for this db are typically expected to be 1-1 with upserting and finding records definied in the
-	// alpine-hodler/web API. That is, they should be extremely simple and devoid of business logic, and so the default
+	// alpstable/web API. That is, they should be extremely simple and devoid of business logic, and so the default
 	// value for this average is one. We expect that the average number of backend processes working on a SINGLE query
 	// to be 1.
 	// }

@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/alpine-hodler/gidari/internal/web/auth"
+	"github.com/alpstable/gidari/internal/web/auth"
 	"golang.org/x/time/rate"
 )
 

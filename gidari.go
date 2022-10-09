@@ -13,7 +13,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/alpine-hodler/gidari/internal/transport"
+	"github.com/alpstable/gidari/internal/transport"
 )
 
 // Config is the configuration object used to make programatic Transport requests.

@@ -1,4 +1,4 @@
-module github.com/alpine-hodler/gidari
+module github.com/alpstable/gidari
 
 go 1.19
 

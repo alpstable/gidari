@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/alpine-hodler/gidari/internal/web"
+	"github.com/alpstable/gidari/internal/web"
 	"golang.org/x/time/rate"
 )
 
