@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,36 +30,97 @@ func truncateStorage(ctx context.Context, t *testing.T, stg Storage, tables ...s
 	}
 }
 
-func TestTruncate(t *testing.T) {
-	t.Parallel()
+type testRunner struct {
+	dns        string
+	table      string
+	data       map[string]interface{}
+	rollback   bool
+	forceError bool
+}
 
-	for _, tcase := range []struct{ dns string }{
-		{"mongodb://mongo1:27017/db1"},
-		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	} {
-		dns := tcase.dns
-		t.Run(fmt.Sprintf("empty case: %s", dns), func(t *testing.T) {
-			t.Parallel()
+func (runner testRunner) upsertJSON(ctx context.Context, t *testing.T, mtx *sync.Mutex) *proto.ListTablesResponse {
+	t.Helper()
 
-			ctx := context.Background()
-			testTable := "tests1"
+	// Lock the mutext between upsert calls
+	mtx.Lock()
+	defer mtx.Unlock()
 
-			stg, err := New(ctx, dns)
+	stg, err := New(ctx, runner.dns)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	truncateStorage(ctx, t, stg, runner.table)
+	t.Cleanup(func() {
+		truncateStorage(ctx, t, stg, runner.table)
+		stg.Close()
+
+		t.Logf("connection closed: %q", runner.dns)
+	})
+
+	txn, err := stg.StartTx(ctx)
+	if err != nil {
+		t.Fatalf("failed to start transaction: %v", err)
+	}
+
+	// Encode some JSON data to test with.
+	bytes, err := json.Marshal(runner.data)
+	if err != nil {
+		t.Fatalf("failed to marshal data: %v", err)
+	}
+
+	// Insert some data.
+	if runner.forceError {
+		// Send twice to make sure the first one fails.
+		txn.Send(func(_ context.Context, _ Storage) error {
+			return fmt.Errorf("test error")
+		})
+
+		txn.Send(func(_ context.Context, _ Storage) error {
+			return nil
+		})
+
+		if err := txn.Commit(); err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+	} else {
+		txn.Send(func(sctx context.Context, stg Storage) error {
+			_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+				Table:    runner.table,
+				Data:     bytes,
+				DataType: int32(tools.UpsertDataJSON),
+			})
 			if err != nil {
-				t.Fatalf("failed to create storage: %v", err)
+				return fmt.Errorf("failed to upsert data: %w", err)
 			}
 
-			truncateStorage(ctx, t, stg, testTable)
-			t.Cleanup(func() {
-				truncateStorage(ctx, t, stg)
-				stg.Close()
-			})
+			return nil
 		})
+		if runner.rollback {
+			if err := txn.Rollback(); err != nil {
+				t.Fatalf("failed to rollback transaction: %v", err)
+			}
+		} else {
+			if err := txn.Commit(); err != nil {
+				t.Fatalf("failed to commit transaction: %v", err)
+			}
+		}
 	}
+
+	// Check that the data was inserted.
+	tableInfo, err := stg.ListTables(ctx)
+	if err != nil {
+		t.Fatalf("failed to list tables: %v", err)
+	}
+
+	return tableInfo
 }
 
 func TestStartTx(t *testing.T) {
 	t.Parallel()
+
+	// mtx for locking writes between tests
+	mtx := &sync.Mutex{}
 
 	for _, tcase := range []struct{ dns string }{
 		{"mongodb://mongo1:27017/db2"},
@@ -67,138 +129,58 @@ func TestStartTx(t *testing.T) {
 		dns := tcase.dns
 		ctx := context.Background()
 
-		stg, err := New(ctx, dns)
-		if err != nil {
-			t.Fatalf("failed to create client: %v", err)
-		}
-
-		const (
-			testTable2 = "tests2"
-			testTable3 = "tests3"
-			testTable4 = "tests4"
-		)
-
-		truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
-		t.Cleanup(func() {
-			truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
-			stg.Close()
-
-			t.Logf("connection closed: %q", dns)
-		})
+		const testsTable = "tests1"
 
 		t.Run(fmt.Sprintf("tx should commit %s", dns), func(t *testing.T) {
 			t.Parallel()
 
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
+			runner := testRunner{
+				dns:   dns,
+				table: testsTable,
+				data: map[string]interface{}{
+					"test_string": "test",
+					"id":          "1",
+				},
 			}
 
-			// Encode some JSON data to test with.
-			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			bytes, err := json.Marshal(data)
-			if err != nil {
-				t.Fatalf("failed to marshal data: %v", err)
-			}
-
-			// Insert some data.
-			txn.Send(func(sctx context.Context, stg Storage) error {
-				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    testTable2,
-					Data:     bytes,
-					DataType: int32(tools.UpsertDataJSON),
-				})
-				if err != nil {
-					return fmt.Errorf("failed to upsert data: %w", err)
-				}
-
-				return nil
-			})
-
-			if err := txn.Commit(); err != nil {
-				t.Fatalf("failed to commit transaction: %v", err)
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable2].GetSize() == 0 {
-				t.Fatalf("expected data to be inserted for %q", testTable2)
+			tableInfo := runner.upsertJSON(ctx, t, mtx)
+			if tableInfo.GetTableSet()[testsTable].GetSize() == 0 {
+				t.Fatalf("expected data to be inserted for %q", testsTable)
 			}
 		})
 		t.Run(fmt.Sprintf("tx should rollback %s", dns), func(t *testing.T) {
 			t.Parallel()
 
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
+			runner := testRunner{
+				dns:   dns,
+				table: testsTable,
+				data: map[string]interface{}{
+					"test_string": "test",
+					"id":          "1",
+				},
+				rollback: true,
 			}
 
-			// Encode some JSON data to test with.
-			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			dataBytes, err := json.Marshal(data)
-			if err != nil {
-				t.Fatalf("failed to marshal data: %v", err)
-			}
-
-			// Insert some data.
-			txn.Send(func(sctx context.Context, stg Storage) error {
-				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    testTable3,
-					Data:     dataBytes,
-					DataType: int32(tools.UpsertDataJSON),
-				})
-				if err != nil {
-					return fmt.Errorf("failed to insert data: %w", err)
-				}
-
-				return nil
-			})
-
-			if err := txn.Rollback(); err != nil {
-				t.Fatalf("failed to rollback transaction: %v", err)
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable3].GetSize() != 0 {
+			tableInfo := runner.upsertJSON(ctx, t, mtx)
+			if tableInfo.GetTableSet()[testsTable].GetSize() != 0 {
 				t.Fatalf("expected data to be rolled back")
 			}
 		})
 		t.Run(fmt.Sprintf("tx should rollback on error %s", dns), func(t *testing.T) {
 			t.Parallel()
 
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
+			runner := testRunner{
+				dns:   dns,
+				table: testsTable,
+				data: map[string]interface{}{
+					"test_string": "test",
+					"id":          "1",
+				},
+				forceError: true,
 			}
 
-			txn.Send(func(_ context.Context, _ Storage) error {
-				return fmt.Errorf("test error")
-			})
-
-			txn.Send(func(_ context.Context, _ Storage) error {
-				return nil
-			})
-
-			if err := txn.Commit(); err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable4].GetSize() != 0 {
+			tableInfo := runner.upsertJSON(ctx, t, mtx)
+			if tableInfo.GetTableSet()[testsTable].GetSize() != 0 {
 				t.Fatalf("expected data to be rolled back")
 			}
 		})

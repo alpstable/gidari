@@ -45,7 +45,7 @@ lint:
 # fmt runs the formatter.
 .PHONY: fmt
 fmt:
-	./scripts/fmt.sh
+	scripts/fmt.sh
 
 # add-license adds the license to all the top of all the .go files.
 .PHONY: add-license
