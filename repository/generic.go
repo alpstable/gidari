@@ -11,8 +11,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alpine-hodler/gidari/internal/storage"
-	"github.com/alpine-hodler/gidari/proto"
+	"github.com/alpstable/gidari/internal/storage"
+	"github.com/alpstable/gidari/proto"
 )
 
 // ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.

@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/alpine-hodler/gidari/proto"
+	"github.com/alpstable/gidari/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

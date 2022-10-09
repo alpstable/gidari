@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alpine-hodler/gidari/internal/web/auth"
-	"github.com/alpine-hodler/gidari/tools"
+	"github.com/alpstable/gidari/internal/web/auth"
+	"github.com/alpstable/gidari/tools"
 	"golang.org/x/time/rate"
 )
 

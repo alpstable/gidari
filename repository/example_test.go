@@ -14,9 +14,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/alpine-hodler/gidari/proto"
-	"github.com/alpine-hodler/gidari/repository"
-	"github.com/alpine-hodler/gidari/tools"
+	"github.com/alpstable/gidari/proto"
+	"github.com/alpstable/gidari/repository"
+	"github.com/alpstable/gidari/tools"
 )
 
 func truncateGenericRepo(ctx context.Context, t *testing.T, connectionString string, tables ...string) {

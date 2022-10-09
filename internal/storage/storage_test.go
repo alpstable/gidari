@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpine-hodler/gidari/proto"
-	"github.com/alpine-hodler/gidari/tools"
+	"github.com/alpstable/gidari/proto"
+	"github.com/alpstable/gidari/tools"
 	"golang.org/x/sync/errgroup"
 )
 

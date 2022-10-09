@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/alpine-hodler/gidari/tools"
+	"github.com/alpstable/gidari/tools"
 )
 
 const (
