@@ -258,6 +258,7 @@ func TestConcurrentTransactions(t *testing.T) {
 		"id":          "1",
 	}
 
+	// We need to lock each iteration since we create new clients for each test case.
 	mtx := &sync.Mutex{}
 
 	for _, tcase := range []struct {
@@ -319,6 +320,11 @@ func TestConcurrentTransactions(t *testing.T) {
 			mtx.Lock()
 			defer mtx.Unlock()
 
+			// In theory, you should not start two clients that will commit competing transactions. The
+			// real goal of this tests is to see if these resources can share the same context. So we pass
+			// this lock to the test runner.
+			runnerMtx := &sync.Mutex{}
+
 			for itr := 0; itr < threshold; itr++ {
 				errs.Go(func() error {
 					// Get a random number between 5 and 10.
@@ -344,11 +350,14 @@ func TestConcurrentTransactions(t *testing.T) {
 					}
 
 					// Do not run these with a mutex as we want to test concurrent transactions.
-					tableInfo := runner.upsertWithTx(ctx, t, nil)
+					tableInfo := runner.upsertWithTx(ctx, t, runnerMtx)
 
 					if tableInfo.GetTableSet()[testTable].GetSize() != tcase.expectedUpsertSize {
-						return fmt.Errorf("expected upsert count for %q to be %q, got %d",
+						return fmt.Errorf("failure to run %q for %q on table %q: "+
+							"expected upsert count to be %d, got %d",
+							tcase.name,
 							SchemeFromConnectionString(tcase.dns),
+							testTable,
 							tcase.expectedUpsertSize,
 							tableInfo.GetTableSet()[testTable].GetSize())
 					}
