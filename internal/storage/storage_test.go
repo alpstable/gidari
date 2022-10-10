@@ -38,6 +38,43 @@ type testRunner struct {
 	forceError bool
 }
 
+// forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
+// the "Send" method. Despite two requests being sent, only the first one (the one that fails) should propagate due to
+// the error it returns.
+func forceTxnError(t *testing.T, txn *Txn) {
+	t.Helper()
+
+	txn.Send(func(_ context.Context, _ Storage) error {
+		return fmt.Errorf("test error")
+	})
+
+	txn.Send(func(_ context.Context, _ Storage) error {
+		return nil
+	})
+
+	if err := txn.Commit(); err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+// resolveTxn will either rollback or commit a transaction based on the value of the "rollback" field.
+func resolveTxn(t *testing.T, txn *Txn, rollback bool) {
+	t.Helper()
+
+	if rollback {
+		if err := txn.Rollback(); err != nil {
+			t.Fatalf("failed to rollback transaction: %v", err)
+		}
+	} else {
+		if err := txn.Commit(); err != nil {
+			t.Fatalf("failed to commit transaction: %v", err)
+		}
+	}
+}
+
+// upsertWithTx will try to simulate an upsert operation with a transaction. It will either commit or rollback the
+// transaction based on the value of the "rollback" field. It can also force an error to occur in the transaction,
+// depending on the testing requirements.
 func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sync.Mutex) *proto.ListTablesResponse {
 	t.Helper()
 
@@ -65,49 +102,32 @@ func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sy
 		t.Fatalf("failed to start transaction: %v", err)
 	}
 
+	if runner.forceError {
+		forceTxnError(t, txn)
+
+		return &proto.ListTablesResponse{}
+	}
+
 	// Encode some JSON data to test with.
 	bytes, err := json.Marshal(runner.data)
 	if err != nil {
 		t.Fatalf("failed to marshal data: %v", err)
 	}
 
-	// Insert some data.
-	if runner.forceError {
-		// Send twice to make sure the first one fails.
-		txn.Send(func(_ context.Context, _ Storage) error {
-			return fmt.Errorf("test error")
+	txn.Send(func(sctx context.Context, stg Storage) error {
+		_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+			Table:    runner.table,
+			Data:     bytes,
+			DataType: int32(tools.UpsertDataJSON),
 		})
-
-		txn.Send(func(_ context.Context, _ Storage) error {
-			return nil
-		})
-
-		if err := txn.Commit(); err == nil {
-			t.Fatalf("expected error, got nil")
+		if err != nil {
+			return fmt.Errorf("failed to upsert data: %w", err)
 		}
-	} else {
-		txn.Send(func(sctx context.Context, stg Storage) error {
-			_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-				Table:    runner.table,
-				Data:     bytes,
-				DataType: int32(tools.UpsertDataJSON),
-			})
-			if err != nil {
-				return fmt.Errorf("failed to upsert data: %w", err)
-			}
 
-			return nil
-		})
-		if runner.rollback {
-			if err := txn.Rollback(); err != nil {
-				t.Fatalf("failed to rollback transaction: %v", err)
-			}
-		} else {
-			if err := txn.Commit(); err != nil {
-				t.Fatalf("failed to commit transaction: %v", err)
-			}
-		}
-	}
+		return nil
+	})
+
+	resolveTxn(t, txn, runner.rollback)
 
 	// Check that the data was inserted.
 	tableInfo, err := stg.ListTables(ctx)
@@ -194,13 +214,11 @@ func TestTransactions(t *testing.T) {
 			data:               defaultData,
 		},
 	} {
-		// Create a runner for the test case.
+		tcase := tcase
 
 		// Test all connection strings for each case.
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
-
-			tcase := tcase
 
 			runner := testRunner{
 				table:      tcase.table,
@@ -228,7 +246,11 @@ func TestConcurrentTransactions(t *testing.T) {
 
 	// threshold is the number of concurrent transactions to run.
 	const threshold = 10
+
+	// defaultMongoDBconnString is the default MongoDB connection string to use for tests.
 	const defaultMongoDBConnString = "mongodb://mongo1:27017/defaultdb"
+
+	// defaultPostgreSQLConnString is the default PostgreSQL connection string to use for tests.
 	const defaultPostgreSQLConnString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
 
 	defaultData := map[string]interface{}{

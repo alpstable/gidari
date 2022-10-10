@@ -291,7 +291,7 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser,
 			repo.Close()
 
 			logInfo := tools.LogFormatter{
-				Msg: fmt.Sprintf("closed repository for %q", storage.Scheme(repo.Type())),
+				Msg: fmt.Sprintf("closed repository for %q", storage.SchemeFromStorageType(repo.Type())),
 			}
 			cfg.Logger.Info(logInfo.String())
 		}
@@ -396,7 +396,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 
 					rt := repo.Type()
 
-					msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.Scheme(rt), req.Table)
+					msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.SchemeFromStorageType(rt), req.Table)
 					logInfo := tools.LogFormatter{
 						WorkerID:      workerID,
 						WorkerName:    "repository",
@@ -487,7 +487,7 @@ func truncate(ctx context.Context, cfg *Config, truncateRequest *proto.TruncateR
 
 		rt := repo.Type()
 		tables := strings.Join(truncateRequest.Tables, ", ")
-		msg := fmt.Sprintf("truncated tables on %q: %v", storage.Scheme(rt), tables)
+		msg := fmt.Sprintf("truncated tables on %q: %v", storage.SchemeFromStorageType(rt), tables)
 
 		logInfo := tools.LogFormatter{
 			Duration: time.Since(start),
