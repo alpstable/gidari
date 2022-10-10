@@ -36,6 +36,7 @@ type testRunner struct {
 	data       map[string]interface{}
 	rollback   bool
 	forceError bool
+	stg        Storage
 }
 
 // forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
@@ -84,18 +85,22 @@ func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sy
 		defer mtx.Unlock()
 	}
 
-	stg, err := New(ctx, runner.dns)
-	if err != nil {
-		t.Fatalf("failed to create client: %v", err)
-	}
+	stg := runner.stg
+	if stg == nil {
+		var err error
+		stg, err = New(ctx, runner.dns)
+		if err != nil {
+			t.Fatalf("failed to create client: %v", err)
+		}
 
-	truncateStorage(ctx, t, stg, runner.table)
-	t.Cleanup(func() {
 		truncateStorage(ctx, t, stg, runner.table)
-		stg.Close()
+		t.Cleanup(func() {
+			truncateStorage(ctx, t, stg, runner.table)
+			stg.Close()
 
-		t.Logf("connection closed: %q", runner.dns)
-	})
+			t.Logf("connection closed: %q", runner.dns)
+		})
+	}
 
 	txn, err := stg.StartTx(ctx)
 	if err != nil {
@@ -260,9 +265,6 @@ func TestConcurrentTransactions(t *testing.T) {
 		"id":          "1",
 	}
 
-	// We need to lock each iteration since we create new clients for each test case.
-	mtx := &sync.Mutex{}
-
 	for _, tcase := range []struct {
 		name               string                 // name is the name of the test case
 		dns                string                 // dns is the connection string to use for the test
@@ -313,16 +315,24 @@ func TestConcurrentTransactions(t *testing.T) {
 		},
 	} {
 		tcase := tcase
-		errs, _ := errgroup.WithContext(context.Background())
-		ctx := context.Background()
 
-		// These tests can be flaky, so we should lock each iteration.
-		mtx.Lock()
+		// Each iteration awaits the completion of the previous iteration.
+		errs, ctx := errgroup.WithContext(context.Background())
 
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
+			fmt.Println("meep")
 			t.Parallel()
 
 			tcase := tcase
+
+			// The storage case should be persisted throughout the subtest.
+			stg, err := New(ctx, tcase.dns)
+			if err != nil {
+				t.Fatalf("failed to create client: %v", err)
+			}
+			t.Cleanup(func() {
+				stg.Close()
+			})
 
 			// In theory, you should not start two clients that will commit competing transactions. The
 			// real goal of this tests is to see if these resources can share the same context. So we pass
@@ -330,23 +340,23 @@ func TestConcurrentTransactions(t *testing.T) {
 			runnerMtx := &sync.Mutex{}
 
 			for itr := 0; itr < threshold; itr++ {
+				itr := itr
+
 				errs.Go(func() error {
-					// Get a random number between 5 and 10.
+					testTable := fmt.Sprintf("tests%d", itr%5+5)
+
 					byts := []byte{0}
 					if _, err := rand.Reader.Read(byts); err != nil {
 						panic(err)
 					}
-					randNum := byts[0]%5 + 5
 
-					testTable := fmt.Sprintf("tests%d", randNum)
-
-					// Wait for a random amount of milliseconds.
-
-					sleepDuration := time.Duration(byts[0]) * time.Millisecond
+					// Sleep for a random amount of time during the operation to help ensure that
+					// the requests are occassionaly truly asynchronous.
+					sleepDuration := time.Duration(byts[0]%255) * time.Millisecond
 					time.Sleep(sleepDuration)
 
 					runner := testRunner{
-						dns:        tcase.dns,
+						stg:        stg,
 						table:      testTable,
 						data:       tcase.data,
 						rollback:   tcase.rollback,
@@ -366,16 +376,17 @@ func TestConcurrentTransactions(t *testing.T) {
 							tableInfo.GetTableSet()[testTable].GetSize())
 					}
 
+					truncateStorage(ctx, t, stg, testTable)
+
 					return nil
 				})
 
-				if err := errs.Wait(); err != nil {
-					t.Fatal(err)
-				}
 			}
 		})
 
-		mtx.Unlock()
+		if err := errs.Wait(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
