@@ -220,6 +220,8 @@ func TestTransactions(t *testing.T) {
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
 
+			tcase := tcase
+
 			runner := testRunner{
 				table:      tcase.table,
 				data:       tcase.data,
@@ -316,6 +318,8 @@ func TestConcurrentTransactions(t *testing.T) {
 
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
+
+			tcase := tcase
 
 			mtx.Lock()
 			defer mtx.Unlock()
