@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,187 +30,274 @@ func truncateStorage(ctx context.Context, t *testing.T, stg Storage, tables ...s
 	}
 }
 
-func TestTruncate(t *testing.T) {
-	t.Parallel()
+type testRunner struct {
+	dns        string
+	table      string
+	data       map[string]interface{}
+	rollback   bool
+	forceError bool
+}
 
-	for _, tcase := range []struct{ dns string }{
-		{"mongodb://mongo1:27017/db1"},
-		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-	} {
-		dns := tcase.dns
-		t.Run(fmt.Sprintf("empty case: %s", dns), func(t *testing.T) {
-			t.Parallel()
+func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sync.Mutex) *proto.ListTablesResponse {
+	t.Helper()
 
-			ctx := context.Background()
-			testTable := "tests1"
+	// Lock the mutext between upsert calls
+	if mtx != nil {
+		mtx.Lock()
+		defer mtx.Unlock()
+	}
 
-			stg, err := New(ctx, dns)
+	stg, err := New(ctx, runner.dns)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	truncateStorage(ctx, t, stg, runner.table)
+	t.Cleanup(func() {
+		truncateStorage(ctx, t, stg, runner.table)
+		stg.Close()
+
+		t.Logf("connection closed: %q", runner.dns)
+	})
+
+	txn, err := stg.StartTx(ctx)
+	if err != nil {
+		t.Fatalf("failed to start transaction: %v", err)
+	}
+
+	// Encode some JSON data to test with.
+	bytes, err := json.Marshal(runner.data)
+	if err != nil {
+		t.Fatalf("failed to marshal data: %v", err)
+	}
+
+	// Insert some data.
+	if runner.forceError {
+		// Send twice to make sure the first one fails.
+		txn.Send(func(_ context.Context, _ Storage) error {
+			return fmt.Errorf("test error")
+		})
+
+		txn.Send(func(_ context.Context, _ Storage) error {
+			return nil
+		})
+
+		if err := txn.Commit(); err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+	} else {
+		txn.Send(func(sctx context.Context, stg Storage) error {
+			_, err := stg.Upsert(sctx, &proto.UpsertRequest{
+				Table:    runner.table,
+				Data:     bytes,
+				DataType: int32(tools.UpsertDataJSON),
+			})
 			if err != nil {
-				t.Fatalf("failed to create storage: %v", err)
+				return fmt.Errorf("failed to upsert data: %w", err)
 			}
 
-			truncateStorage(ctx, t, stg, testTable)
-			t.Cleanup(func() {
-				truncateStorage(ctx, t, stg)
-				stg.Close()
-			})
+			return nil
+		})
+		if runner.rollback {
+			if err := txn.Rollback(); err != nil {
+				t.Fatalf("failed to rollback transaction: %v", err)
+			}
+		} else {
+			if err := txn.Commit(); err != nil {
+				t.Fatalf("failed to commit transaction: %v", err)
+			}
+		}
+	}
+
+	// Check that the data was inserted.
+	tableInfo, err := stg.ListTables(ctx)
+	if err != nil {
+		t.Fatalf("failed to list tables: %v", err)
+	}
+
+	return tableInfo
+}
+
+func TestTransactions(t *testing.T) {
+	t.Parallel()
+
+	// mtx for locking writes between tests
+	mtx := &sync.Mutex{}
+
+	// defaultTestTable will be the table used for all tests unless otherwise specified.
+	const defaultTestTable = "tests1"
+
+	// defaultMongoDBConnString is the default MongoDB connection string to use for tests.
+	const defaultMongoDBConnString = "mongodb://mongo1:27017/defaultdb"
+
+	// defaultPostgreSQLConnString is the default PostgreSQL connection string to use for tests.
+	const defaultPostgreSQLConnString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
+
+	defaultData := map[string]interface{}{
+		"test_string": "test",
+		"id":          "1",
+	}
+
+	for _, tcase := range []struct {
+		dns                string                 // dns is the connection string to use for the test
+		name               string                 // name is the name of the test case
+		expectedUpsertSize int64                  // expectedUpsertSize is in bits
+		table              string                 // table is where to insert the data
+		data               map[string]interface{} // data is the data to insert
+		rollback           bool                   // rollback will rollback the transaction
+		forceError         bool                   // forceError will force an error to occur
+	}{
+		{
+			name:               "commit",
+			dns:                defaultMongoDBConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 54,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback",
+			dns:                defaultMongoDBConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 0,
+			rollback:           true,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback on error",
+			dns:                defaultMongoDBConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 0,
+			forceError:         true,
+			data:               defaultData,
+		},
+		{
+			name:               "commit",
+			dns:                defaultPostgreSQLConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 8192,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback",
+			dns:                defaultPostgreSQLConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 0,
+			rollback:           true,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback on error",
+			dns:                defaultPostgreSQLConnString,
+			table:              defaultTestTable,
+			expectedUpsertSize: 0,
+			forceError:         true,
+			data:               defaultData,
+		},
+	} {
+		// Create a runner for the test case.
+
+		// Test all connection strings for each case.
+		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
+			t.Parallel()
+
+			tcase := tcase
+
+			runner := testRunner{
+				table:      tcase.table,
+				data:       tcase.data,
+				rollback:   tcase.rollback,
+				forceError: tcase.forceError,
+				dns:        tcase.dns,
+			}
+
+			size := runner.
+				upsertWithTx(context.Background(), t, mtx).
+				GetTableSet()[runner.table].
+				GetSize()
+
+			if size != tcase.expectedUpsertSize {
+				t.Fatalf("expected upsert count to be %d, got %d",
+					tcase.expectedUpsertSize, size)
+			}
 		})
 	}
 }
 
-func TestStartTx(t *testing.T) {
+func TestConcurrentTransactions(t *testing.T) {
 	t.Parallel()
 
-	for _, tcase := range []struct{ dns string }{
-		{"mongodb://mongo1:27017/db2"},
-		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	// threshold is the number of concurrent transactions to run.
+	const threshold = 10
+	const defaultMongoDBConnString = "mongodb://mongo1:27017/defaultdb"
+	const defaultPostgreSQLConnString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
+
+	defaultData := map[string]interface{}{
+		"test_string": "test",
+		"id":          "1",
+	}
+
+	mtx := &sync.Mutex{}
+
+	for _, tcase := range []struct {
+		name               string                 // name is the name of the test case
+		dns                string                 // dns is the connection string to use for the test
+		data               map[string]interface{} // data is the data to insert
+		expectedUpsertSize int64                  // expectedUpsertSize is in bits
+		rollback           bool                   // rollback will rollback the transaction
+		forceError         bool                   // forceError will force an error to occur
+	}{
+		{
+			name:               "commit",
+			dns:                defaultMongoDBConnString,
+			expectedUpsertSize: 54,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback",
+			dns:                defaultMongoDBConnString,
+			expectedUpsertSize: 0,
+			rollback:           true,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback on error",
+			dns:                defaultMongoDBConnString,
+			expectedUpsertSize: 0,
+			forceError:         true,
+			data:               defaultData,
+		},
+		{
+			name:               "commit",
+			dns:                defaultPostgreSQLConnString,
+			expectedUpsertSize: 8192,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback",
+			dns:                defaultPostgreSQLConnString,
+			expectedUpsertSize: 0,
+			rollback:           true,
+			data:               defaultData,
+		},
+		{
+			name:               "rollback on error",
+			dns:                defaultPostgreSQLConnString,
+			expectedUpsertSize: 0,
+			forceError:         true,
+			data:               defaultData,
+		},
 	} {
-		dns := tcase.dns
+		tcase := tcase
+		errs, _ := errgroup.WithContext(context.Background())
 		ctx := context.Background()
 
-		stg, err := New(ctx, dns)
-		if err != nil {
-			t.Fatalf("failed to create client: %v", err)
-		}
-
-		const (
-			testTable2 = "tests2"
-			testTable3 = "tests3"
-			testTable4 = "tests4"
-		)
-
-		truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
-		t.Cleanup(func() {
-			truncateStorage(ctx, t, stg, testTable2, testTable3, testTable4)
-			stg.Close()
-
-			t.Logf("connection closed: %q", dns)
-		})
-
-		t.Run(fmt.Sprintf("tx should commit %s", dns), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
 
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
-			}
+			mtx.Lock()
+			defer mtx.Unlock()
 
-			// Encode some JSON data to test with.
-			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			bytes, err := json.Marshal(data)
-			if err != nil {
-				t.Fatalf("failed to marshal data: %v", err)
-			}
-
-			// Insert some data.
-			txn.Send(func(sctx context.Context, stg Storage) error {
-				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    testTable2,
-					Data:     bytes,
-					DataType: int32(tools.UpsertDataJSON),
-				})
-				if err != nil {
-					return fmt.Errorf("failed to upsert data: %w", err)
-				}
-
-				return nil
-			})
-
-			if err := txn.Commit(); err != nil {
-				t.Fatalf("failed to commit transaction: %v", err)
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable2].GetSize() == 0 {
-				t.Fatalf("expected data to be inserted for %q", testTable2)
-			}
-		})
-		t.Run(fmt.Sprintf("tx should rollback %s", dns), func(t *testing.T) {
-			t.Parallel()
-
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
-			}
-
-			// Encode some JSON data to test with.
-			data := map[string]interface{}{"test_string": "test", "id": "1"}
-			dataBytes, err := json.Marshal(data)
-			if err != nil {
-				t.Fatalf("failed to marshal data: %v", err)
-			}
-
-			// Insert some data.
-			txn.Send(func(sctx context.Context, stg Storage) error {
-				_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-					Table:    testTable3,
-					Data:     dataBytes,
-					DataType: int32(tools.UpsertDataJSON),
-				})
-				if err != nil {
-					return fmt.Errorf("failed to insert data: %w", err)
-				}
-
-				return nil
-			})
-
-			if err := txn.Rollback(); err != nil {
-				t.Fatalf("failed to rollback transaction: %v", err)
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable3].GetSize() != 0 {
-				t.Fatalf("expected data to be rolled back")
-			}
-		})
-		t.Run(fmt.Sprintf("tx should rollback on error %s", dns), func(t *testing.T) {
-			t.Parallel()
-
-			txn, err := stg.StartTx(ctx)
-			if err != nil {
-				t.Fatalf("failed to start transaction: %v", err)
-			}
-
-			txn.Send(func(_ context.Context, _ Storage) error {
-				return fmt.Errorf("test error")
-			})
-
-			txn.Send(func(_ context.Context, _ Storage) error {
-				return nil
-			})
-
-			if err := txn.Commit(); err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-
-			// Check that the data was inserted.
-			tableInfo, err := stg.ListTables(ctx)
-			if err != nil {
-				t.Fatalf("failed to list tables: %v", err)
-			}
-
-			if tableInfo.GetTableSet()[testTable4].GetSize() != 0 {
-				t.Fatalf("expected data to be rolled back")
-			}
-		})
-		t.Run(fmt.Sprintf("tx should commit in parallel %s", dns), func(t *testing.T) {
-			t.Parallel()
-
-			// Run this test 3 times.
-			errs, _ := errgroup.WithContext(context.Background())
-
-			ctx := context.Background()
-			for itr := 0; itr < 10; itr++ {
+			for itr := 0; itr < threshold; itr++ {
 				errs.Go(func() error {
 					// Get a random number between 5 and 10.
 					byts := []byte{0}
@@ -225,45 +313,22 @@ func TestStartTx(t *testing.T) {
 					sleepDuration := time.Duration(byts[0]) * time.Millisecond
 					time.Sleep(sleepDuration)
 
-					txn, err := stg.StartTx(ctx)
-					if err != nil {
-						return fmt.Errorf("failed to start transaction: %w", err)
+					runner := testRunner{
+						dns:        tcase.dns,
+						table:      testTable,
+						data:       tcase.data,
+						rollback:   tcase.rollback,
+						forceError: tcase.forceError,
 					}
 
-					// Encode some JSON data to test with.
-					data := map[string]interface{}{"test_string": "test", "id": "1"}
-					bytes, err := json.Marshal(data)
-					if err != nil {
-						return fmt.Errorf("failed to marshal data: %w", err)
-					}
+					// Do not run these with a mutex as we want to test concurrent transactions.
+					tableInfo := runner.upsertWithTx(ctx, t, nil)
 
-					// Insert some data.
-					txn.Send(func(sctx context.Context, stg Storage) error {
-						_, err := stg.Upsert(sctx, &proto.UpsertRequest{
-							Table:    testTable,
-							Data:     bytes,
-							DataType: int32(tools.UpsertDataJSON),
-						})
-						if err != nil {
-							return fmt.Errorf("failed to upsert data: %w", err)
-						}
-
-						return nil
-					})
-
-					if err := txn.Commit(); err != nil {
-						return fmt.Errorf("failed to commit transaction: %w", err)
-					}
-
-					// Check that the data was inserted.
-					tableInfo, err := stg.ListTables(ctx)
-					if err != nil {
-						return fmt.Errorf("failed to list tables: %w", err)
-					}
-
-					if tableInfo.GetTableSet()[testTable].GetSize() == 0 {
-						return fmt.Errorf("expected data to be inserted for %q",
-							testTable)
+					if tableInfo.GetTableSet()[testTable].GetSize() != tcase.expectedUpsertSize {
+						return fmt.Errorf("expected upsert count for %q to be %q, got %d",
+							SchemeFromConnectionString(tcase.dns),
+							tcase.expectedUpsertSize,
+							tableInfo.GetTableSet()[testTable].GetSize())
 					}
 
 					return nil
