@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alpine-hodler/gidari/cmd/gidari/cmd"
+	"github.com/alpstable/gidari/cmd/gidari/cmd"
 )
 
 func main() {

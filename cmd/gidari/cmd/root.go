@@ -13,8 +13,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alpine-hodler/gidari"
-	"github.com/alpine-hodler/gidari/version"
+	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
