@@ -318,7 +318,6 @@ func TestConcurrentTransactions(t *testing.T) {
 
 		// These tests can be flaky, so we should lock each iteration.
 		mtx.Lock()
-		defer mtx.Unlock()
 
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
@@ -375,6 +374,8 @@ func TestConcurrentTransactions(t *testing.T) {
 				}
 			}
 		})
+
+		mtx.Unlock()
 	}
 }
 
