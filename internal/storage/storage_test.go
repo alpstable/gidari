@@ -334,11 +334,6 @@ func TestConcurrentTransactions(t *testing.T) {
 				stg.Close()
 			})
 
-			// In theory, you should not start two clients that will commit competing transactions. The
-			// real goal of this tests is to see if these resources can share the same context. So we pass
-			// this lock to the test runner.
-			runnerMtx := &sync.Mutex{}
-
 			for itr := 0; itr < threshold; itr++ {
 				itr := itr
 
@@ -364,7 +359,7 @@ func TestConcurrentTransactions(t *testing.T) {
 					}
 
 					// Do not run these with a mutex as we want to test concurrent transactions.
-					tableInfo := runner.upsertWithTx(ctx, t, runnerMtx)
+					tableInfo := runner.upsertWithTx(ctx, t, nil)
 
 					if tableInfo.GetTableSet()[testTable].GetSize() != tcase.expectedUpsertSize {
 						return fmt.Errorf("failure to run %q for %q on table %q: "+
