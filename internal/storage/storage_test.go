@@ -316,13 +316,14 @@ func TestConcurrentTransactions(t *testing.T) {
 		errs, _ := errgroup.WithContext(context.Background())
 		ctx := context.Background()
 
+		// These tests can be flaky, so we should lock each iteration.
+		mtx.Lock()
+		defer mtx.Unlock()
+
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			t.Parallel()
 
 			tcase := tcase
-
-			mtx.Lock()
-			defer mtx.Unlock()
 
 			// In theory, you should not start two clients that will commit competing transactions. The
 			// real goal of this tests is to see if these resources can share the same context. So we pass
