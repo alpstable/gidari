@@ -335,6 +335,7 @@ func TestConcurrentTransactions(t *testing.T) {
 			data:               defaultData,
 		},
 	} {
+		tcase := tcase
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromStorageType(tcase.stg.Type())), func(t *testing.T) {
 			tcase := tcase
 			t.Parallel()
@@ -391,7 +392,6 @@ func TestConcurrentTransactions(t *testing.T) {
 				t.Fatalf("failed to run test: %v", err)
 			}
 		})
-
 	}
 }
 
