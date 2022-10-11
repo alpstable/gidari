@@ -15,6 +15,8 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 go install github.com/alpine-hodler/gidari/cmd/gidari@latest
 ```
 
+Gidari is not currently available as a library. Library support will be investigated in Issue #214. For supported usage see the "Usage" section.
+
 ## Usage
 
 Using Gidari in command mode is a two step process:
