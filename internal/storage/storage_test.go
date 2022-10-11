@@ -249,9 +249,6 @@ func TestTransactions(t *testing.T) {
 	}
 }
 
-// Running these tests in parallel is far too complex, so we run them serially.
-//
-//nolint:tparallel
 func TestConcurrentTransactions(t *testing.T) {
 	t.Parallel()
 
@@ -289,7 +286,6 @@ func TestConcurrentTransactions(t *testing.T) {
 	stgLockSet[mongoStg.Type()] = &sync.Mutex{}
 	stgLockSet[postgresStg.Type()] = &sync.Mutex{}
 
-	//nolint:paralleltest
 	for _, tcase := range []struct {
 		name               string                 // name is the name of the test case
 		stg                Storage                // stg is the storage to use for the test
@@ -341,6 +337,8 @@ func TestConcurrentTransactions(t *testing.T) {
 	} {
 		tcase := tcase
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromStorageType(tcase.stg.Type())), func(t *testing.T) {
+			t.Parallel()
+
 			tcase := tcase
 
 			stgLockSet[tcase.stg.Type()].Lock()
@@ -395,6 +393,7 @@ func TestConcurrentTransactions(t *testing.T) {
 				t.Fatalf("failed to run test: %v", err)
 			}
 		})
+
 	}
 }
 
