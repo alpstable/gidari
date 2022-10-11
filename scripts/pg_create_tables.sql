@@ -11,53 +11,66 @@ CREATE TABLE tests2 (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE tests3 (
+CREATE TABLE parallel_tests1 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE tests4 (
+CREATE TABLE  parallel_tests2 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE tests5 (
+CREATE TABLE parallel_tests3 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE tests6 (
-	id VARCHAR(255) NOT NULL,
-	test_string VARCHAR(255) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-
-CREATE TABLE tests7 (
+CREATE TABLE parallel_tests4 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
 
-CREATE TABLE tests8 (
+CREATE TABLE parallel_tests5 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
 
-CREATE TABLE tests9 (
+CREATE TABLE parallel_tests6 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
 
-CREATE TABLE tests10 (
+CREATE TABLE parallel_tests7 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE parallel_tests8 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
+CREATE TABLE parallel_tests9 (
+	id VARCHAR(255) NOT NULL,
+	test_string VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE parallel_tests10 (
 	id VARCHAR(255) NOT NULL,
 	test_string VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)

@@ -88,6 +88,7 @@ func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sy
 	stg := runner.stg
 	if stg == nil {
 		var err error
+
 		stg, err = New(ctx, runner.dns)
 		if err != nil {
 			t.Fatalf("failed to create client: %v", err)
@@ -223,9 +224,9 @@ func TestTransactions(t *testing.T) {
 
 		// Test all connection strings for each case.
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
-			t.Parallel()
-
 			tcase := tcase
+
+			t.Parallel()
 
 			runner := testRunner{
 				table:      tcase.table,
@@ -251,8 +252,7 @@ func TestTransactions(t *testing.T) {
 func TestConcurrentTransactions(t *testing.T) {
 	t.Parallel()
 
-	// threshold is the number of concurrent transactions to run.
-	const threshold = 10
+	ctx := context.Background()
 
 	// defaultMongoDBconnString is the default MongoDB connection string to use for tests.
 	const defaultMongoDBConnString = "mongodb://mongo1:27017/defaultdb"
@@ -260,14 +260,35 @@ func TestConcurrentTransactions(t *testing.T) {
 	// defaultPostgreSQLConnString is the default PostgreSQL connection string to use for tests.
 	const defaultPostgreSQLConnString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
 
+	// defaultData is the default data to use for tests upserts.
 	defaultData := map[string]interface{}{
 		"test_string": "test",
 		"id":          "1",
 	}
 
+	mongoStg, err := New(ctx, defaultMongoDBConnString)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	postgresStg, err := New(ctx, defaultPostgreSQLConnString)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	t.Cleanup(func() {
+		mongoStg.Close()
+		postgresStg.Close()
+	})
+
+	stgLockSet := map[uint8]*sync.Mutex{}
+
+	stgLockSet[mongoStg.Type()] = &sync.Mutex{}
+	stgLockSet[postgresStg.Type()] = &sync.Mutex{}
+
 	for _, tcase := range []struct {
 		name               string                 // name is the name of the test case
-		dns                string                 // dns is the connection string to use for the test
+		stg                Storage                // stg is the storage to use for the test
 		data               map[string]interface{} // data is the data to insert
 		expectedUpsertSize int64                  // expectedUpsertSize is in bits
 		rollback           bool                   // rollback will rollback the transaction
@@ -275,83 +296,74 @@ func TestConcurrentTransactions(t *testing.T) {
 	}{
 		{
 			name:               "commit",
-			dns:                defaultMongoDBConnString,
+			stg:                mongoStg,
 			expectedUpsertSize: 54,
 			data:               defaultData,
 		},
 		{
 			name:               "rollback",
-			dns:                defaultMongoDBConnString,
+			stg:                mongoStg,
 			expectedUpsertSize: 0,
 			rollback:           true,
 			data:               defaultData,
 		},
 		{
 			name:               "rollback on error",
-			dns:                defaultMongoDBConnString,
+			stg:                mongoStg,
 			expectedUpsertSize: 0,
 			forceError:         true,
 			data:               defaultData,
 		},
 		{
 			name:               "commit",
-			dns:                defaultPostgreSQLConnString,
+			stg:                postgresStg,
 			expectedUpsertSize: 8192,
 			data:               defaultData,
 		},
 		{
 			name:               "rollback",
-			dns:                defaultPostgreSQLConnString,
+			stg:                postgresStg,
 			expectedUpsertSize: 0,
 			rollback:           true,
 			data:               defaultData,
 		},
 		{
 			name:               "rollback on error",
-			dns:                defaultPostgreSQLConnString,
+			stg:                postgresStg,
 			expectedUpsertSize: 0,
 			forceError:         true,
 			data:               defaultData,
 		},
 	} {
-		tcase := tcase
-
-		// Each iteration awaits the completion of the previous iteration.
-		errs, ctx := errgroup.WithContext(context.Background())
-
-		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
-			fmt.Println("meep")
+		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromStorageType(tcase.stg.Type())), func(t *testing.T) {
+			tcase := tcase
 			t.Parallel()
 
-			tcase := tcase
+			stgLockSet[tcase.stg.Type()].Lock()
+			defer stgLockSet[tcase.stg.Type()].Unlock()
 
-			// The storage case should be persisted throughout the subtest.
-			stg, err := New(ctx, tcase.dns)
-			if err != nil {
-				t.Fatalf("failed to create client: %v", err)
-			}
-			t.Cleanup(func() {
-				stg.Close()
-			})
+			// Each iteration awaits the completion of the previous iteration.
+			errs, _ := errgroup.WithContext(context.Background())
 
-			for itr := 0; itr < threshold; itr++ {
+			for itr := 1; itr < 10; itr++ {
 				itr := itr
 
 				errs.Go(func() error {
-					testTable := fmt.Sprintf("tests%d", itr%5+5)
+					testTable := fmt.Sprintf("parallel_tests%d", itr)
+					defer truncateStorage(ctx, t, tcase.stg, testTable)
 
 					byts := []byte{0}
 					if _, err := rand.Reader.Read(byts); err != nil {
-						panic(err)
+						return fmt.Errorf("failed to read random bytes: %w", err)
 					}
 
 					// Sleep for a random amount of time during the operation to help ensure that
-					// the requests are occassionaly truly asynchronous.
+					// the requests are occasionally truly asynchronous.
 					sleepDuration := time.Duration(byts[0]%255) * time.Millisecond
 					time.Sleep(sleepDuration)
 
 					runner := testRunner{
-						stg:        stg,
+						stg:        tcase.stg,
 						table:      testTable,
 						data:       tcase.data,
 						rollback:   tcase.rollback,
@@ -362,31 +374,32 @@ func TestConcurrentTransactions(t *testing.T) {
 					tableInfo := runner.upsertWithTx(ctx, t, nil)
 
 					if tableInfo.GetTableSet()[testTable].GetSize() != tcase.expectedUpsertSize {
-						return fmt.Errorf("failure to run %q for %q on table %q: "+
+						return fmt.Errorf("failed to run %q for %q on table %q: "+
 							"expected upsert count to be %d, got %d",
 							tcase.name,
-							SchemeFromConnectionString(tcase.dns),
+							SchemeFromStorageType(tcase.stg.Type()),
 							testTable,
 							tcase.expectedUpsertSize,
 							tableInfo.GetTableSet()[testTable].GetSize())
 					}
 
-					truncateStorage(ctx, t, stg, testTable)
-
 					return nil
 				})
+			}
 
+			if err := errs.Wait(); err != nil {
+				t.Fatalf("failed to run test: %v", err)
 			}
 		})
 
-		if err := errs.Wait(); err != nil {
-			t.Fatal(err)
-		}
 	}
 }
 
 func TestListTables(t *testing.T) {
 	t.Parallel()
+
+	// defaultTestTable is the default test table to use for tests.
+	const defaultTestTable = "accounts"
 
 	for _, tcase := range []struct{ dns string }{
 		{"mongodb://mongo1:27017/db4"},
@@ -397,7 +410,6 @@ func TestListTables(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			testTable := "accounts"
 
 			stg, err := New(ctx, dns)
 			if err != nil {
@@ -439,11 +451,11 @@ func TestListTables(t *testing.T) {
 				t.Fatalf("expected tables, got none")
 			}
 
-			if rsp.GetTableSet()[testTable].Size == 0 {
+			if rsp.GetTableSet()[defaultTestTable].Size == 0 {
 				t.Fatalf("expected table size to be greater than zero")
 			}
 
-			truncateStorage(ctx, t, stg, testTable)
+			truncateStorage(ctx, t, stg, defaultTestTable)
 
 			// Get the table data.
 			rsp, err = stg.ListTables(ctx)
@@ -451,7 +463,7 @@ func TestListTables(t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			if rsp.GetTableSet()[testTable].Size != 0 {
+			if rsp.GetTableSet()[defaultTestTable].Size != 0 {
 				t.Fatalf("expected table size to be zero")
 			}
 		})
@@ -461,6 +473,9 @@ func TestListTables(t *testing.T) {
 func TestListPrimaryKeys(t *testing.T) {
 	t.Parallel()
 
+	// defaultTestTable is the default table name used for testing.
+	const defaultTestTable = "tests2"
+
 	for _, tcase := range []struct {
 		dns           string
 		expectedPKSet map[string][]string
@@ -468,13 +483,13 @@ func TestListPrimaryKeys(t *testing.T) {
 		{
 			"mongodb://mongo1:27017/db3",
 			map[string][]string{
-				"tests5": {"_id"},
+				defaultTestTable: {"_id"},
 			},
 		},
 		{
 			"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable",
 			map[string][]string{
-				"tests5":         {"id"},
+				defaultTestTable: {"id"},
 				"candle_minutes": {"product_id", "unix"},
 			},
 		},
@@ -498,7 +513,7 @@ func TestListPrimaryKeys(t *testing.T) {
 
 			// Insert some data to initialize NoSQL tables.
 			_, err = stg.Upsert(ctx, &proto.UpsertRequest{
-				Table:    "tests5",
+				Table:    defaultTestTable,
 				Data:     []byte(`{"id": 1, "test_string":"test"}`),
 				DataType: int32(tools.UpsertDataJSON),
 			})
