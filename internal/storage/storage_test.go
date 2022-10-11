@@ -9,17 +9,14 @@ package storage
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/alpstable/gidari/proto"
 	"github.com/alpstable/gidari/tools"
-	"golang.org/x/sync/errgroup"
 )
 
 func truncateStorage(ctx context.Context, t *testing.T, stg Storage, tables ...string) {
@@ -246,154 +243,6 @@ func TestTransactions(t *testing.T) {
 					tcase.expectedUpsertSize, size)
 			}
 		})
-	}
-}
-
-func TestConcurrentTransactions(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-
-	// defaultMongoDBconnString is the default MongoDB connection string to use for tests.
-	const defaultMongoDBConnString = "mongodb://mongo1:27017/defaultdb"
-
-	// defaultPostgreSQLConnString is the default PostgreSQL connection string to use for tests.
-	const defaultPostgreSQLConnString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
-
-	// defaultData is the default data to use for tests upserts.
-	defaultData := map[string]interface{}{
-		"test_string": "test",
-		"id":          "1",
-	}
-
-	mongoStg, err := New(ctx, defaultMongoDBConnString)
-	if err != nil {
-		t.Fatalf("failed to create storage: %v", err)
-	}
-
-	postgresStg, err := New(ctx, defaultPostgreSQLConnString)
-	if err != nil {
-		t.Fatalf("failed to create storage: %v", err)
-	}
-
-	t.Cleanup(func() {
-		mongoStg.Close()
-		postgresStg.Close()
-	})
-
-	stgLockSet := map[uint8]*sync.Mutex{}
-
-	stgLockSet[mongoStg.Type()] = &sync.Mutex{}
-	stgLockSet[postgresStg.Type()] = &sync.Mutex{}
-
-	for _, tcase := range []struct {
-		name               string                 // name is the name of the test case
-		stg                Storage                // stg is the storage to use for the test
-		data               map[string]interface{} // data is the data to insert
-		expectedUpsertSize int64                  // expectedUpsertSize is in bits
-		rollback           bool                   // rollback will rollback the transaction
-		forceError         bool                   // forceError will force an error to occur
-	}{
-		{
-			name:               "commit",
-			stg:                mongoStg,
-			expectedUpsertSize: 54,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback",
-			stg:                mongoStg,
-			expectedUpsertSize: 0,
-			rollback:           true,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback on error",
-			stg:                mongoStg,
-			expectedUpsertSize: 0,
-			forceError:         true,
-			data:               defaultData,
-		},
-		{
-			name:               "commit",
-			stg:                postgresStg,
-			expectedUpsertSize: 8192,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback",
-			stg:                postgresStg,
-			expectedUpsertSize: 0,
-			rollback:           true,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback on error",
-			stg:                postgresStg,
-			expectedUpsertSize: 0,
-			forceError:         true,
-			data:               defaultData,
-		},
-	} {
-		tcase := tcase
-		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromStorageType(tcase.stg.Type())), func(t *testing.T) {
-			t.Parallel()
-
-			tcase := tcase
-
-			stgLockSet[tcase.stg.Type()].Lock()
-			defer stgLockSet[tcase.stg.Type()].Unlock()
-
-			// Each iteration awaits the completion of the previous iteration.
-			errs, _ := errgroup.WithContext(context.Background())
-
-			for itr := 1; itr < 10; itr++ {
-				itr := itr
-
-				errs.Go(func() error {
-					testTable := fmt.Sprintf("parallel_tests%d", itr)
-					defer truncateStorage(ctx, t, tcase.stg, testTable)
-
-					byts := []byte{0}
-					if _, err := rand.Reader.Read(byts); err != nil {
-						return fmt.Errorf("failed to read random bytes: %w", err)
-					}
-
-					// Sleep for a random amount of time during the operation to help ensure that
-					// the requests are occasionally truly asynchronous.
-					sleepDuration := time.Duration(byts[0]%255) * time.Millisecond
-					time.Sleep(sleepDuration)
-
-					runner := testRunner{
-						stg:        tcase.stg,
-						table:      testTable,
-						data:       tcase.data,
-						rollback:   tcase.rollback,
-						forceError: tcase.forceError,
-					}
-
-					// Do not run these with a mutex as we want to test concurrent transactions.
-					tableInfo := runner.upsertWithTx(ctx, t, nil)
-
-					if tableInfo.GetTableSet()[testTable].GetSize() != tcase.expectedUpsertSize {
-						return fmt.Errorf("failed to run %q for %q on table %q: "+
-							"expected upsert count to be %d, got %d",
-							tcase.name,
-							SchemeFromStorageType(tcase.stg.Type()),
-							testTable,
-							tcase.expectedUpsertSize,
-							tableInfo.GetTableSet()[testTable].GetSize())
-					}
-
-					return nil
-				})
-			}
-
-			if err := errs.Wait(); err != nil {
-				t.Fatalf("failed to run test: %v", err)
-			}
-		})
-
 	}
 }
 
