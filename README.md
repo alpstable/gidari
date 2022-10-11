@@ -11,11 +11,15 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 
 ## Installation
 
+### Command Mode
+
 ```sh
 go install github.com/alpstable/gidari/cmd/gidari@latest
 ```
 
-Gidari is not currently available as a library. Library support will be investigated in [Issue #214](https://github.com/alpstable/gidari/issues/214). For supported usage see the "Usage" section.
+### Library 
+
+Currently Gidari is not currently available as a library. Library support will be investigated in [Issue #214](https://github.com/alpstable/gidari/issues/214).
 
 ## Usage
 
