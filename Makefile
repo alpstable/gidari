@@ -29,7 +29,9 @@ proto:
 .PHONY: tests
 tests:
 	$(GC) clean -testcache
-	@$(foreach dir,$(TESTPKGS), $(GC) test $(dir) -v;)
+
+	# Run each test 3 times to minimalize flakey tests.
+	@$(foreach dir,$(TESTPKGS), $(GC) test $(dir) -v -count=3;)
 
 # ci are the integration tests in CI/CD.
 .PHONY: ci

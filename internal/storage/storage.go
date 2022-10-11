@@ -68,8 +68,8 @@ type Storage interface {
 // sqlPrepareContextFn can be used to prepare a statement and return the result.
 type sqlPrepareContextFn func(context.Context, string) (*sql.Stmt, error)
 
-// Scheme takes a byte and returns the associated DNS root database resource.
-func Scheme(t uint8) string {
+// SchemeFromStorageType takes a byte and returns the associated DNS root database resource.
+func SchemeFromStorageType(t uint8) string {
 	switch t {
 	case MongoType:
 		return "mongodb"
@@ -80,6 +80,11 @@ func Scheme(t uint8) string {
 	}
 }
 
+// SchemeFromConnectionString will return the scheme of a DNS.
+func SchemeFromConnectionString(dns string) string {
+	return strings.Split(dns, "://")[0]
+}
+
 // Service is a wrapper for a Storage implementation.
 type Service struct {
 	Storage
@@ -87,7 +92,7 @@ type Service struct {
 
 // New will attempt to return a generic storage object given a DNS.
 func New(ctx context.Context, dns string) (*Service, error) {
-	if strings.Contains(dns, Scheme(MongoType)) {
+	if strings.Contains(dns, SchemeFromStorageType(MongoType)) {
 		svc, err := NewMongo(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
@@ -96,7 +101,7 @@ func New(ctx context.Context, dns string) (*Service, error) {
 		return &Service{svc}, nil
 	}
 
-	if strings.Contains(dns, Scheme(PostgresType)) {
+	if strings.Contains(dns, SchemeFromStorageType(PostgresType)) {
 		svc, err := NewPostgres(ctx, dns)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
