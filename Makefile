@@ -13,7 +13,7 @@ export GO111MODULE=on
 
 default:
 	chmod +rwx scripts/*.sh
-	$(GC) build -o gidari-cli cmd/gidari/main.go
+	$(GC) build -o gidari cmd/gidari/cmd.go
 
 # containers build the docker containers for performing integration tests.
 .PHONY: containers
