@@ -23,7 +23,7 @@ go install github.com/alpstable/gidari/cmd/gidari@latest
 go get github.com/alpstable/gidari@latest
 ```
 
-Gidari is not currently available as a library. Library support will be investigated in [Issue #214](https://github.com/alpstable/gidari/issues/214).
+Gidari is not currently available as a stable API. Library support is a [WIP](https://github.com/alpstable/gidari/milestone/5).
 
 ## Usage
 
