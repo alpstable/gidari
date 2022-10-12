@@ -19,6 +19,10 @@ go install github.com/alpstable/gidari/cmd/gidari@latest
 
 ### Library 
 
+```sh
+go get github.com/alpstable/gidari@latest
+```
+
 Gidari is not currently available as a library. Library support will be investigated in [Issue #214](https://github.com/alpstable/gidari/issues/214).
 
 ## Usage
