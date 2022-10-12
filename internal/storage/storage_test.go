@@ -141,6 +141,7 @@ func (runner testRunner) upsertWithTx(ctx context.Context, t *testing.T, mtx *sy
 	return tableInfo
 }
 
+//nolint:tparallel
 func TestTransactions(t *testing.T) {
 	t.Parallel()
 
@@ -161,6 +162,9 @@ func TestTransactions(t *testing.T) {
 		"id":          "1",
 	}
 
+	// Running these tests in parallel will inevitably lead to race conditions.
+	//
+	//nolint:paralleltest
 	for _, tcase := range []struct {
 		dns                string                 // dns is the connection string to use for the test
 		name               string                 // name is the name of the test case
@@ -222,8 +226,6 @@ func TestTransactions(t *testing.T) {
 		// Test all connection strings for each case.
 		t.Run(fmt.Sprintf("%s %s", tcase.name, SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			tcase := tcase
-
-			t.Parallel()
 
 			runner := testRunner{
 				table:      tcase.table,
