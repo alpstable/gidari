@@ -14,8 +14,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/repository"
 	"github.com/alpstable/gidari/tools"
 )
 

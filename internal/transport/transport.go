@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/storage"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
 	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/repository"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
