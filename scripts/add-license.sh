@@ -2,8 +2,8 @@
 
 # EXCLUDE_LIST is an array of files paths to exclude from prepending with a license notice.
 declare -a EXCLUDE_LIST=(
-    "internal/web/auth/auth1.go",
-    "proto/db.pb.go"
+    "./internal/web/auth/auth1.go",
+    "./proto/db.pb.go"
 )
 
 # LICENSE_TEMPLATE is the license notice to prepend to files.
