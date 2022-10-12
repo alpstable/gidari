@@ -21,6 +21,9 @@ go install github.com/alpstable/gidari/cmd/gidari@latest
 
 Gidari is not currently available as a library. Library support will be investigated in [Issue #214](https://github.com/alpstable/gidari/issues/214).
 
+```sh
+go get
+
 ## Usage
 
 Using Gidari in command mode is a two step process:
