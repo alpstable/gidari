@@ -65,7 +65,7 @@ TODO
 
 ### NoSQL
 
-The NoSQL use case should require no overhead from the user. Just include the connection string in the `connectionString` list of the configuration file.
+The NoSQL use case should require no overhead from the user. Just include the connection string in the `connectionString` list of the configuration file. Currently this project only supports [MongoDB](https://www.mongodb.com/docs/drivers/go/current/).
 
 ## Repository
 
