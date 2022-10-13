@@ -47,7 +47,7 @@ func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 }
 
 // TransportFile will construct the transport operation using a configuration YAML file.
-func TransportFile(ctx context.Context, file *os.File) (error) {
+func TransportFile(ctx context.Context, file *os.File) error {
 	info, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("unable to get file stat for reading: %w", err)
