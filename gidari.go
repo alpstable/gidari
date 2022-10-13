@@ -20,6 +20,7 @@ import (
 type Config struct {
 	transport.Config
 }
+
 // TODO #265: Remove this routine
 func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 	info, err := file.Stat()
@@ -46,7 +47,7 @@ func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 }
 
 // TransportFile will construct the transport operation using a configuration YAML file.
-func TransportFile(ctx context.Context, file *os.File) error {
+func TransportFile(ctx context.Context, file *os.File) (*Config, error) {
 	info, err := file.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
@@ -69,14 +70,14 @@ func TransportFile(ctx context.Context, file *os.File) error {
 
 	return &Config{*cfg}, nil
 	if err != nil {
-		return fmt.Errorf("unable to create new config: %w", err)
+		return nil, fmt.Errorf("unable to create new config: %w", err)
 	}
 
-	return Transport(ctx, cfg)
+	return nil, Transport(ctx, cfg)
 }
 
 // Transport will construct the transport operation using a "transport.Config" object.
-func Transport(ctx context.Context, cfg *Config) error {
+func Transport(ctx context.Context, cfg *transport.Config) error {
 	if err := transport.Upsert(ctx, &cfg.Config); err != nil {
 		return fmt.Errorf("unable to upsert the config: %w", err)
 	}
