@@ -73,7 +73,7 @@ func TransportFile(ctx context.Context, file *os.File) (*Config, error) {
 		return nil, fmt.Errorf("unable to create new config: %w", err)
 	}
 
-	return nil, Transport(ctx, cfg)
+	return Transport(ctx, cfg)
 }
 
 // Transport will construct the transport operation using a "transport.Config" object.
