@@ -50,7 +50,7 @@ func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 func TransportFile(ctx context.Context, file *os.File) (error) {
 	info, err := file.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
+		return fmt.Errorf("unable to get file stat for reading: %w", err)
 	}
 
 	bytes := make([]byte, info.Size())
