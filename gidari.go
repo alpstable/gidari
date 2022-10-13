@@ -21,8 +21,9 @@ type Config struct {
 	transport.Config
 }
 
-//nolint:godox
 // TODO #265: Remove this routine.
+//
+//nolint:godox
 func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 	info, err := file.Stat()
 	if err != nil {
