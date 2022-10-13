@@ -69,7 +69,7 @@ func TransportFile(ctx context.Context, file *os.File) error {
 	cfg.Logger.SetOutput(io.Discard)
 
 	if err != nil {
-		return nil, fmt.Errorf("unable to create new config: %w", err)
+		return fmt.Errorf("unable to create new config: %w", err)
 	}
 
 	return Transport(ctx, cfg)
