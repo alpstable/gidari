@@ -21,7 +21,7 @@ type Config struct {
 	transport.Config
 }
 
-// TODO #265: Remove this routine
+// TODO #265: Remove this routine.
 func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 	info, err := file.Stat()
 	if err != nil {
