@@ -1,3 +1,4 @@
+
 # PKGS returns all Go packages in the Gidari code base.
 PKGS = $(or $(PKG),$(shell env GO111MODULE=on $(GC) list ./...))
 
