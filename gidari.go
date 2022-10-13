@@ -57,7 +57,7 @@ func TransportFile(ctx context.Context, file *os.File) error {
 
 	_, err = file.Read(bytes)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read file: %w", err)
+		return fmt.Errorf("unable to read file: %w", err)
 	}
 
 	cfg, err := transport.NewConfig(bytes)
