@@ -20,7 +20,7 @@ import (
 type Config struct {
 	transport.Config
 }
-
+// TODO #265: Remove this routine
 func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 	info, err := file.Stat()
 	if err != nil {
@@ -47,7 +47,27 @@ func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
 
 // TransportFile will construct the transport operation using a configuration YAML file.
 func TransportFile(ctx context.Context, file *os.File) error {
-	cfg, err := NewConfig(ctx, file)
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
+	}
+
+	bytes := make([]byte, info.Size())
+
+	_, err = file.Read(bytes)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read file: %w", err)
+	}
+
+	cfg, err := transport.NewConfig(bytes)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new config: %w", err)
+	}
+
+	// Disable logger
+	cfg.Logger.SetOutput(io.Discard)
+
+	return &Config{*cfg}, nil
 	if err != nil {
 		return fmt.Errorf("unable to create new config: %w", err)
 	}
