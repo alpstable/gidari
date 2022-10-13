@@ -77,7 +77,7 @@ func TransportFile(ctx context.Context, file *os.File) (*Config, error) {
 }
 
 // Transport will construct the transport operation using a "transport.Config" object.
-func Transport(ctx context.Context, cfg *transport.Config) error {
+func Transport(ctx context.Context, cfg *Config) error {
 	if err := transport.Upsert(ctx, &cfg.Config); err != nil {
 		return fmt.Errorf("unable to upsert the config: %w", err)
 	}
