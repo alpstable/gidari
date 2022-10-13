@@ -159,13 +159,17 @@ type RateLimitConfig struct {
 	Period *time.Duration `yaml:"period"`
 }
 
-func (rl RateLimitConfig) validate() error {
+func (rl RateLimitConfig) validate(cfg *Config) error {
 	if rl.Burst == nil {
 		return MissingRateLimitFieldError("burst")
 	}
 
 	if rl.Period == nil {
 		return MissingRateLimitFieldError("period")
+	}
+
+	if *rl.Burst < int(rl.Period.Seconds()) {
+		cfg.Logger.Fatalf("rateLimit has a burst/period < 1")
 	}
 
 	return nil
@@ -301,10 +305,17 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser,
 // validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) validate() error {
 	if cfg.RateLimitConfig == nil {
-		return MissingConfigFieldError("rateLimit")
+		defaultBurst := 1
+		defaultPeriod := time.Second
+		cfg.RateLimitConfig = &RateLimitConfig{&defaultBurst, &defaultPeriod}
+
+		logWarn := tools.LogFormatter{
+			Msg: "no rateLimitConfig specified in the config file",
+		}
+		cfg.Logger.Warn(logWarn.String())
 	}
 
-	if err := cfg.RateLimitConfig.validate(); err != nil {
+	if err := cfg.RateLimitConfig.validate(cfg); err != nil {
 		return ErrInvalidRateLimit
 	}
 
