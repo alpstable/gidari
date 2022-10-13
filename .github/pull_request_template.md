@@ -1,2 +1,2 @@
-Resolves #<the issue no>
+Resolves <!--- Issue number goes here, e.g. #101 -->
 
