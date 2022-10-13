@@ -62,7 +62,7 @@ func TransportFile(ctx context.Context, file *os.File) error {
 
 	cfg, err := transport.NewConfig(bytes)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create new config: %w", err)
+		return fmt.Errorf("unable to create new config: %w", err)
 	}
 
 	// Disable logger
