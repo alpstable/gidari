@@ -11,7 +11,7 @@ import (
 	"context"
 	"fmt"
 
-	proto "github.com/alpstable/gidari-proto"
+	"github.com/alpstable/gidari/internal/proto"
 )
 
 // ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.

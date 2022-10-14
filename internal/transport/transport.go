@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	proto "github.com/alpstable/gidari-proto"
-	"github.com/alpstable/gidari/config"
+	"github.com/alpstable/gidari/internal/proto"
 	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
+	"github.com/alpstable/gidari/pkg/config"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 )

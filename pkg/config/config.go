@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 
-	proto "github.com/alpstable/gidari-proto"
+	"github.com/alpstable/gidari/internal/proto"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"

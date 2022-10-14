@@ -4,8 +4,10 @@ go 1.19
 
 require (
 	github.com/google/uuid v1.1.2
+	github.com/lib/pq v1.10.7
 	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cobra v1.5.0
+	github.com/spf13/cobra v1.6.0
+	go.mongodb.org/mongo-driver v1.10.3
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 	google.golang.org/protobuf v1.28.1
@@ -13,9 +15,8 @@ require (
 )
 
 require (
-	github.com/alpstable/gidari-proto v0.4.0-alpha // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect

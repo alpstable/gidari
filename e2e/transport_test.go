@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/alpstable/gidari"
-	gmongo "github.com/alpstable/gidari-mongo"
-	proto "github.com/alpstable/gidari-proto"
-	"github.com/alpstable/gidari/config"
+	"github.com/alpstable/gidari/internal/mongo"
+	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/pkg/config"
+	"github.com/alpstable/gidari/pkg/gidari"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,7 +54,7 @@ func TestUpsert(t *testing.T) {
 			storageType := proto.SchemeFromConnectionString(cfg.ConnectionStrings[0])
 
 			if storageType == "mongodb" {
-				cfg.StgConstructor = gmongo.New
+				cfg.StgConstructor = mongo.New
 			}
 
 			// Fill in the authentication details for the fixture.
