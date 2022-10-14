@@ -1,8 +1,0 @@
-url: https://ghibliapi.herokuapp.com
-connectionStrings:
-  - mongodb://mongo1:27017/studio-ghibli
-rateLimit:
-  burst: 5
-  period: 1
-requests:
-  - endpoint: /films

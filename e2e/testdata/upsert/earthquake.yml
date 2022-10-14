@@ -17,4 +17,3 @@ requests:
       endName: endtime
       period: 18000
       layout: "2006-01-02T15:04:05Z" # ISO 8601
-

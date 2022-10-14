@@ -8,67 +8,61 @@
 package main
 
 import (
-	"context"
 	_ "embed" // Embed external data.
-	"log"
-	"os"
-
-	"github.com/alpstable/gidari"
-	"github.com/alpstable/gidari/version"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
-func main() {
-	// configFilepath is the path to the configuration file.
-	var configFilepath string
+func main() {}
 
-	// verbose is a flag that enables verbose logging.
-	var verbose bool
+// func main() {
+// 	// configFilepath is the path to the configuration file.
+// 	var configFilepath string
 
-	cmd := &cobra.Command{
-		Long: "Gidari is a tool for querying web APIs and persisting resultant data onto local storage\n" +
-			"using a configuration file.",
+// 	// verbose is a flag that enables verbose logging.
+// 	var verbose bool
 
-		Use:        "gidari",
-		Short:      "Persisted data from the web to your database",
-		Example:    "gidari --config config.yaml",
-		Deprecated: "",
-		Version:    version.Gidari,
+// 	cmd := &cobra.Command{
+// 		Long: "Gidari is a tool for querying web APIs and persisting resultant data onto local storage\n" +
+// 			"using a configuration file.",
 
-		Run: func(_ *cobra.Command, args []string) { run(configFilepath, verbose, args) },
-	}
+// 		Use:        "gidari",
+// 		Short:      "Persisted data from the web to your database",
+// 		Example:    "gidari --config config.yaml",
+// 		Deprecated: "",
+// 		Version:    version.Gidari,
 
-	cmd.Flags().StringVar(&configFilepath, "config", "c", "path to configuration")
-	cmd.Flags().BoolVar(&verbose, "verbose", false, "print log data as the binary executes")
+// 		Run: func(_ *cobra.Command, args []string) { run(configFilepath, verbose, args) },
+// 	}
 
-	if err := cmd.MarkFlagRequired("config"); err != nil {
-		logrus.Fatalf("error marking flag as required: %v", err)
-	}
+// 	cmd.Flags().StringVar(&configFilepath, "config", "c", "path to configuration")
+// 	cmd.Flags().BoolVar(&verbose, "verbose", false, "print log data as the binary executes")
 
-	if err := cmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
-}
+// 	if err := cmd.MarkFlagRequired("config"); err != nil {
+// 		logrus.Fatalf("error marking flag as required: %v", err)
+// 	}
 
-func run(configFilepath string, verboseLogging bool, _ []string) {
-	file, err := os.Open(configFilepath)
-	if err != nil {
-		log.Fatalf("error opening config file  %s: %v", configFilepath, err)
-	}
+// 	if err := cmd.Execute(); err != nil {
+// 		log.Fatal(err)
+// 	}
+// }
 
-	cfg, err := gidari.NewConfig(context.Background(), file)
-	if err != nil {
-		log.Fatalf("error creating new config: %v", err)
-	}
+// func run(configFilepath string, verboseLogging bool, _ []string) {
+// 	file, err := os.Open(configFilepath)
+// 	if err != nil {
+// 		log.Fatalf("error opening config file  %s: %v", configFilepath, err)
+// 	}
 
-	if verboseLogging {
-		cfg.Logger.SetOutput(os.Stdout)
-		cfg.Logger.SetLevel(logrus.InfoLevel)
-	}
+// 	cfg, err := gidari.NewConfig(context.Background(), file)
+// 	if err != nil {
+// 		log.Fatalf("error creating new config: %v", err)
+// 	}
 
-	err = gidari.Transport(context.Background(), cfg)
-	if err != nil {
-		log.Fatalf("failed to transport data: %v", err)
-	}
-}
+// 	if verboseLogging {
+// 		cfg.Logger.SetOutput(os.Stdout)
+// 		cfg.Logger.SetLevel(logrus.InfoLevel)
+// 	}
+
+// 	err = gidari.Transport(context.Background(), cfg)
+// 	if err != nil {
+// 		log.Fatalf("failed to transport data: %v", err)
+// 	}
+// }

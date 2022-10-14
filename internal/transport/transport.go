@@ -13,228 +13,25 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/repository"
-	"github.com/alpstable/gidari/internal/storage"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
-	"github.com/alpstable/gidari/proto"
+
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
-	"gopkg.in/yaml.v2"
+
+	proto "github.com/alpstable/gidari-proto"
 )
-
-var (
-	ErrFetchingTimeseriesChunks = fmt.Errorf("failed to fetch timeseries chunks")
-	ErrInvalidRateLimit         = fmt.Errorf("invalid rate limit configuration")
-	ErrMissingConfigField       = fmt.Errorf("missing config field")
-	ErrMissingRateLimitField    = fmt.Errorf("missing rate limit field")
-	ErrMissingTimeseriesField   = fmt.Errorf("missing timeseries field")
-	ErrSettingTimeseriesChunks  = fmt.Errorf("failed to set timeseries chunks")
-	ErrUnableToParse            = fmt.Errorf("unable to parse")
-	ErrNoRequests               = fmt.Errorf("no requests defined")
-)
-
-// MissingConfigFieldError is returned when a configuration field is missing.
-func MissingConfigFieldError(field string) error {
-	return fmt.Errorf("%w: %s", ErrMissingConfigField, field)
-}
-
-// MissingRateLimitFieldError is returned when the rate limit configuration is missing a field.
-func MissingRateLimitFieldError(field string) error {
-	return fmt.Errorf("%w: %s", ErrMissingRateLimitField, field)
-}
-
-// MissingTimeseriesFieldError is returned when the timeseries is missing from the configuration.
-func MissingTimeseriesFieldError(field string) error {
-	return fmt.Errorf("%w: %s", ErrMissingTimeseriesField, field)
-}
-
-// UnableToParseError is returned when a parser is unable to parse the data.
-func UnableToParseError(name string) error {
-	return fmt.Errorf("%s %w", name, ErrUnableToParse)
-}
-
-// WrapRepositoryError will wrap an error from the repository with a message.
-func WrapRepositoryError(err error) error {
-	return fmt.Errorf("repository: %w", err)
-}
-
-// WrapWebError will wrap an error from the web package with a message.
-func WrapWebError(err error) error {
-	return fmt.Errorf("web: %w", err)
-}
-
-// APIKey is one method of HTTP(s) transport that requires a passphrase, key, and secret.
-type APIKey struct {
-	Passphrase string `yaml:"passphrase"`
-	Key        string `yaml:"key"`
-	Secret     string `yaml:"secret"`
-}
-
-// Auth2 is a struct that contains the authentication data for a web API that uses OAuth2.
-type Auth2 struct {
-	Bearer string `yaml:"bearer"`
-}
-
-// Authentication is the credential information to be used to construct an HTTP(s) transport for accessing the API.
-type Authentication struct {
-	APIKey *APIKey `yaml:"apiKey"`
-	Auth2  *Auth2  `yaml:"auth2"`
-}
-
-// timeseries is a struct that contains the information needed to query a web API for timeseries data.
-type timeseries struct {
-	StartName string `yaml:"startName"`
-	EndName   string `yaml:"endName"`
-
-	// Period is the size of each chunk in seconds for which we can query the API. Some API will not allow us to
-	// query all data within the start and end range.
-	Period int32 `yaml:"period"`
-
-	// Layout is the time layout for parsing the "Start" and "End" values into "time.Time". The default is assumed
-	// to be RFC3339.
-	Layout *string `yaml:"layout"`
-
-	// chunks are the time ranges for which we can query the API. These are broken up into pieces for API requests
-	// that only return a limited number of results.
-	chunks [][2]time.Time
-}
-
-// chunk will attempt to use the query string of a URL to partition the timeseries into "chunks" of time for queying
-// a web API.
-func (ts *timeseries) chunk(rurl url.URL) error {
-	// If layout is not set, then default it to be RFC3339
-	if ts.Layout == nil {
-		str := time.RFC3339
-		ts.Layout = &str
-	}
-
-	query := rurl.Query()
-
-	startSlice := query[ts.StartName]
-	if len(startSlice) != 1 {
-		return MissingTimeseriesFieldError("startName")
-	}
-
-	start, err := time.Parse(*ts.Layout, startSlice[0])
-	if err != nil {
-		return UnableToParseError("startTime")
-	}
-
-	endSlice := query[ts.EndName]
-	if len(endSlice) != 1 {
-		return MissingTimeseriesFieldError("endName")
-	}
-
-	end, err := time.Parse(*ts.Layout, endSlice[0])
-	if err != nil {
-		return UnableToParseError("endTime")
-	}
-
-	for start.Before(end) {
-		next := start.Add(time.Second * time.Duration(ts.Period))
-		if next.Before(end) {
-			ts.chunks = append(ts.chunks, [2]time.Time{start, next})
-		} else {
-			ts.chunks = append(ts.chunks, [2]time.Time{start, end})
-		}
-
-		start = next
-	}
-
-	return nil
-}
-
-// RateLimitConfig is the data needed for constructing a rate limit for the HTTP requests.
-type RateLimitConfig struct {
-	// Burst represents the number of requests that we limit over a period frequency.
-	Burst *int `yaml:"burst"`
-
-	// Period is the number of times to allow a burst per second.
-	Period *time.Duration `yaml:"period"`
-}
-
-func (rl RateLimitConfig) validate() error {
-	if rl.Burst == nil {
-		return MissingRateLimitFieldError("burst")
-	}
-
-	if rl.Period == nil {
-		return MissingRateLimitFieldError("period")
-	}
-
-	return nil
-}
-
-// Config is the configuration used to query data from the web using HTTP requests and storing that data using
-// the repositories defined by the "ConnectionStrings" list.
-type Config struct {
-	RawURL            string           `yaml:"url"`
-	Authentication    Authentication   `yaml:"authentication"`
-	ConnectionStrings []string         `yaml:"connectionStrings"`
-	Requests          []*Request       `yaml:"requests"`
-	RateLimitConfig   *RateLimitConfig `yaml:"rateLimit"`
-	Logger            *logrus.Logger
-	Truncate          bool
-
-	URL *url.URL `yaml:"-"`
-}
-
-// New config takes a YAML byte slice and returns a new transport configuration for upserting data to storage.
-//
-// For web requests defined on the transport configuration, the default HTTP Request Method is "GET". Furthermore,
-// if rate limit data has not been defined for a request it will inherit the rate limit data from the transport config.
-func NewConfig(yamlBytes []byte) (*Config, error) {
-	var cfg Config
-
-	cfg.Logger = logrus.New()
-
-	if err := yaml.Unmarshal(yamlBytes, &cfg); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal YAML: %w", err)
-	}
-
-	if err := cfg.validate(); err != nil {
-		return nil, err
-	}
-
-	// Parse the raw URL
-	var err error
-
-	cfg.URL, err = url.Parse(cfg.RawURL)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse URL: %w", err)
-	}
-
-	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
-	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
-	// different endpoints could cause a rate limit error on a web API.
-	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
-
-	// Update default request data.
-	for _, req := range cfg.Requests {
-		if req.Method == "" {
-			req.Method = http.MethodGet
-		}
-
-		if req.Table == "" {
-			endpointParts := strings.Split(req.Endpoint, "/")
-			req.Table = endpointParts[len(endpointParts)-1]
-		}
-
-		req.rateLimiter = rateLimiter
-	}
-
-	return &cfg, nil
-}
 
 // connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
 // authentication data, this method will exhaust every transport option in the "Authentication" struct.
-func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
+func connect(ctx context.Context, cfg *config.Config) (*web.Client, error) {
 	if apiKey := cfg.Authentication.APIKey; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAPIKey().
 			SetURL(cfg.RawURL).
@@ -242,7 +39,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
 		if err != nil {
-			return nil, WrapWebError(web.FailedToCreateClientError(err))
+			return nil, config.WrapWebError(web.FailedToCreateClientError(err))
 		}
 
 		return client, nil
@@ -251,7 +48,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.RawURL))
 		if err != nil {
-			return nil, WrapWebError(web.FailedToCreateClientError(err))
+			return nil, config.WrapWebError(web.FailedToCreateClientError(err))
 		}
 
 		return client, nil
@@ -260,7 +57,7 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 	// In the case of no authentication, create a client without an auth transport.
 	client, err := web.NewClient(ctx, nil)
 	if err != nil {
-		return nil, WrapWebError(web.FailedToCreateClientError(err))
+		return nil, config.WrapWebError(web.FailedToCreateClientError(err))
 	}
 
 	return client, nil
@@ -269,13 +66,17 @@ func (cfg *Config) connect(ctx context.Context) (*web.Client, error) {
 type repoCloser func()
 
 // repos will return a slice of generic repositories along with associated transaction instances.
-func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser, error) {
+func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoCloser, error) {
 	repos := []repository.Generic{}
 
 	for _, dns := range cfg.ConnectionStrings {
-		repo, err := repository.NewTx(ctx, dns)
+		stg, err := cfg.StgConstructor(ctx, dns)
 		if err != nil {
-			return nil, nil, WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+			return nil, nil, config.WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+		}
+		repo, err := repository.NewTx(ctx, stg)
+		if err != nil {
+			return nil, nil, config.WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
 		}
 
 		logInfo := tools.LogFormatter{
@@ -291,36 +92,145 @@ func (cfg *Config) repos(ctx context.Context) ([]repository.Generic, repoCloser,
 			repo.Close()
 
 			logInfo := tools.LogFormatter{
-				Msg: fmt.Sprintf("closed repository for %q", storage.SchemeFromStorageType(repo.Type())),
+				Msg: fmt.Sprintf("closed repository for %q", proto.SchemeFromStorageType(repo.Type())),
 			}
 			cfg.Logger.Info(logInfo.String())
 		}
 	}, nil
 }
 
-// validate will ensure that the configuration is valid for querying the web API.
-func (cfg *Config) validate() error {
-	if cfg.RateLimitConfig == nil {
-		return MissingConfigFieldError("rateLimit")
-	}
+// newFetchConfig will constrcut a new HTTP request from the transport request.
+func newFetchConfig(req *config.Request, rurl url.URL, client *web.Client) *web.FetchConfig {
+	rurl.Path = path.Join(rurl.Path, req.Endpoint)
 
-	if err := cfg.RateLimitConfig.validate(); err != nil {
-		return ErrInvalidRateLimit
-	}
-
-	if cfg.ConnectionStrings == nil {
-		logWarn := tools.LogFormatter{
-			Msg: "no connectionStrings specified in the config file",
+	// Add the query params to the URL.
+	if req.Query != nil {
+		query := rurl.Query()
+		for key, value := range req.Query {
+			query.Set(key, value)
 		}
-		cfg.Logger.Warn(logWarn.String())
+
+		rurl.RawQuery = query.Encode()
+	}
+
+	return &web.FetchConfig{
+		Method:      req.Method,
+		URL:         &rurl,
+		C:           client,
+		RateLimiter: req.RateLimiter,
+	}
+}
+
+// flattenedRequest contains all of the request information to create a web job. The number of flattened request  for an
+// operation should be 1-1 with the number of requests to the web API.
+type flattenedRequest struct {
+	fetchConfig *web.FetchConfig
+	table       string
+}
+
+// flatten will compress the request information into a "web.FetchConfig" request and a "table" name for storage
+// interaction.
+func flattenRequest(req *config.Request, rurl url.URL, client *web.Client) *flattenedRequest {
+	fetchConfig := newFetchConfig(req, rurl, client)
+
+	return &flattenedRequest{
+		fetchConfig: fetchConfig,
+		table:       req.Table,
+	}
+}
+
+// chunkTimeseries will attempt to use the query string of a URL to partition the timeseries into "Chunks" of time for queying
+// a web API.
+func chunkTimeseries(timeseries *config.Timeseries, rurl url.URL) error {
+	// If layout is not set, then default it to be RFC3339
+	if timeseries.Layout == nil {
+		str := time.RFC3339
+		timeseries.Layout = &str
+	}
+
+	query := rurl.Query()
+
+	startSlice := query[timeseries.StartName]
+	if len(startSlice) != 1 {
+		return config.MissingTimeseriesFieldError("startName")
+	}
+
+	start, err := time.Parse(*timeseries.Layout, startSlice[0])
+	if err != nil {
+		return config.UnableToParseError("startTime")
+	}
+
+	endSlice := query[timeseries.EndName]
+	if len(endSlice) != 1 {
+		return config.MissingTimeseriesFieldError("endName")
+	}
+
+	end, err := time.Parse(*timeseries.Layout, endSlice[0])
+	if err != nil {
+		return config.UnableToParseError("endTime")
+	}
+
+	for start.Before(end) {
+		next := start.Add(time.Second * time.Duration(timeseries.Period))
+		if next.Before(end) {
+			timeseries.Chunks = append(timeseries.Chunks, [2]time.Time{start, next})
+		} else {
+			timeseries.Chunks = append(timeseries.Chunks, [2]time.Time{start, end})
+		}
+
+		start = next
 	}
 
 	return nil
 }
 
-// flattenRequests will flatten the requests into a single slice for HTTP requests.
-func (cfg *Config) flattenRequests(ctx context.Context) ([]*flattenedRequest, error) {
-	client, err := cfg.connect(ctx)
+// flattenRequestTimeseries will compress the request information into a "web.FetchConfig" request and a "table" name for
+// storage interaction. This function will create a flattened request for each time series in the request. If no
+// timeseries are defined, this function will return a single flattened request.
+func flattenRequestTimeseries(req *config.Request, rurl url.URL, client *web.Client) ([]*flattenedRequest, error) {
+	timeseries := req.Timeseries
+	if timeseries == nil {
+		flatReq := flattenRequest(req, rurl, client)
+
+		return []*flattenedRequest{flatReq}, nil
+	}
+
+	requests := make([]*flattenedRequest, 0, len(timeseries.Chunks))
+
+	// Add the query params to the URL.
+	if req.Query != nil {
+		query := rurl.Query()
+		for key, value := range req.Query {
+			query.Set(key, value)
+		}
+
+		rurl.RawQuery = query.Encode()
+	}
+
+	if err := chunkTimeseries(timeseries, rurl); err != nil {
+		return nil, fmt.Errorf("failed to set time series chunks: %w", err)
+	}
+
+	for _, chunk := range timeseries.Chunks {
+		// copy the request and update it to reflect the partitioned timeseries
+		chunkReq := req
+		chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
+		chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
+
+		fetchConfig := newFetchConfig(chunkReq, rurl, client)
+
+		requests = append(requests, &flattenedRequest{
+			fetchConfig: fetchConfig,
+			table:       req.Table,
+		})
+	}
+
+	return requests, nil
+}
+
+// flattenConfigRequests will flatten the requests into a single slice for HTTP requests.
+func flattenConfigRequests(ctx context.Context, cfg *config.Config) ([]*flattenedRequest, error) {
+	client, err := connect(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to web API: %w", err)
 	}
@@ -328,7 +238,7 @@ func (cfg *Config) flattenRequests(ctx context.Context) ([]*flattenedRequest, er
 	var flattenedRequests []*flattenedRequest
 
 	for _, req := range cfg.Requests {
-		flatReqs, err := req.flattenTimeseries(*cfg.URL, client)
+		flatReqs, err := flattenRequestTimeseries(req, *cfg.URL, client)
 		if err != nil {
 			return nil, err
 		}
@@ -337,7 +247,7 @@ func (cfg *Config) flattenRequests(ctx context.Context) ([]*flattenedRequest, er
 	}
 
 	if len(flattenedRequests) == 0 {
-		return nil, ErrNoRequests
+		return nil, config.ErrNoRequests
 	}
 
 	return flattenedRequests, nil
@@ -351,14 +261,14 @@ type repoJob struct {
 
 type repoConfig struct {
 	repos      []repository.Generic
-	closeRepos repoCloser
+	closeRepos func()
 	jobs       chan *repoJob
 	done       chan bool
 	logger     *logrus.Logger
 }
 
-func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
-	repos, closeRepos, err := cfg.repos(ctx)
+func newRepoConfig(ctx context.Context, cfg *config.Config, volume int) (*repoConfig, error) {
+	repos, closeRepos, err := repos(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -376,9 +286,8 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
 		reqs := []*proto.UpsertRequest{
 			{
-				Table:    job.table,
-				Data:     job.b,
-				DataType: int32(tools.UpsertDataJSON),
+				Table: job.table,
+				Data:  job.b,
 			},
 		}
 
@@ -396,7 +305,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 
 					rt := repo.Type()
 
-					msg := fmt.Sprintf("partial upsert completed: %s.%s", storage.SchemeFromStorageType(rt), req.Table)
+					msg := fmt.Sprintf("partial upsert completed: %s.%s", proto.SchemeFromStorageType(rt), req.Table)
 					logInfo := tools.LogFormatter{
 						WorkerID:      workerID,
 						WorkerName:    "repository",
@@ -425,7 +334,7 @@ type webJob struct {
 	logger   *logrus.Logger
 }
 
-func newWebJob(cfg *Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
+func newWebJob(cfg *config.Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
 	return &webJob{
 		flattenedRequest: req,
 		repoJobs:         repoJobs,
@@ -467,10 +376,10 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 	}
 }
 
-func truncate(ctx context.Context, cfg *Config, truncateRequest *proto.TruncateRequest) error {
+func truncate(ctx context.Context, cfg *config.Config, truncateRequest *proto.TruncateRequest) error {
 	start := time.Now()
 
-	repos, closeRepos, err := cfg.repos(ctx)
+	repos, closeRepos, err := repos(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -487,7 +396,7 @@ func truncate(ctx context.Context, cfg *Config, truncateRequest *proto.TruncateR
 
 		rt := repo.Type()
 		tables := strings.Join(truncateRequest.Tables, ", ")
-		msg := fmt.Sprintf("truncated tables on %q: %v", storage.SchemeFromStorageType(rt), tables)
+		msg := fmt.Sprintf("truncated tables on %q: %v", proto.SchemeFromStorageType(rt), tables)
 
 		logInfo := tools.LogFormatter{
 			Duration: time.Since(start),
@@ -506,7 +415,7 @@ func truncate(ctx context.Context, cfg *Config, truncateRequest *proto.TruncateR
 }
 
 // Truncate will truncate the defined tables in the configuration.
-func Truncate(ctx context.Context, cfg *Config) error {
+func Truncate(ctx context.Context, cfg *config.Config) error {
 	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
 
@@ -535,7 +444,7 @@ func Truncate(ctx context.Context, cfg *Config) error {
 // repository, a transaction will be created and used to upsert data. The transaction will be committed at the end
 // of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
 // for some repository transactions to succeed and others to fail.
-func Upsert(ctx context.Context, cfg *Config) error {
+func Upsert(ctx context.Context, cfg *config.Config) error {
 	start := time.Now()
 	threads := runtime.NumCPU()
 
@@ -543,7 +452,7 @@ func Upsert(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	flattenedRequests, err := cfg.flattenRequests(ctx)
+	flattenedRequests, err := flattenConfigRequests(ctx, cfg)
 	if err != nil {
 		return err
 	}

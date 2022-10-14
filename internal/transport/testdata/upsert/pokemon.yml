@@ -1,8 +1,0 @@
-url: https://pokeapi.co
-connectionStrings:
-  - mongodb://mongo1:27017/pokemon
-rateLimit:
-  burst: 1
-  period: 1
-requests:
-  - endpoint: /api/v2/pokemon/ditto

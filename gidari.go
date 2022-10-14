@@ -13,39 +13,17 @@ import (
 	"io"
 	"os"
 
+	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/transport"
 )
 
-// Config is the configuration object used to make programatic Transport requests.
-type Config struct {
-	transport.Config
-}
-
-// TODO #265: Remove this routine.
-//
-//nolint:godox
-func NewConfig(ctx context.Context, file *os.File) (*Config, error) {
-	info, err := file.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
+// Transport will construct the transport operation using a "transport.Config" object.
+func Transport(ctx context.Context, cfg *config.Config) error {
+	if err := transport.Upsert(ctx, cfg); err != nil {
+		return fmt.Errorf("unable to upsert the config: %w", err)
 	}
 
-	bytes := make([]byte, info.Size())
-
-	_, err = file.Read(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read file: %w", err)
-	}
-
-	cfg, err := transport.NewConfig(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create new config: %w", err)
-	}
-
-	// Disable logger
-	cfg.Logger.SetOutput(io.Discard)
-
-	return &Config{*cfg}, nil
+	return nil
 }
 
 // TransportFile will construct the transport operation using a configuration YAML file.
@@ -62,7 +40,7 @@ func TransportFile(ctx context.Context, file *os.File) error {
 		return fmt.Errorf("unable to read file: %w", err)
 	}
 
-	cfg, err := transport.NewConfig(bytes)
+	cfg, err := config.New(bytes)
 	if err != nil {
 		return fmt.Errorf("unable to create new config: %w", err)
 	}
@@ -74,14 +52,5 @@ func TransportFile(ctx context.Context, file *os.File) error {
 		return fmt.Errorf("unable to create new config: %w", err)
 	}
 
-	return Transport(ctx, &Config{*cfg})
-}
-
-// Transport will construct the transport operation using a "transport.Config" object.
-func Transport(ctx context.Context, cfg *Config) error {
-	if err := transport.Upsert(ctx, &cfg.Config); err != nil {
-		return fmt.Errorf("unable to upsert the config: %w", err)
-	}
-
-	return nil
+	return Transport(ctx, cfg)
 }
