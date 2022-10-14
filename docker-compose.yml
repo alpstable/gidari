@@ -7,12 +7,10 @@ networks:
     driver: bridge
 
 services:
-
-  # CI networking is straight up hot putrid trash, wrap the code and run tests.
-  ci:
+  e2e:
     build:
       context: .
-      dockerfile: docker/ci.Dockerfile
+      dockerfile: docker/e2e.Dockerfile
     networks:
       - mongo_network
       - postgres_network

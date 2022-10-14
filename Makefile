@@ -34,10 +34,10 @@ tests:
 	@$(foreach dir,$(TESTPKGS), $(GC) test $(dir) -v -count=3;)
 
 # ci are the integration tests in CI/CD.
-.PHONY: ci
-ci:
+.PHONY: e2e
+e2e:
 	$(GC) clean -testcache
-	./scripts/run-ci-tests.sh
+	./scripts/run-e2e-tests.sh
 
 # lint runs the linter.
 .PHONY: lint
