@@ -18,15 +18,18 @@ import (
 	"strings"
 	"time"
 
+	proto "github.com/alpstable/gidari-proto"
 	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
-
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
+)
 
-	proto "github.com/alpstable/gidari-proto"
+var (
+	ErrInvalidEndTimeSize   = fmt.Errorf("invalid end time size, expected 1")
+	ErrInvalidStartTimeSize = fmt.Errorf("invalid start time size, expected 1")
 )
 
 // connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
@@ -39,7 +42,7 @@ func connect(ctx context.Context, cfg *config.Config) (*web.Client, error) {
 			SetPassphrase(apiKey.Passphrase).
 			SetSecret(apiKey.Secret))
 		if err != nil {
-			return nil, config.WrapWebError(web.FailedToCreateClientError(err))
+			return nil, fmt.Errorf("failed to create API key client: %w", err)
 		}
 
 		return client, nil
@@ -48,7 +51,7 @@ func connect(ctx context.Context, cfg *config.Config) (*web.Client, error) {
 	if apiKey := cfg.Authentication.Auth2; apiKey != nil {
 		client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.RawURL))
 		if err != nil {
-			return nil, config.WrapWebError(web.FailedToCreateClientError(err))
+			return nil, fmt.Errorf("failed to create client: %w", err)
 		}
 
 		return client, nil
@@ -57,7 +60,7 @@ func connect(ctx context.Context, cfg *config.Config) (*web.Client, error) {
 	// In the case of no authentication, create a client without an auth transport.
 	client, err := web.NewClient(ctx, nil)
 	if err != nil {
-		return nil, config.WrapWebError(web.FailedToCreateClientError(err))
+		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
 	return client, nil
@@ -72,11 +75,12 @@ func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoC
 	for _, dns := range cfg.ConnectionStrings {
 		stg, err := cfg.StgConstructor(ctx, dns)
 		if err != nil {
-			return nil, nil, config.WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+			return nil, nil, fmt.Errorf("failed to create storage: %w", err)
 		}
+
 		repo, err := repository.NewTx(ctx, stg)
 		if err != nil {
-			return nil, nil, config.WrapRepositoryError(repository.FailedToCreateRepositoryError(err))
+			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
 		}
 
 		logInfo := tools.LogFormatter{
@@ -139,8 +143,8 @@ func flattenRequest(req *config.Request, rurl url.URL, client *web.Client) *flat
 	}
 }
 
-// chunkTimeseries will attempt to use the query string of a URL to partition the timeseries into "Chunks" of time for queying
-// a web API.
+// chunkTimeseries will attempt to use the query string of a URL to partition the timeseries into "Chunks" of time for
+// queying a web API.
 func chunkTimeseries(timeseries *config.Timeseries, rurl url.URL) error {
 	// If layout is not set, then default it to be RFC3339
 	if timeseries.Layout == nil {
@@ -152,22 +156,22 @@ func chunkTimeseries(timeseries *config.Timeseries, rurl url.URL) error {
 
 	startSlice := query[timeseries.StartName]
 	if len(startSlice) != 1 {
-		return config.MissingTimeseriesFieldError("startName")
+		return ErrInvalidStartTimeSize
 	}
 
 	start, err := time.Parse(*timeseries.Layout, startSlice[0])
 	if err != nil {
-		return config.UnableToParseError("startTime")
+		return fmt.Errorf("failed to parse start time: %w", err)
 	}
 
 	endSlice := query[timeseries.EndName]
 	if len(endSlice) != 1 {
-		return config.MissingTimeseriesFieldError("endName")
+		return ErrInvalidEndTimeSize
 	}
 
 	end, err := time.Parse(*timeseries.Layout, endSlice[0])
 	if err != nil {
-		return config.UnableToParseError("endTime")
+		return fmt.Errorf("unable to parse end time: %w", err)
 	}
 
 	for start.Before(end) {
@@ -184,8 +188,8 @@ func chunkTimeseries(timeseries *config.Timeseries, rurl url.URL) error {
 	return nil
 }
 
-// flattenRequestTimeseries will compress the request information into a "web.FetchConfig" request and a "table" name for
-// storage interaction. This function will create a flattened request for each time series in the request. If no
+// flattenRequestTimeseries will compress the request information into a "web.FetchConfig" request and a "table" name
+// for storage interaction. This function will create a flattened request for each time series in the request. If no
 // timeseries are defined, this function will return a single flattened request.
 func flattenRequestTimeseries(req *config.Request, rurl url.URL, client *web.Client) ([]*flattenedRequest, error) {
 	timeseries := req.Timeseries
