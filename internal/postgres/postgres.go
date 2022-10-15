@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alpstable/gidari/internal/proto"
 	"github.com/google/uuid"
@@ -135,6 +137,8 @@ func (meta *pgmeta) upsertStmt(ctx context.Context, table string, pcf sqlPrepare
 		strings.Join(meta.pks[table], ","),
 		strings.Join(meta.exclusionConstraints(table), ","))
 
+	fmt.Println(query)
+
 	stmt, err := pcf(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare statement: %w", err)
@@ -159,6 +163,9 @@ func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8, tables
 		// retry more than a deterministic number of times, defined by "pgGCRetryLimit".
 		var pqErr *pq.Error
 		if retryCount <= defaultGarbageCollectionRetryLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
+			// Sleep for a random amount of time to avoid a thundering herd.
+			time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+
 			return pg.garbageCollect(ctx, retryCount+1, tables...)
 		}
 
@@ -388,7 +395,7 @@ type Postgres struct {
 }
 
 // New will return a new Postgres option for querying data through a Postgres DB.
-func New(ctx context.Context, connectionURL string) (proto.Storage, error) {
+func New(ctx context.Context, connectionURL string) (*Postgres, error) {
 	postgres := new(Postgres)
 
 	var err error
@@ -497,7 +504,9 @@ func (pg *Postgres) StartTx(ctx context.Context) (*proto.Txn, error) {
 		}
 
 		if <-txn.CommitCh {
+			fmt.Println("commit is occurring")
 			txn.DoneCh <- pgtx.Commit()
+			time.Sleep(1 * time.Second)
 		} else {
 			txn.DoneCh <- pgtx.Rollback()
 		}

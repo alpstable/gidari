@@ -81,5 +81,5 @@ services:
       - "5432:5432"
     volumes:
       - ./.db/postgres1:/var/lib/postgresql/dat
-      - ./storage/postgres/queries/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./internal/postgres/queries/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"

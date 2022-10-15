@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpstable/gidari/pkg/config"
+	"github.com/alpstable/gidari/config"
 )
 
 func TestTimeseries(t *testing.T) {

@@ -11,6 +11,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/alpstable/gidari/internal/mongo"
+	"github.com/alpstable/gidari/internal/postgres"
 	"github.com/alpstable/gidari/internal/proto"
 )
 
@@ -37,14 +39,51 @@ type GenericService struct {
 	*proto.Txn
 }
 
+// NewStorage returns a new storage service.
+func NewStorage(ctx context.Context, dns string) (*proto.StorageService, error) {
+	var stg *proto.StorageService
+
+	scheme := proto.SchemeFromConnectionString(dns)
+	switch scheme {
+	case proto.SchemeFromStorageType(proto.MongoType):
+		mdb, err := mongo.New(ctx, dns)
+		if err != nil {
+			return nil, err
+		}
+
+		stg = &proto.StorageService{Storage: mdb}
+	case proto.SchemeFromStorageType(proto.PostgresType):
+		pdb, err := postgres.New(ctx, dns)
+		if err != nil {
+			return nil, err
+		}
+
+		stg = &proto.StorageService{Storage: pdb}
+	default:
+		return nil, fmt.Errorf("unknown scheme: %s", scheme)
+	}
+
+	return stg, nil
+}
+
 // New returns a new Generic service.
-func New(ctx context.Context, stg proto.Storage) (*GenericService, error) {
+func New(ctx context.Context, dns string) (*GenericService, error) {
+	stg, err := NewStorage(ctx, dns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct storage: %w", err)
+	}
+
 	return &GenericService{stg, nil}, nil
 }
 
 // NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
 // storage operations made by the repository layer.
-func NewTx(ctx context.Context, stg proto.Storage) (*GenericService, error) {
+func NewTx(ctx context.Context, dns string) (*GenericService, error) {
+	stg, err := NewStorage(ctx, dns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct storage: %w", err)
+	}
+
 	tx, err := stg.StartTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)

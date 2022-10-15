@@ -13,8 +13,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/alpstable/gidari/pkg/config"
-	"github.com/alpstable/gidari/pkg/gidari"
+	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -53,12 +53,15 @@ func main() {
 }
 
 func run(configFilepath string, verboseLogging bool, _ []string) {
-	_, err := os.Open(configFilepath)
+	file, err := os.Open(configFilepath)
 	if err != nil {
 		log.Fatalf("error opening config file  %s: %v", configFilepath, err)
 	}
 
-	cfg := &config.Config{}
+	cfg, err := config.New(context.Background(), file)
+	if err != nil {
+		log.Fatalf("error creating new config: %v", err)
+	}
 
 	if verboseLogging {
 		cfg.Logger.SetOutput(os.Stdout)

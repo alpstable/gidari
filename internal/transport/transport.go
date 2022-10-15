@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/proto"
 	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
-	"github.com/alpstable/gidari/pkg/config"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 )
@@ -73,12 +73,7 @@ func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoC
 	repos := []repository.Generic{}
 
 	for _, dns := range cfg.ConnectionStrings {
-		stg, err := cfg.StgConstructor(ctx, dns)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create storage: %w", err)
-		}
-
-		repo, err := repository.NewTx(ctx, stg)
+		repo, err := repository.NewTx(ctx, dns)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
 		}

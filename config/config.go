@@ -8,9 +8,11 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/alpstable/gidari/internal/proto"
@@ -58,21 +60,30 @@ type Config struct {
 //
 // For web requests defined on the transport configuration, the default HTTP Request Method is "GET". Furthermore,
 // if rate limit data has not been defined for a request it will inherit the rate limit data from the transport config.
-func New(yamlBytes []byte) (*Config, error) {
+func New(_ context.Context, file *os.File) (*Config, error) {
 	var cfg Config
 
 	cfg.Logger = logrus.New()
 
-	if err := yaml.Unmarshal(yamlBytes, &cfg); err != nil {
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
+	}
+
+	bytes := make([]byte, info.Size())
+
+	_, err = file.Read(bytes)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read file: %w", err)
+	}
+
+	if err := yaml.Unmarshal(bytes, &cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal YAML: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-
-	// Parse the raw URL
-	var err error
 
 	cfg.URL, err = url.Parse(cfg.RawURL)
 	if err != nil {

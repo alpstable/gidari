@@ -13,10 +13,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/alpstable/gidari/internal/mongo"
-	"github.com/alpstable/gidari/internal/proto"
-	"github.com/alpstable/gidari/pkg/config"
-	"github.com/alpstable/gidari/pkg/gidari"
+	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,26 +34,21 @@ func TestUpsert(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ctx := context.Background()
+
 			path := filepath.Join(fixtureRoot, name)
 
-			bytes, err := os.ReadFile(path)
+			file, err := os.Open(path)
 			if err != nil {
-				t.Fatalf("error reading fixture: %v", err)
+				t.Fatalf("error opening fixture: %v", err)
 			}
 
-			cfg, err := config.New(bytes)
+			cfg, err := config.New(ctx, file)
 			if err != nil {
 				t.Fatalf("error creating config: %v", err)
 			}
 
 			cfg.Logger = logrus.New()
-
-			// Get the storage type being tests from the yml DNS.
-			storageType := proto.SchemeFromConnectionString(cfg.ConnectionStrings[0])
-
-			if storageType == "mongodb" {
-				cfg.StgConstructor = mongo.New
-			}
 
 			// Fill in the authentication details for the fixture.
 			cfgAuth := cfg.Authentication

@@ -57,8 +57,10 @@ type Storage interface {
 	Upsert(context.Context, *UpsertRequest) (*UpsertResponse, error)
 }
 
+type StorageService struct{ Storage }
+
 // Constructor is a constructor method for a storage package.
-type Constructor func(context.Context, string) (Storage, error)
+type Constructor func(context.Context, string) (*StorageService, error)
 
 // SchemeFromStorageType takes a byte and returns the associated DNS root database resource.
 func SchemeFromStorageType(t uint8) string {

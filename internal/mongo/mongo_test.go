@@ -29,7 +29,7 @@ func TestMongoDBTxn(t *testing.T) {
 		}
 
 		// Change the lifetime to 1 second to avoid long test times.
-		mdb.(*Mongo).lifetime = 1 * time.Second
+		mdb.lifetime = 1 * time.Second
 
 		// Start a transaction.
 		txn, err := mdb.StartTx(ctx)
@@ -45,7 +45,7 @@ func TestMongoDBTxn(t *testing.T) {
 		}
 
 		// Add an index to the collection.
-		indexView := mdb.(*Mongo).Client.Database(database).Collection(collection).Indexes()
+		indexView := mdb.Client.Database(database).Collection(collection).Indexes()
 		_, err = indexView.CreateOne(context.Background(), mongo.IndexModel{
 			Keys: bsonx.Doc{{Key: "test_string", Value: bsonx.Int32(1)}},
 		})

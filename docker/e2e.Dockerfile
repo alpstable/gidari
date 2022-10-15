@@ -13,4 +13,4 @@ COPY . .
 WORKDIR e2e
 
 # Run the tests.
-CMD ["go", "test", "-v", "./..."]
+CMD ["go", "test", "-count", "3", "-v", "./..."]

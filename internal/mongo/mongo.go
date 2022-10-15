@@ -44,7 +44,7 @@ type Mongo struct {
 // New will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
 // constructor uses a URI to make the client connection, and the URI is of the form
 // Mongo://username:password@host:port
-func New(ctx context.Context, uri string) (proto.Storage, error) {
+func New(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
 
 	client, err := mongo.Connect(ctx, clientOptions)
