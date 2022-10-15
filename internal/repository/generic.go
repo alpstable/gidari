@@ -17,7 +17,10 @@ import (
 )
 
 // ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
-var ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
+var (
+	ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
+	ErrUnkownScheme             = fmt.Errorf("unknown scheme")
+)
 
 // FailedToCreateRepositoryError is a helper function that returns a new error with the ErrFailedToCreateRepository
 // error wrapped.
@@ -48,19 +51,19 @@ func NewStorage(ctx context.Context, dns string) (*proto.StorageService, error) 
 	case proto.SchemeFromStorageType(proto.MongoType):
 		mdb, err := mongo.New(ctx, dns)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
 		}
 
 		stg = &proto.StorageService{Storage: mdb}
 	case proto.SchemeFromStorageType(proto.PostgresType):
 		pdb, err := postgres.New(ctx, dns)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
 		}
 
 		stg = &proto.StorageService{Storage: pdb}
 	default:
-		return nil, fmt.Errorf("unknown scheme: %s", scheme)
+		return nil, fmt.Errorf("%w: %s", ErrUnkownScheme, scheme)
 	}
 
 	return stg, nil

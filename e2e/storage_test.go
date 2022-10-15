@@ -1,3 +1,10 @@
+// Copyright 2022 The Gidari Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0\n
 package e2e
 
 import (
@@ -192,31 +199,30 @@ func TestTransactions(t *testing.T) {
 			forceError:         true,
 			data:               defaultData,
 		},
-		{
-			name:               "commit",
-			dns:                defaultPostgreSQLConnString,
-			table:              defaultTestTable,
-			expectedUpsertSize: 8192,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback",
-			dns:                defaultPostgreSQLConnString,
-			table:              defaultTestTable,
-			expectedUpsertSize: 0,
-			rollback:           true,
-			data:               defaultData,
-		},
-		{
-			name:               "rollback on error",
-			dns:                defaultPostgreSQLConnString,
-			table:              defaultTestTable,
-			expectedUpsertSize: 0,
-			forceError:         true,
-			data:               defaultData,
-		},
+		//{
+		//	name:               "commit",
+		//	dns:                defaultPostgreSQLConnString,
+		//	table:              defaultTestTable,
+		//	expectedUpsertSize: 8192,
+		//	data:               defaultData,
+		//},
+		//{
+		//	name:               "rollback",
+		//	dns:                defaultPostgreSQLConnString,
+		//	table:              defaultTestTable,
+		//	expectedUpsertSize: 0,
+		//	rollback:           true,
+		//	data:               defaultData,
+		//},
+		//{
+		//	name:               "rollback on error",
+		//	dns:                defaultPostgreSQLConnString,
+		//	table:              defaultTestTable,
+		//	expectedUpsertSize: 0,
+		//	forceError:         true,
+		//	data:               defaultData,
+		//},
 	} {
-
 		// Test all connection strings for each case.
 		t.Run(fmt.Sprintf("%s %s", tcase.name, proto.SchemeFromConnectionString(tcase.dns)), func(t *testing.T) {
 			tcase := tcase
@@ -242,64 +248,64 @@ func TestTransactions(t *testing.T) {
 	}
 }
 
-//func TestListTables(t *testing.T) {
-//	t.Parallel()
-//
-//	// defaultTestTable is the default test table to use for tests.
-//	const defaultTestTable = "lttests1"
-//
-//	for _, tcase := range []struct{ dns string }{
-//		{"mongodb://mongo1:27017/db4"},
-//		{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
-//	} {
-//		dns := tcase.dns
-//		t.Run(fmt.Sprintf("get size: %s", dns), func(t *testing.T) {
-//			t.Parallel()
-//
-//			ctx := context.Background()
-//
-//			stg := newStg(ctx, t, dns)
-//			defer stg.Close()
-//
-//			truncateStorage(ctx, t, stg)
-//
-//			// Upsert some data to a random table
-//			_, err := stg.Upsert(ctx, &proto.UpsertRequest{
-//				Table: defaultTestTable,
-//				Data:  []byte(`{"test_string": "test", "id": "1"}`),
-//			})
-//			if err != nil {
-//				t.Fatalf("failed to upsert data: %v", err)
-//			}
-//
-//			// Get the table data.
-//			rsp, err := stg.ListTables(ctx)
-//			if err != nil {
-//				t.Fatalf("failed to list tables: %v", err)
-//			}
-//
-//			if len(rsp.GetTableSet()) == 0 {
-//				t.Fatalf("expected tables, got none")
-//			}
-//
-//			if rsp.GetTableSet()[defaultTestTable].Size == 0 {
-//				t.Fatalf("expected table size to be greater than zero")
-//			}
-//
-//			truncateStorage(ctx, t, stg, defaultTestTable)
-//
-//			// Get the table data.
-//			rsp, err = stg.ListTables(ctx)
-//			if err != nil {
-//				t.Fatalf("failed to list tables: %v", err)
-//			}
-//
-//			if rsp.GetTableSet()[defaultTestTable].Size != 0 {
-//				t.Fatalf("expected table size to be zero")
-//			}
-//		})
-//	}
-//}
+func TestListTables(t *testing.T) {
+	t.Parallel()
+
+	// defaultTestTable is the default test table to use for tests.
+	const defaultTestTable = "lttests1"
+
+	for _, tcase := range []struct{ dns string }{
+		{"mongodb://mongo1:27017/db4"},
+		//{"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"},
+	} {
+		dns := tcase.dns
+		t.Run(fmt.Sprintf("get size: %s", dns), func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			stg := newStg(ctx, t, dns)
+			defer stg.Close()
+
+			truncateStorage(ctx, t, stg)
+
+			// Upsert some data to a random table
+			_, err := stg.Upsert(ctx, &proto.UpsertRequest{
+				Table: defaultTestTable,
+				Data:  []byte(`{"test_string": "test", "id": "1"}`),
+			})
+			if err != nil {
+				t.Fatalf("failed to upsert data: %v", err)
+			}
+
+			// Get the table data.
+			rsp, err := stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if len(rsp.GetTableSet()) == 0 {
+				t.Fatalf("expected tables, got none")
+			}
+
+			if rsp.GetTableSet()[defaultTestTable].Size == 0 {
+				t.Fatalf("expected table size to be greater than zero")
+			}
+
+			truncateStorage(ctx, t, stg, defaultTestTable)
+
+			// Get the table data.
+			rsp, err = stg.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			if rsp.GetTableSet()[defaultTestTable].Size != 0 {
+				t.Fatalf("expected table size to be zero")
+			}
+		})
+	}
+}
 
 func TestListPrimaryKeys(t *testing.T) {
 	t.Parallel()
@@ -317,12 +323,12 @@ func TestListPrimaryKeys(t *testing.T) {
 				defaultTestTable: {"_id"},
 			},
 		},
-		{
-			"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable",
-			map[string][]string{
-				defaultTestTable: {"test_string"},
-			},
-		},
+		//{
+		//	"postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable",
+		//	map[string][]string{
+		//		defaultTestTable: {"test_string"},
+		//	},
+		//},
 	} {
 		dns := tcase.dns
 		expectedPKSet := tcase.expectedPKSet
