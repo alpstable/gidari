@@ -15,6 +15,14 @@ services:
       - mongo_network
       - postgres_network
 
+  integration:
+    build:
+      context: .
+      dockerfile: docker/integration.Dockerfile
+    networks:
+      - mongo_network
+      - postgres_network
+
   lint:
     build:
       context: .

@@ -25,3 +25,9 @@ jobs:
 
     - name: Run E2E
       run: make e2e
+
+    - name: Run Postgres Integration Tests
+      run: make postgres-integration-tests
+
+    - name: Run Mongo Integration Tests
+      run: make mongo-integration-tests

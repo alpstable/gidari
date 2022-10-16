@@ -1,3 +1,5 @@
+//go:build mdbinteg
+
 // Copyright 2022 The Gidari Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +20,84 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )
+
+const defaultConnectionString = "mongodb://mongo1:27017/defaultcoll"
+
+func TestMongo(t *testing.T) {
+	t.Parallel()
+
+	const defaultTestTable = "tests1"
+	const listTablesTable = "lttests1"
+	const listPrimaryKeysTable = "pktests1"
+
+	defaultData := map[string]interface{}{
+		"test_string": "test",
+		"id":          "1",
+	}
+
+	ctx := context.Background()
+
+	mongo, err := New(ctx, defaultConnectionString)
+	if err != nil {
+		t.Fatalf("failed to connect to the database: %v", err)
+	}
+
+	proto.RunTest(context.Background(), t, mongo, func(runner *proto.TestRunner) {
+		runner.AddCloseDBCases(
+			[]proto.TestCase{
+				{
+					Name: "close mongo",
+				},
+			}...,
+		)
+
+		runner.AddListPrimaryKeysCases(
+			[]proto.TestCase{
+				{
+					Name:  "single",
+					Table: listPrimaryKeysTable,
+					ExpectedPrimaryKeys: map[string][]string{
+						listPrimaryKeysTable: {"_id"},
+					},
+				},
+			}...,
+		)
+
+		runner.AddListTablesCases(
+			[]proto.TestCase{
+				{
+					Name:  "single",
+					Table: listTablesTable,
+				},
+			}...,
+		)
+
+		runner.AddUpsertTxnCases(
+			[]proto.TestCase{
+				{
+					Name:               "commit",
+					Table:              defaultTestTable,
+					ExpectedUpsertSize: 54,
+					Data:               defaultData,
+				},
+				{
+					Name:               "rollback",
+					Table:              defaultTestTable,
+					ExpectedUpsertSize: 0,
+					Rollback:           true,
+					Data:               defaultData,
+				},
+				{
+					Name:               "rollback on error",
+					Table:              defaultTestTable,
+					ExpectedUpsertSize: 0,
+					ForceError:         true,
+					Data:               defaultData,
+				},
+			}...,
+		)
+	})
+}
 
 func TestMongoDBTxn(t *testing.T) {
 	t.Parallel()
