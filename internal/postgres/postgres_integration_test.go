@@ -19,6 +19,8 @@ import (
 const defaultConnectionString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
 
 func TestPostgres(t *testing.T) {
+	t.Parallel()
+	
 	const defaultTestTable = "tests1"
 	const listTablesTable = "lttests1"
 	const listPrimaryKeysTable = "pktests1"
