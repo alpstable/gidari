@@ -4,32 +4,24 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
-package storage
+//	http://www.apache.org/licenses/LICENSE-2.0\n
+package proto
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
-
-	"github.com/alpstable/gidari/proto"
 )
 
 const (
-	// MongoType is the byte representation of a mongo database.
-	MongoType uint8 = iota
-
 	// PostgresType is the byte representation of a postgres database.
-	PostgresType
+	PostgresType = 0x01
+
+	// MongoType is the byte representation of a mongo database.
+	MongoType = 0x02
 )
 
-var (
-	ErrDNSNotSupported     = fmt.Errorf("dns is not supported")
-	ErrTransactionNotFound = fmt.Errorf("transaction not found")
-	ErrNoTables            = fmt.Errorf("no tables found")
-	ErrTransactionAborted  = fmt.Errorf("transaction aborted")
-)
+var ErrDNSNotSupported = fmt.Errorf("dns is not supported")
 
 // DNSNotSupported wraps an error with ErrDNSNotSupported.
 func DNSNotSupportedError(dns string) error {
@@ -42,10 +34,10 @@ type Storage interface {
 	Close()
 
 	// ListPrimaryKeys will return a list of primary keys for all tables in the database.
-	ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error)
+	ListPrimaryKeys(ctx context.Context) (*ListPrimaryKeysResponse, error)
 
 	// ListTables will return a list of all tables in the database.
-	ListTables(ctx context.Context) (*proto.ListTablesResponse, error)
+	ListTables(ctx context.Context) (*ListTablesResponse, error)
 
 	// IsNoSQL will return true if the storage device is a NoSQL database.
 	IsNoSQL() bool
@@ -56,17 +48,19 @@ type Storage interface {
 	StartTx(context.Context) (*Txn, error)
 
 	// Truncate will delete all data from the storage device for ast list of tables.
-	Truncate(context.Context, *proto.TruncateRequest) (*proto.TruncateResponse, error)
+	Truncate(context.Context, *TruncateRequest) (*TruncateResponse, error)
 
 	// Type returns the type of storage device.
 	Type() uint8
 
 	// Upsert will insert or update a batch of records in the storage device.
-	Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error)
+	Upsert(context.Context, *UpsertRequest) (*UpsertResponse, error)
 }
 
-// sqlPrepareContextFn can be used to prepare a statement and return the result.
-type sqlPrepareContextFn func(context.Context, string) (*sql.Stmt, error)
+type StorageService struct{ Storage }
+
+// Constructor is a constructor method for a storage package.
+type Constructor func(context.Context, string) (*StorageService, error)
 
 // SchemeFromStorageType takes a byte and returns the associated DNS root database resource.
 func SchemeFromStorageType(t uint8) string {
@@ -88,27 +82,4 @@ func SchemeFromConnectionString(dns string) string {
 // Service is a wrapper for a Storage implementation.
 type Service struct {
 	Storage
-}
-
-// New will attempt to return a generic storage object given a DNS.
-func New(ctx context.Context, dns string) (*Service, error) {
-	if strings.Contains(dns, SchemeFromStorageType(MongoType)) {
-		svc, err := NewMongo(ctx, dns)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
-		}
-
-		return &Service{svc}, nil
-	}
-
-	if strings.Contains(dns, SchemeFromStorageType(PostgresType)) {
-		svc, err := NewPostgres(ctx, dns)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
-		}
-
-		return &Service{svc}, nil
-	}
-
-	return nil, DNSNotSupportedError(dns)
 }

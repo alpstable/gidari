@@ -1,22 +1,21 @@
+//go:build utests
+
 // Copyright 2022 The Gidari Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0\n
 package transport
 
 import (
-	"context"
 	"net/url"
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/alpstable/gidari/config"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -24,7 +23,7 @@ func TestTimeseries(t *testing.T) {
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		timeseries := &timeseries{
+		timeseries := &config.Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -40,7 +39,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T00:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.chunk(*testURL)
+		err = chunkTimeseries(timeseries, *testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -68,15 +67,15 @@ func TestTimeseries(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
-			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.Chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.Chunks)
 		}
 	})
 
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		timeseries := &timeseries{
+		timeseries := &config.Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -92,7 +91,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T01:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.chunk(*testURL)
+		err = chunkTimeseries(timeseries, *testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -120,14 +119,14 @@ func TestTimeseries(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
-			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.Chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.Chunks)
 		}
 	})
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
 		t.Parallel()
-		timeseries := &timeseries{
+		timeseries := &config.Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -143,7 +142,7 @@ func TestTimeseries(t *testing.T) {
 		query.Set("end", "2022-05-11T02:00:00Z")
 		testURL.RawQuery = query.Encode()
 
-		err = timeseries.chunk(*testURL)
+		err = chunkTimeseries(timeseries, *testURL)
 		if err != nil {
 			t.Fatalf("error setting chunks: %v", err)
 		}
@@ -175,94 +174,8 @@ func TestTimeseries(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(expChunks, timeseries.chunks) {
-			t.Fatalf("unexpected chunks: %v", timeseries.chunks)
+		if !reflect.DeepEqual(expChunks, timeseries.Chunks) {
+			t.Fatalf("unexpected chunks: %v", timeseries.Chunks)
 		}
 	})
-}
-
-func TestUpsert(t *testing.T) {
-	t.Parallel()
-
-	// Iterate over the fixtures/upsert directory and run each configuration file.
-	fixtureRoot := "testdata/upsert"
-
-	fixtures, err := os.ReadDir(fixtureRoot)
-	if err != nil {
-		t.Fatalf("error reading fixtures: %v", err)
-	}
-
-	for _, fixture := range fixtures {
-		name := fixture.Name()
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			path := filepath.Join(fixtureRoot, name)
-
-			bytes, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("error reading fixture: %v", err)
-			}
-
-			cfg, err := NewConfig(bytes)
-			if err != nil {
-				t.Fatalf("error creating config: %v", err)
-			}
-
-			cfg.Logger = logrus.New()
-
-			// Fill in the authentication details for the fixture.
-			cfgAuth := cfg.Authentication
-			if cfgAuth.APIKey != nil {
-				// The "passhprase" field in the fixture should be the name of the auth map entry. That
-				// is how we lookup which authentication details to use.
-				cfg.Authentication = Authentication{
-					APIKey: &APIKey{
-						Key:        os.Getenv(cfgAuth.APIKey.Key),
-						Secret:     os.Getenv(cfgAuth.APIKey.Secret),
-						Passphrase: os.Getenv(cfgAuth.APIKey.Passphrase),
-					},
-				}
-			}
-
-			if cfgAuth.Auth2 != nil {
-				// The "bearer" field in the fixture should be the name of the auth map entry. That
-				// is how we lookup which authentication details to use.
-				cfg.Authentication = Authentication{
-					Auth2: &Auth2{
-						Bearer: os.Getenv(cfgAuth.Auth2.Bearer),
-					},
-				}
-			}
-
-			// Upsert the fixture.
-			if err := Upsert(context.Background(), cfg); err != nil {
-				t.Fatalf("error upserting: %v", err)
-			}
-
-			// cleanup
-			t.Cleanup(func() {
-				if err := Truncate(context.Background(), cfg); err != nil {
-					t.Fatalf("error in truncating tables %v", err)
-				}
-			})
-			// checking if the data was actually inserted.
-			repos, repocloser, err := cfg.repos(context.Background())
-			if err != nil {
-				t.Error(err)
-			}
-
-			defer repocloser()
-
-			for _, repo := range repos {
-				rsp, err := repo.ListTables(context.Background())
-				if err != nil {
-					t.Fatalf("failed to list tables: %v", err)
-				}
-				if len(rsp.GetTableSet()) == 0 {
-					t.Fatalf("expected tables, got none")
-				}
-			}
-		})
-	}
 }

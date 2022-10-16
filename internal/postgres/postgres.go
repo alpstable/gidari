@@ -4,8 +4,8 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
-package storage
+//	http://www.apache.org/licenses/LICENSE-2.0\n
+package postgres
 
 import (
 	"context"
@@ -14,18 +14,27 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/tools"
+	"github.com/alpstable/gidari/internal/proto"
 	"github.com/google/uuid"
-	"github.com/lib/pq" // postgres driver
+	"github.com/lib/pq"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
-	pgPartitionSize = 1000
-	pgGCRetryLimit  = 10
+	defaultPartitionSize               = 1000
+	defaultGarbageCollectionRetryLimit = 10
+)
+
+var (
+	ErrTransactionNotFound   = fmt.Errorf("transaction not found")
+	ErrNoTables              = fmt.Errorf("no tables found")
+	ErrUnsupportedDataType   = fmt.Errorf("unsupported data type")
+	ErrFailedToMarshalJSON   = fmt.Errorf("failed to marshal json")
+	ErrFailedToUnmarshalJSON = fmt.Errorf("failed to unmarshal json")
 )
 
 // postgresTxType is a type alias for the postgres transaction type.
@@ -34,6 +43,9 @@ type postgresTxType uint8
 const (
 	basicPostgressTxID postgresTxType = iota
 )
+
+// sqlPrepareContextFn can be used to prepare a statement and return the result.
+type sqlPrepareContextFn func(context.Context, string) (*sql.Stmt, error)
 
 type pgmeta struct {
 	// cols are the columns for a specific table.
@@ -56,6 +68,57 @@ func (meta *pgmeta) isPK(table, name string) bool {
 	return false
 }
 
+// fortmatPlaceholders will return a string of placeholders that require a number next to the placeholder string
+// that iteratively increases by the number of arguments passed to the query. For example, if a string has numCols=3
+// and numRows=2, this function will return "(?1,?2,?3),(?4,?5,?6)".
+func formatPlaceholders(numCols int, numRows int, symbol string) string {
+	if numCols == 0 || numRows == 0 {
+		return "()"
+	}
+
+	if symbol == "" {
+		symbol = "?"
+	}
+
+	var strBldr strings.Builder
+
+	for pos := 0; pos < numRows*numCols; pos++ {
+		if pos%numCols == 0 {
+			strBldr.WriteString("(")
+		}
+
+		strBldr.WriteString(symbol)
+		strBldr.WriteString(strconv.Itoa(pos + 1))
+
+		if pos%numCols == numCols-1 {
+			strBldr.WriteString(")")
+
+			if pos != numRows*numCols-1 {
+				strBldr.WriteString(",")
+			}
+		} else {
+			strBldr.WriteString(",")
+		}
+	}
+
+	return strBldr.String()
+}
+
+// flattenPartition will take a slice of structures, extract data from their fields, and append it to a slice.
+// This will "flatten" the data to be used in conjunctino with placeholders in a SQL query.
+func flattenPartition(columns []string, partition []*structpb.Struct) []interface{} {
+	var args []interface{}
+
+	for _, record := range partition {
+		hash := record.AsMap()
+		for _, column := range columns {
+			args = append(args, hash[column])
+		}
+	}
+
+	return args
+}
+
 // exclusionConstraints will return a string of non-primary key columns to "exclude" if they are not changed in the
 // context of a Postgres insert. That is, if a column is not changed, it will not be updated. All columns beside primary
 // keys must be included in the "excluded" clause.
@@ -75,7 +138,7 @@ func (meta *pgmeta) exclusionConstraints(table string) []string {
 func (meta *pgmeta) upsertStmt(ctx context.Context, table string, pcf sqlPrepareContextFn, vol int) (*sql.Stmt, error) {
 	query := fmt.Sprintf(`INSERT INTO %s(%s) VALUES %s ON CONFLICT (%s) DO UPDATE SET %s`, table,
 		strings.Join(meta.cols[table], ","),
-		tools.SQLIterativePlaceholders(len(meta.cols[table]), vol, "$"),
+		formatPlaceholders(len(meta.cols[table]), vol, "$"),
 		strings.Join(meta.pks[table], ","),
 		strings.Join(meta.exclusionConstraints(table), ","))
 
@@ -102,7 +165,7 @@ func (pg *Postgres) garbageCollect(ctx context.Context, retryCount uint8, tables
 		// If the garbage collection fails due to a deadlock, we will retry the operation. We should not
 		// retry more than a deterministic number of times, defined by "pgGCRetryLimit".
 		var pqErr *pq.Error
-		if retryCount <= pgGCRetryLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
+		if retryCount <= defaultGarbageCollectionRetryLimit && errors.As(err, &pqErr) && pqErr.Code == "40P01" {
 			return pg.garbageCollect(ctx, retryCount+1, tables...)
 		}
 
@@ -273,7 +336,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 	pg.writeMutex.Lock()
 	defer pg.writeMutex.Unlock()
 
-	records, err := tools.DecodeUpsertRecords(req)
+	records, err := proto.DecodeUpsertRecords(req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode records: %w", err)
 	}
@@ -296,14 +359,14 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 
 	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
 	// postgres database.
-	for _, partition := range tools.PartitionStructs(pgPartitionSize, records) {
+	for _, partition := range proto.PartitionStructs(defaultPartitionSize, records) {
 		stmt, err := pg.meta.upsertStmt(ctx, table, prepareContextFn, len(partition))
 		if err != nil {
 			return nil, fmt.Errorf("unable to prepare statement: %w", err)
 		}
 
 		// Execute upsert.
-		arguments := tools.SQLFlattenPartition(pg.meta.cols[table], partition)
+		arguments := flattenPartition(pg.meta.cols[table], partition)
 		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
 			return nil, fmt.Errorf("unable to execute upsert: %w", err)
 		}
@@ -331,8 +394,8 @@ type Postgres struct {
 	activeTx sync.Map
 }
 
-// NewPostgres will return a new Postgres option for querying data through a Postgres DB.
-func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
+// New will return a new Postgres option for querying data through a Postgres DB.
+func New(ctx context.Context, connectionURL string) (*Postgres, error) {
 	postgres := new(Postgres)
 
 	var err error
@@ -355,7 +418,7 @@ func NewPostgres(ctx context.Context, connectionURL string) (*Postgres, error) {
 func (pg *Postgres) IsNoSQL() bool { return false }
 
 // Type implements the storage interface.
-func (pg *Postgres) Type() uint8 { return PostgresType }
+func (pg *Postgres) Type() uint8 { return proto.PostgresType }
 
 // pgMaxConnectionsUpperLimit will return the most ideal upper limit for the maximum number of connections for a
 // Postgres DB. https://tinyurl.com/57kyjtwd
@@ -399,12 +462,12 @@ func (pg *Postgres) setMaxOpenConns() {
 
 // StartTx will start a transaction on the Postgres connection. The transaction ID is returned and should be used
 // to commit or rollback the transaction.
-func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
+func (pg *Postgres) StartTx(ctx context.Context) (*proto.Txn, error) {
 	// Construct a gidari storage transaction.
-	txn := &Txn{
-		make(chan TxnChanFn),
-		make(chan error, 1),
-		make(chan bool, 1),
+	txn := &proto.Txn{
+		FunctionCh: make(chan proto.TxnChanFn),
+		DoneCh:     make(chan error, 1),
+		CommitCh:   make(chan bool, 1),
 	}
 
 	// Instantiate a new transaction on the Postgres connection and store it in the activeTx map.
@@ -426,7 +489,7 @@ func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 			pg.activeTx.Delete(txnID)
 		}()
 
-		for fn := range txn.ch {
+		for fn := range txn.FunctionCh {
 			if err != nil {
 				continue
 			}
@@ -435,15 +498,15 @@ func (pg *Postgres) StartTx(ctx context.Context) (*Txn, error) {
 		}
 
 		if err != nil {
-			txn.done <- err
+			txn.DoneCh <- err
 
 			return
 		}
 
-		if <-txn.commit {
-			txn.done <- pgtx.Commit()
+		if <-txn.CommitCh {
+			txn.DoneCh <- pgtx.Commit()
 		} else {
-			txn.done <- pgtx.Rollback()
+			txn.DoneCh <- pgtx.Rollback()
 		}
 	}()
 

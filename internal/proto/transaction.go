@@ -4,8 +4,8 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
-package storage
+//	http://www.apache.org/licenses/LICENSE-2.0\n
+package proto
 
 import (
 	"context"
@@ -16,9 +16,9 @@ type TxnChanFn func(context.Context, Storage) error
 
 // Txn is a wrapper for a mongo session that can be used to perform CRUD operations on a mongo DB instance.
 type Txn struct {
-	ch     chan TxnChanFn
-	done   chan error
-	commit chan bool
+	FunctionCh chan TxnChanFn
+	DoneCh     chan error
+	CommitCh   chan bool
 }
 
 // Transactor is an interface that can be used to perform CRUD operations within the context of a database transaction.
@@ -30,21 +30,21 @@ type Transactor interface {
 
 // Commit will commit the transaction.
 func (txn *Txn) Commit() error {
-	close(txn.ch)
-	txn.commit <- true
+	close(txn.FunctionCh)
+	txn.CommitCh <- true
 
-	return <-txn.done
+	return <-txn.DoneCh
 }
 
 // Rollback will rollback the transaction.
 func (txn *Txn) Rollback() error {
-	close(txn.ch)
-	txn.commit <- false
+	close(txn.FunctionCh)
+	txn.CommitCh <- false
 
-	return <-txn.done
+	return <-txn.DoneCh
 }
 
 // Send will send a function to the transaction channel.
 func (txn *Txn) Send(fn TxnChanFn) {
-	txn.ch <- fn
+	txn.FunctionCh <- fn
 }

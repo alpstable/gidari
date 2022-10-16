@@ -13,4 +13,3 @@ requests:
     endpoint: /us/94701
     table: berkeley
     truncate: true
-    

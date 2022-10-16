@@ -1,11 +1,3 @@
-# PKGS returns all Go packages in the Gidari code base.
-PKGS = $(or $(PKG),$(shell env GO111MODULE=on $(GC) list ./...))
-
-# TESTPKGS returns all Go packages int the Gidari code base that contain "*_test.go" files.
-TESTPKGS = $(shell env GO111MODULE=on $(GC) list -f \
-            '{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' \
-            $(PKGS))
-
 # GC is the go compiler.
 GC = go
 
@@ -23,21 +15,36 @@ containers:
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:
-	protoc --proto_path=proto --go_out=proto proto/db.proto
+	protoc --proto_path=internal/proto --go_out=internal/proto internal/proto/db.proto
 
-# test runs all of the application tests locally.
+# test runs all of the unit tests locally. Each test is run 5 times to minimize flakiness.
 .PHONY: tests
 tests:
 	$(GC) clean -testcache
+	go test -v -count=5 -tags=utests ./...
 
-	# Run each test 3 times to minimalize flakey tests.
-	@$(foreach dir,$(TESTPKGS), $(GC) test $(dir) -v -count=3;)
-
-# ci are the integration tests in CI/CD.
-.PHONY: ci
-ci:
+# e2e runs all of the end-to-end tests locally.
+.PHONY: e2e
+e2e:
+	chmod +rwx scripts/*.sh
 	$(GC) clean -testcache
-	./scripts/run-ci-tests.sh
+	./scripts/run-e2e-tests.sh
+
+# mongo-integration-tests runs all of the mongo integration tests in a docker container. Each test is run 5 times
+# to minimize flakiness.
+.PHONY: mongo-integration-tests
+mongo-integration-tests:
+	chmod +rwx scripts/*.sh
+	$(GC) clean -testcache
+	./scripts/run-integration-tests.sh mdbinteg 5
+
+# postgres-integration-tests runs all of the postgres integration tests in a docker container. Each test is run 5
+# times to minimize flakiness.
+.PHONY: postgres-integration-tests
+postgres-integration-tests:
+	chmod +rwx scripts/*.sh
+	$(GC) clean -testcache
+	./scripts/run-integration-tests.sh pginteg 5
 
 # lint runs the linter.
 .PHONY: lint

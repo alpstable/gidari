@@ -4,8 +4,8 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
-package storage
+//	http://www.apache.org/licenses/LICENSE-2.0\n
+package mongo
 
 import (
 	"context"
@@ -14,20 +14,30 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/tools"
+	"github.com/alpstable/gidari/internal/proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
-	mdbLifetime              = 60 * time.Second
-	mdbTransactionRetryLimit = 3
-	mdbWriteConflicErrCode   = 112
+	transactionLifetime    = 60 * time.Second
+	transactionRetryLimit  = 3
+	writeConflictErrorCode = 112
+)
+
+var (
+	ErrFailedToMarshalBSON   = fmt.Errorf("failed to marshal bson")
+	ErrFailedToUnmarshalBSON = fmt.Errorf("failed to unmarshal bson")
+	ErrTransactionNotFound   = fmt.Errorf("transaction not found")
+	ErrNoTables              = fmt.Errorf("no tables found")
+	ErrUnsupportedDataType   = fmt.Errorf("unsupported data type")
+	ErrDNSNotSupported       = fmt.Errorf("dns is not supported")
+	ErrTransactionAborted    = fmt.Errorf("transaction aborted")
 )
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
@@ -38,10 +48,10 @@ type Mongo struct {
 	writeMutex sync.Mutex
 }
 
-// NewMongo will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
+// New will return a new mongo client that can be used to perform CRUD operations on a mongo DB instance. This
 // constructor uses a URI to make the client connection, and the URI is of the form
 // Mongo://username:password@host:port
-func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
+func New(ctx context.Context, uri string) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(uri)
 
 	client, err := mongo.Connect(ctx, clientOptions)
@@ -52,7 +62,7 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 	mdb := new(Mongo)
 	mdb.Client = client
 	mdb.dns = uri
-	mdb.lifetime = mdbLifetime
+	mdb.lifetime = transactionLifetime
 	mdb.writeMutex = sync.Mutex{}
 
 	return mdb, nil
@@ -62,8 +72,20 @@ func NewMongo(ctx context.Context, uri string) (*Mongo, error) {
 func (m *Mongo) IsNoSQL() bool { return true }
 
 // Type returns the type of storage.
-func (m *Mongo) Type() uint8 {
-	return MongoType
+func (m *Mongo) Type() uint8 { return proto.MongoType }
+
+func assingRecordBSONDocument(req *structpb.Struct, doc *bson.D) error {
+	data, err := bson.Marshal(req.AsMap())
+	if err != nil {
+		return fmt.Errorf("%v: %w", ErrFailedToMarshalBSON, err)
+	}
+
+	err = bson.Unmarshal(data, doc)
+	if err != nil {
+		return fmt.Errorf("%v: %w", ErrFailedToUnmarshalBSON, err)
+	}
+
+	return nil
 }
 
 // Close will close the mongo client.
@@ -79,8 +101,8 @@ func (m *Mongo) commitTransactionWithRetry(ctx mongo.SessionContext, retryCount 
 	if err := ctx.CommitTransaction(ctx); err != nil {
 		// Check if the transaction error is a "mongo.ServerError".
 		var mdbErr mongo.ServerError
-		if retryCount <= mdbTransactionRetryLimit && errors.As(err, &mdbErr) &&
-			mdbErr.HasErrorCode(mdbWriteConflicErrCode) {
+		if retryCount <= transactionRetryLimit && errors.As(err, &mdbErr) &&
+			mdbErr.HasErrorCode(writeConflictErrorCode) {
 			// Check if the server error is a "WriteConflict", if so then retry the transaction.
 			return m.commitTransactionWithRetry(ctx, retryCount+1)
 		}
@@ -91,7 +113,7 @@ func (m *Mongo) commitTransactionWithRetry(ctx mongo.SessionContext, retryCount 
 
 // ReceiveWrites will listen for writes to the transaction and commit them to the database every time the lifetime
 // limit is reached, or when the transaction is committed through the commit channel.
-func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *Txn) *errgroup.Group {
+func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *proto.Txn) *errgroup.Group {
 	lifetimeTicker := time.NewTicker(m.lifetime)
 	errs, _ := errgroup.WithContext(context.Background())
 
@@ -99,7 +121,7 @@ func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *Txn) *errgroup.Gro
 		var err error
 
 		// Receive write requests.
-		for opr := range txn.ch {
+		for opr := range txn.FunctionCh {
 			select {
 			case <-lifetimeTicker.C:
 				// If the transaction has exceeded the lifetime, commit the transaction and start a new
@@ -133,8 +155,8 @@ func (m *Mongo) receiveWrites(sctx mongo.SessionContext, txn *Txn) *errgroup.Gro
 
 // startSession will create a session and listen for writes, committing and reseting the transaction every 60 seconds
 // to avoid lifetime limit errors.
-func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
-	txn.done <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
+func (m *Mongo) startSession(ctx context.Context, txn *proto.Txn) {
+	txn.DoneCh <- m.Client.UseSession(ctx, func(sctx mongo.SessionContext) error {
 		// Start the transaction, if there is an error break the go routine.
 		if err := sctx.StartTransaction(); err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)
@@ -146,7 +168,7 @@ func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 
 		// Await the decision to commit or rollback.
 		switch {
-		case <-txn.commit:
+		case <-txn.CommitCh:
 			if err := m.commitTransactionWithRetry(sctx, 0); err != nil {
 				return fmt.Errorf("commit transaction: %w", err)
 			}
@@ -166,12 +188,12 @@ func (m *Mongo) startSession(ctx context.Context, txn *Txn) {
 // error for exceeding this time constraint is "TransactionExceededLifetimeLimitSeconds". To maintain agnostism at the
 // repository layer, we implement the logic to handle these transactions errors in the storage layer. Therefore, every
 // 60 seconds, the transacting data will be committed commit the transaction and start a new one.
-func (m *Mongo) StartTx(ctx context.Context) (*Txn, error) {
+func (m *Mongo) StartTx(ctx context.Context) (*proto.Txn, error) {
 	// Construct a transaction.
-	txn := &Txn{
-		make(chan TxnChanFn),
-		make(chan error, 1),
-		make(chan bool, 1),
+	txn := &proto.Txn{
+		FunctionCh: make(chan proto.TxnChanFn),
+		DoneCh:     make(chan error, 1),
+		CommitCh:   make(chan bool, 1),
 	}
 
 	// Create a go routine that creates a session and listens for writes.
@@ -209,7 +231,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	m.writeMutex.Lock()
 	defer m.writeMutex.Unlock()
 
-	records, err := tools.DecodeUpsertRecords(req)
+	records, err := proto.DecodeUpsertRecords(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode records: %w", err)
 	}
@@ -223,7 +245,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 
 	for _, record := range records {
 		doc := bson.D{}
-		if err := tools.AssingRecordBSONDocument(record, &doc); err != nil {
+		if err := assingRecordBSONDocument(record, &doc); err != nil {
 			return nil, fmt.Errorf("failed to assign record to bson document: %w", err)
 		}
 

@@ -11,4 +11,4 @@ RUN go mod download
 COPY . .
 
 # Run the tests.
-CMD ["go", "test", "-v", "./..."]
+ENTRYPOINT ["go", "test", "-v", "./..."]

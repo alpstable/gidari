@@ -11,12 +11,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alpstable/gidari/internal/storage"
-	"github.com/alpstable/gidari/proto"
+	"github.com/alpstable/gidari/internal/mongo"
+	"github.com/alpstable/gidari/internal/postgres"
+	"github.com/alpstable/gidari/internal/proto"
 )
 
 // ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
-var ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
+var (
+	ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
+	ErrUnkownScheme             = fmt.Errorf("unknown scheme")
+)
 
 // FailedToCreateRepositoryError is a helper function that returns a new error with the ErrFailedToCreateRepository
 // error wrapped.
@@ -26,21 +30,48 @@ func FailedToCreateRepositoryError(err error) error {
 
 // Generic is the interface for the generic service.
 type Generic interface {
-	storage.Storage
-	storage.Transactor
+	proto.Storage
+	proto.Transactor
 
 	Transact(fn func(ctx context.Context, repo Generic) error)
 }
 
 // GenericService is the implementation of the Generic service.
 type GenericService struct {
-	storage.Storage
-	*storage.Txn
+	proto.Storage
+	*proto.Txn
+}
+
+// NewStorage returns a new storage service.
+func NewStorage(ctx context.Context, dns string) (*proto.StorageService, error) {
+	var stg *proto.StorageService
+
+	scheme := proto.SchemeFromConnectionString(dns)
+	switch scheme {
+	case proto.SchemeFromStorageType(proto.MongoType):
+		mdb, err := mongo.New(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
+		}
+
+		stg = &proto.StorageService{Storage: mdb}
+	case proto.SchemeFromStorageType(proto.PostgresType):
+		pdb, err := postgres.New(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
+		}
+
+		stg = &proto.StorageService{Storage: pdb}
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrUnkownScheme, scheme)
+	}
+
+	return stg, nil
 }
 
 // New returns a new Generic service.
 func New(ctx context.Context, dns string) (*GenericService, error) {
-	stg, err := storage.New(ctx, dns)
+	stg, err := NewStorage(ctx, dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct storage: %w", err)
 	}
@@ -51,7 +82,7 @@ func New(ctx context.Context, dns string) (*GenericService, error) {
 // NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
 // storage operations made by the repository layer.
 func NewTx(ctx context.Context, dns string) (*GenericService, error) {
-	stg, err := storage.New(ctx, dns)
+	stg, err := NewStorage(ctx, dns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct storage: %w", err)
 	}
@@ -67,7 +98,7 @@ func NewTx(ctx context.Context, dns string) (*GenericService, error) {
 // Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If
 // svc is not a transaction, the function will be executed without executing.
 func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) error) {
-	svc.Txn.Send(func(ctx context.Context, stg storage.Storage) error {
+	svc.Txn.Send(func(ctx context.Context, stg proto.Storage) error {
 		err := fn(ctx, svc)
 		if err != nil {
 			return fmt.Errorf("error executing transaction: %w", err)

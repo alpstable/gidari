@@ -4,18 +4,18 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
-package storage
+//	http://www.apache.org/licenses/LICENSE-2.0\n
+package postgres
 
 import (
 	_ "embed" // Embed external data.
 )
 
-//go:embed queries/pg_columns.sql
+//go:embed queries/columns.sql
 var pgColumns []byte
 
-//go:embed queries/pg_truncate_tables.sql
+//go:embed queries/truncate_tables.sql
 var pgTruncatedTables []byte
 
-//go:embed queries/pg_garbage_collect.sql
+//go:embed queries/garbage_collect.sql
 var pgGarbageCollect []byte

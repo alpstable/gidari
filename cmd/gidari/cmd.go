@@ -14,6 +14,7 @@ import (
 	"os"
 
 	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,7 +58,7 @@ func run(configFilepath string, verboseLogging bool, _ []string) {
 		log.Fatalf("error opening config file  %s: %v", configFilepath, err)
 	}
 
-	cfg, err := gidari.NewConfig(context.Background(), file)
+	cfg, err := config.New(context.Background(), file)
 	if err != nil {
 		log.Fatalf("error creating new config: %v", err)
 	}

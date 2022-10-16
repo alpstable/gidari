@@ -21,9 +21,13 @@ jobs:
       run: make containers
 
     - name: Run Test
-      env:
-        CBP_KEY: ${{ secrets.CBP_KEY }}
-        CBP_PASSPHRASE: ${{ secrets.CBP_PASSPHRASE }}
-        CBP_SECRET: ${{ secrets.CBP_SECRET }}
-        POL_BEARER_TOKEN: ${{ secrets.POL_BEARER_TOKEN }}
-      run: make ci
+      run: make tests
+
+    - name: Run E2E
+      run: make e2e
+
+    - name: Run Postgres Integration Tests
+      run: make postgres-integration-tests
+
+    - name: Run Mongo Integration Tests
+      run: make mongo-integration-tests

@@ -7,12 +7,18 @@ networks:
     driver: bridge
 
 services:
-
-  # CI networking is straight up hot putrid trash, wrap the code and run tests.
-  ci:
+  e2e:
     build:
       context: .
-      dockerfile: docker/ci.Dockerfile
+      dockerfile: docker/e2e.Dockerfile
+    networks:
+      - mongo_network
+      - postgres_network
+
+  integration:
+    build:
+      context: .
+      dockerfile: docker/integration.Dockerfile
     networks:
       - mongo_network
       - postgres_network
@@ -83,5 +89,5 @@ services:
       - "5432:5432"
     volumes:
       - ./.db/postgres1:/var/lib/postgresql/dat
-      - ./scripts/pg_create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./internal/postgres/queries/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     restart: "unless-stopped"
