@@ -32,6 +32,8 @@ type Request struct {
 	// Truncate before upserting on single request
 	Truncate *bool `yaml:"truncate"`
 
+	ClobColumn string `yaml:"clobColumn"`
+
 	// Chunks of requests should share a rate limiter, probably all of them; inheriting the rate limiter from the
 	// root configuration.
 	RateLimiter *rate.Limiter
