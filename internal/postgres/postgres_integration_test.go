@@ -20,7 +20,7 @@ const defaultConnectionString = "postgresql://root:root@postgres1:5432/defaultdb
 
 func TestPostgres(t *testing.T) {
 	t.Parallel()
-	
+
 	const defaultTestTable = "tests1"
 	const listTablesTable = "lttests1"
 	const listPrimaryKeysTable = "pktests1"
@@ -88,6 +88,36 @@ func TestPostgres(t *testing.T) {
 					ExpectedUpsertSize: 0,
 					ForceError:         true,
 					Data:               defaultData,
+				},
+			}...,
+		)
+
+		runner.AddUpsertBinaryCases(
+			[]proto.TestCase{
+				{
+					Name:               "no pk map",
+					BinaryColumn:       "data",
+					Table:              "property_bag_tests1",
+					ExpectedUpsertSize: 8192,
+					Data: map[string]interface{}{
+						"data": []byte("{ x: 1 }"),
+						"id":   "1",
+					},
+				},
+				{
+					Name:         "pk map",
+					BinaryColumn: "data",
+					Table:        "property_bag_tests2",
+					PrimaryKeyMap: map[string]string{
+						"pk1": "primary_key1",
+						"pk2": "primary_key2",
+					},
+					ExpectedUpsertSize: 8192,
+					Data: map[string]interface{}{
+						"data": []byte("{ x: 1 }"),
+						"pk1":  "1",
+						"pk2":  "2",
+					},
 				},
 			}...,
 		)

@@ -329,6 +329,34 @@ func (pg *Postgres) getPrepareContextFn(ctx context.Context) (sqlPrepareContextF
 	return pg.DB.PrepareContext, nil
 }
 
+func (pg *Postgres) upsert(ctx context.Context, table string, records []*structpb.Struct) error {
+	prepareContextFn, err := pg.getPrepareContextFn(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to get preparer: %w", err)
+	}
+
+	if err := pg.loadMeta(ctx, false); err != nil {
+		return fmt.Errorf("unable to load postgres metadata: %w", err)
+	}
+
+	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
+	// postgres database.
+	for _, partition := range proto.PartitionStructs(defaultPartitionSize, records) {
+		stmt, err := pg.meta.upsertStmt(ctx, table, prepareContextFn, len(partition))
+		if err != nil {
+			return fmt.Errorf("unable to prepare statement: %w", err)
+		}
+
+		// Execute upsert.
+		arguments := flattenPartition(pg.meta.cols[table], partition)
+		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
+			return fmt.Errorf("unable to execute upsert: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // Upsert will insert the records on the request if they do not exist in the database. On conflict, it will use the
 // PK on the request record to update the data in the database. An upsert request will update the entire table
 // for a given record, include fields that have not been set directly.
@@ -336,7 +364,7 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 	pg.writeMutex.Lock()
 	defer pg.writeMutex.Unlock()
 
-	records, err := proto.DecodeUpsertRecords(req)
+	records, err := proto.DecodeUpsertRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode records: %w", err)
 	}
@@ -346,30 +374,9 @@ func (pg *Postgres) Upsert(ctx context.Context, req *proto.UpsertRequest) (*prot
 		return &proto.UpsertResponse{}, nil
 	}
 
-	prepareContextFn, err := pg.getPrepareContextFn(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get preparer: %w", err)
-	}
-
-	if err := pg.loadMeta(ctx, false); err != nil {
-		return nil, fmt.Errorf("unable to load postgres metadata: %w", err)
-	}
-
 	table := req.GetTable()
-
-	// Upsert 1000 records at a time, the maximum number of records that can be inserted in a single statement on a
-	// postgres database.
-	for _, partition := range proto.PartitionStructs(defaultPartitionSize, records) {
-		stmt, err := pg.meta.upsertStmt(ctx, table, prepareContextFn, len(partition))
-		if err != nil {
-			return nil, fmt.Errorf("unable to prepare statement: %w", err)
-		}
-
-		// Execute upsert.
-		arguments := flattenPartition(pg.meta.cols[table], partition)
-		if _, err := stmt.ExecContext(ctx, arguments...); err != nil {
-			return nil, fmt.Errorf("unable to execute upsert: %w", err)
-		}
+	if err := pg.upsert(ctx, table, records); err != nil {
+		return nil, fmt.Errorf("unable to upsert: %w", err)
 	}
 
 	return &proto.UpsertResponse{}, nil
@@ -511,4 +518,30 @@ func (pg *Postgres) StartTx(ctx context.Context) (*proto.Txn, error) {
 	}()
 
 	return txn, nil
+}
+
+// UpsertBinary will upsert binary data into the PostgresDB for a "property bag"-like table, storing the data in a
+// binary-type column.
+func (pg *Postgres) UpsertBinary(ctx context.Context,
+	req *proto.UpsertBinaryRequest,
+) (*proto.UpsertBinaryResponse, error) {
+	pg.writeMutex.Lock()
+	defer pg.writeMutex.Unlock()
+
+	records, err := proto.DecodeUpsertBinaryRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode records: %w", err)
+	}
+
+	// Do nothing if there are no records.
+	if len(records) == 0 {
+		return &proto.UpsertBinaryResponse{}, nil
+	}
+
+	table := req.GetTable()
+	if err := pg.upsert(ctx, table, records); err != nil {
+		return nil, fmt.Errorf("unable to upsert: %w", err)
+	}
+
+	return &proto.UpsertBinaryResponse{}, nil
 }

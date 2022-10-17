@@ -77,8 +77,8 @@ const (
 	UpsertDataJSON UpsertDataType = iota
 )
 
-// DecodeUpsertRecords will decode the records from the upsert request into a slice of structs.
-func DecodeUpsertRecords(req *UpsertRequest) ([]*structpb.Struct, error) {
+// DecodeUpsertRequest will decode the records from the upsert request into a slice of structs.
+func DecodeUpsertRequest(req *UpsertRequest) ([]*structpb.Struct, error) {
 	if UpsertDataType(req.DataType) == UpsertDataJSON {
 		var data interface{}
 		if err := json.Unmarshal(req.Data, &data); err != nil {
@@ -94,6 +94,54 @@ func DecodeUpsertRecords(req *UpsertRequest) ([]*structpb.Struct, error) {
 	}
 
 	return nil, fmt.Errorf("%w: %v", ErrUnsupportedDataType, req.DataType)
+}
+
+// DecodeUpsertBinaryRequest will decode the records from an upsert binary request into a slice of structs.
+func DecodeUpsertBinaryRequest(req *UpsertBinaryRequest) ([]*structpb.Struct, error) {
+	// Create an "UpsertRequest" and decode the records normally.
+	upsertReq := &UpsertRequest{
+		DataType: int32(UpsertDataJSON),
+		Data:     req.Data,
+	}
+
+	records, err := DecodeUpsertRequest(upsertReq)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrFailedToDecodeRecords, err)
+	}
+
+	// Get the map for each record and encode it as JSON binary.
+	binRecords := make([]*structpb.Struct, len(records))
+
+	for idx, record := range records {
+		binRecordData, err := json.Marshal(record.AsMap())
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
+		}
+
+		// Create the binary record and add it to the slice.
+		binRecords[idx] = &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				req.BinaryColumn: {
+					Kind: &structpb.Value_StringValue{
+						StringValue: string(binRecordData),
+					},
+				},
+			},
+		}
+
+		// Now add the primary keys to the binary record.
+		if req.PrimaryKeyMap != nil {
+			for jsonCol, primaryKey := range req.PrimaryKeyMap {
+				if val, ok := record.Fields[jsonCol]; ok {
+					binRecords[idx].Fields[primaryKey] = val
+				}
+			}
+		} else {
+			binRecords[idx].Fields["id"] = record.Fields["id"]
+		}
+	}
+
+	return binRecords, nil
 }
 
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to

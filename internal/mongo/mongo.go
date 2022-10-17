@@ -38,6 +38,7 @@ var (
 	ErrUnsupportedDataType   = fmt.Errorf("unsupported data type")
 	ErrDNSNotSupported       = fmt.Errorf("dns is not supported")
 	ErrTransactionAborted    = fmt.Errorf("transaction aborted")
+	ErrNotImplemented        = fmt.Errorf("not implemented")
 )
 
 // Mongo is a wrapper for *mongo.Client, use to perform CRUD operations on a mongo DB instance.
@@ -231,7 +232,7 @@ func (m *Mongo) Upsert(ctx context.Context, req *proto.UpsertRequest) (*proto.Up
 	m.writeMutex.Lock()
 	defer m.writeMutex.Unlock()
 
-	records, err := proto.DecodeUpsertRecords(req)
+	records, err := proto.DecodeUpsertRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode records: %w", err)
 	}
@@ -323,4 +324,10 @@ func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, erro
 	}
 
 	return rsp, nil
+}
+
+// UpsertBinary is not implemented for Mongo databases as it is specifically a method to process NoSQL requests on a
+// SQL database.
+func (m *Mongo) UpsertBinary(_ context.Context, _ *proto.UpsertBinaryRequest) (*proto.UpsertBinaryResponse, error) {
+	return nil, ErrNotImplemented
 }
