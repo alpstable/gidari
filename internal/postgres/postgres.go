@@ -522,7 +522,9 @@ func (pg *Postgres) StartTx(ctx context.Context) (*proto.Txn, error) {
 
 // UpsertBinary will upsert binary data into the PostgresDB for a "property bag"-like table, storing the data in a
 // binary-type column.
-func (pg *Postgres) UpsertBinary(ctx context.Context, req *proto.UpsertBinaryRequest) (*proto.UpsertBinaryResponse, error) {
+func (pg *Postgres) UpsertBinary(ctx context.Context,
+	req *proto.UpsertBinaryRequest,
+) (*proto.UpsertBinaryResponse, error) {
 	pg.writeMutex.Lock()
 	defer pg.writeMutex.Unlock()
 

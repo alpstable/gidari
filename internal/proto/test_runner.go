@@ -410,10 +410,8 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			size := tableInfo.GetTableSet()[tcase.Table].GetSize()
-			if size != tcase.ExpectedUpsertSize {
-				t.Fatalf("expected upsert count to be %d, got %d",
-					tcase.ExpectedUpsertSize, size)
+			if size := tableInfo.GetTableSet()[tcase.Table].GetSize(); size != tcase.ExpectedUpsertSize {
+				t.Fatalf("expected upsert count to be %d, got %d", tcase.ExpectedUpsertSize, size)
 			}
 
 			truncateTables(ctx, t, runner.Storage, tcase.Table)
