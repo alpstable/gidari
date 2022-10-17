@@ -324,3 +324,9 @@ func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, erro
 
 	return rsp, nil
 }
+
+// UpsertBinary is not implemented for Mongo databases as it is specifically a method to process NoSQL requests on a
+// SQL database.
+func (m *Mongo) UpsertBinary(_ context.Context, _ *proto.UpsertBinaryRequest) (*proto.UpsertBinaryResponse, error) {
+	return nil, fmt.Errorf("not implemented")
+}

@@ -65,6 +65,8 @@ type TestCase struct {
 	Data                map[string]interface{} // data is the data to insert
 	Rollback            bool                   // rollback will rollback the transaction
 	ForceError          bool                   // forceError will force an error to occur
+	BinaryColumn        string                 // binaryColumn is the column to insert the binary data into
+	PrimaryKeyMap       map[string]string      // primaryKeyMap is a map of data columns to primary key columns
 }
 
 // TestRunner is the storage test runner.
@@ -73,6 +75,7 @@ type TestRunner struct {
 	listPrimaryKeysCases []TestCase
 	listTablesCases      []TestCase
 	upsertTxnCases       []TestCase
+	upsertBinaryCases    []TestCase
 	Mutex                *sync.Mutex
 	Storage              Storage
 }
@@ -93,6 +96,7 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 	runner.listTables(ctx, t)
 	runner.listPrimaryKeys(ctx, t)
 	runner.upsertTxn(ctx, t)
+	runner.upsertBinary(ctx, t)
 }
 
 // AddCloseDBCases will add test cases to the "closeDB" test.
@@ -125,6 +129,14 @@ func (runner *TestRunner) AddUpsertTxnCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.upsertTxnCases = append(runner.upsertTxnCases, cases...)
+}
+
+// AddUpsertBinaryCases will add test cases to the "upsertBinary" test.
+func (runner *TestRunner) AddUpsertBinaryCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.upsertBinaryCases = append(runner.upsertBinaryCases, cases...)
 }
 
 // forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
@@ -316,6 +328,72 @@ func (runner TestRunner) upsertTxn(ctx context.Context, t *testing.T) {
 				_, err := stg.Upsert(sctx, &UpsertRequest{
 					Table: tcase.Table,
 					Data:  bytes,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to upsert data: %w", err)
+				}
+
+				return nil
+			})
+
+			resolveTxn(t, txn, tcase.Rollback)
+
+			// Check that the data was inserted.
+			tableInfo, err := runner.Storage.ListTables(ctx)
+			if err != nil {
+				t.Fatalf("failed to list tables: %v", err)
+			}
+
+			size := tableInfo.GetTableSet()[tcase.Table].GetSize()
+			if size != tcase.ExpectedUpsertSize {
+				t.Fatalf("expected upsert count to be %d, got %d",
+					tcase.ExpectedUpsertSize, size)
+			}
+
+			truncateTables(ctx, t, runner.Storage, tcase.Table)
+		})
+	}
+}
+
+// upsertBinary will test the "UpsertBinary" storage method.
+func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.upsertBinaryCases {
+		name := fmt.Sprintf("%s upsert binary", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runner.Mutex.Lock()
+			defer runner.Mutex.Unlock()
+
+			if runner.Storage == nil {
+				t.Fatalf("storage is nil")
+			}
+
+			txn, err := runner.Storage.StartTx(ctx)
+			if err != nil {
+				t.Fatalf("failed to start transaction: %v", err)
+			}
+
+			if tcase.ForceError {
+				forceTxnError(t, txn)
+
+				return
+			}
+
+			// Encode some JSON data to test with.
+			bytes, err := json.Marshal(tcase.Data)
+			if err != nil {
+				t.Fatalf("failed to marshal data: %v", err)
+			}
+
+			txn.Send(func(sctx context.Context, stg Storage) error {
+				_, err := stg.UpsertBinary(sctx, &UpsertBinaryRequest{
+					Table:         tcase.Table,
+					Data:          bytes,
+					BinaryColumn:  tcase.BinaryColumn,
+					PrimaryKeyMap: tcase.PrimaryKeyMap,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to upsert data: %w", err)

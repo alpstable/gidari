@@ -55,6 +55,10 @@ type Storage interface {
 
 	// Upsert will insert or update a batch of records in the storage device.
 	Upsert(context.Context, *UpsertRequest) (*UpsertResponse, error)
+
+	// UpsertBinary will insert or update a batch of records that are part of a "property bag"-like structure that
+	// containers binary data in the storage device.
+	UpsertBinary(context.Context, *UpsertBinaryRequest) (*UpsertBinaryResponse, error)
 }
 
 type StorageService struct{ Storage }

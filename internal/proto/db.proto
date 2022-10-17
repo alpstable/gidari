@@ -20,6 +20,24 @@ message UpsertResponse {
 	int64 matchedCount = 2;
 }
 
+// UpsertBinaryRequest is a request to upsert a binary record into storage.
+message UpsertBinaryRequest {
+	// table is the name of the table or collection to upsert data into.
+	string table = 1;
+
+	// binaryColumn is the name of the column to upsert binary data into.
+	string binaryColumn = 2;
+
+	// data  is the binary data to upsert.
+	bytes data = 3;
+
+	// primaryKeyMap is a map of JSON HTTP response column names to their storage analogues.
+	map<string, string> primaryKeyMap = 4;
+}
+
+// UpsertBinaryReponse is the resupose for upserting binary data into storage.
+message UpsertBinaryResponse {}
+
 message Columns {
 	repeated string list = 1;
 }
