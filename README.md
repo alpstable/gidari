@@ -17,7 +17,7 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 go install github.com/alpstable/gidari/cmd/gidari@latest
 ```
 
-### Library 
+### Library
 
 ```sh
 go get github.com/alpstable/gidari/pkg@latest
@@ -77,6 +77,6 @@ Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
 
 ## Resources
 
-- Public REST APIs: https://documenter.getpostman.com/view/8854915/Szf7znEe
+- Public REST APIs from [Postman Documenter](https://documenter.getpostman.com/view/8854915/Szf7znEe)
 - Go Gopher artwork by [Victoria Trum](https://www.fiverr.com/victoria_trum?source=order_page_user_message_link)
 - The original Go gopher was designed by the awesome [Renee French](http://reneefrench.blogspot.com/)
