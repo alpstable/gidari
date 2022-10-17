@@ -67,10 +67,6 @@ TODO
 
 The NoSQL use case should require no overhead from the user. Just include the connection string in the `connectionString` list of the configuration file. Currently this project only supports [MongoDB](https://www.mongodb.com/docs/drivers/go/current/).
 
-## Repository
-
-The `repository` and `proto` packages are the only packages within the application that are public-facing stable API with the purpose of communicating CRUD requests to the storage devices used in the web-to-storage transfers.
-
 ## Contributing
 
 Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
