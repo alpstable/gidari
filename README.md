@@ -52,6 +52,7 @@ The `configuration.yml` file is used to define a set of rules for making RESTful
 | requests                         | F        | list   | List of requests to receive data from the web API for upserting into storage                                     |
 | request.endpoint                 | T        | string | Endpoint for making the RESTful API request                                                                      |
 | request.table                    | F        | string | Name of the table in the storage for upserting data. This field defaults to the last string in the endpoint path |
+| request.clobColumn               | F        | string | Name of the column where data will be stored if the response data is not a valid JSON. Logs a warning if invalid JSON is received and this field is not set, and no data is saved. | 
 | request.timseries                | F        | map    | Data required for upserting timeseries data, which are batched and can be resource intensive                     |
 | request.timeseries.startName     | T        | string | "Name of the query/path parameter for the "start" datetime of the timeseries"                                  |
 | request.timeseries.endName       | T        | string | "Name of the query/path parameter for the "end" datetime of the timeseries"                                    |
