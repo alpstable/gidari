@@ -32,7 +32,7 @@ Using Gidari in command mode is a two step process:
 1. Create a configuraiton file to instruct the binary on how to make the RESful HTTP requests and where to store the data
 2. Run `gidari --config your_configuration.yml --verbose`
 
-The `configuration.yml` file is used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpstable/gidari/tree/main/internal/transport/testdata/upsert) for example configurations.
+The `configuration.yml` file is used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpstable/gidari/tree/main/e2e/testdata/upsert) for example configurations.
 
 ### Configurations
 
