@@ -1,5 +1,5 @@
 ### Table Of Contents
-[About Gidari](https://github.com/alpstable/gidari/blob/main/README.md#gidari)  
+
 [Installation](https://github.com/alpstable/gidari/blob/main/README.md#installation)  
 [Configurations](https://github.com/alpstable/gidari/blob/main/README.md#configurations)  
 [SQL](https://github.com/alpstable/gidari/blob/main/README.md#sql)  
@@ -17,6 +17,16 @@
 <p align="center"><img src="https://raw.githubusercontent.com/alpstable/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
 Gidari is a "web-to-storage" tool for querying web APIs and persisting the resulting data onto local storage. A configuration file is used to define how this querying and storing should occur. Once you have a configuration file, you can intiate this transport using the command `gidari --config <configuration.yml>`. See [here](https://youtu.be/NgeOJ50IWhY) for a quick demonstration.
+
+### Table Of Contents
+
+[Installation](https://github.com/alpstable/gidari/blob/main/README.md#installation)  
+[Configurations](https://github.com/alpstable/gidari/blob/main/README.md#configurations)  
+[SQL](https://github.com/alpstable/gidari/blob/main/README.md#sql)  
+[No SQL](https://github.com/alpstable/gidari/blob/main/README.md#nosql)   
+[Contributing](https://github.com/alpstable/gidari/blob/main/README.md#contributing)  
+[Releases](https://github.com/alpstable/gidari/blob/main/README.md#releases)  
+[Resources](https://github.com/alpstable/gidari/blob/main/README.md#resources)  
 
 ## Installation
 
