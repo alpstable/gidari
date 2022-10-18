@@ -11,7 +11,7 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 
 ### Table Of Contents
 
-*[Installation](https://github.com/alpstable/gidari/blob/main/README.md#installation)  
+* [Installation](https://github.com/alpstable/gidari/blob/main/README.md#installation)  
 *[Configurations](https://github.com/alpstable/gidari/blob/main/README.md#configurations)  
 *[SQL](https://github.com/alpstable/gidari/blob/main/README.md#sql)  
 *[No SQL](https://github.com/alpstable/gidari/blob/main/README.md#nosql)  
