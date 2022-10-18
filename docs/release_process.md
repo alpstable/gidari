@@ -27,7 +27,7 @@ Assume the minor release is `X.Y.0`
 
 1. Create a PR updating the install instructions in README.md of the `main` branch to `@vX.Y.0`
 2. Create a new branch from `main` called `release/X.Y`
-3. Create a PR updating the `main` branche's `version/version.go` to `vX.(Y+1).0-prerelease`
+3. Create a PR updating the `main` branch's `version/version.go` to `vX.(Y+1).0-prerelease`
 4. Draft a new release [here](https://github.com/alpstable/gidari/releases/new)
 	- Create a new tag `vX.Y.0`
 	- Target should be `release/X.Y`
