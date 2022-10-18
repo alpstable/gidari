@@ -1,3 +1,12 @@
+### Table Of Contents
+[About Gidari](https://github.com/alpstable/gidari/blob/main/README.md#gidari)
+[Installation](https://github.com/alpstable/gidari/blob/main/README.md#installation)
+[Configurations](https://github.com/alpstable/gidari/blob/main/README.md#configurations)
+[SQL](https://github.com/alpstable/gidari/blob/main/README.md#sql)
+[No SQL](https://github.com/alpstable/gidari/blob/main/README.md#nosql)
+[Contributing](https://github.com/alpstable/gidari/blob/main/README.md#contributing)
+[Releases](https://github.com/alpstable/gidari/blob/main/README.md#releases)
+[Resources](https://github.com/alpstable/gidari/blob/main/README.md#resources)
 # Gidari
 
 [![PkgGoDev](https://img.shields.io/badge/go.dev-docs-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alpstable/gidari)
