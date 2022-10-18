@@ -11,11 +11,14 @@ package transport
 
 import (
 	"net/url"
+	"path"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/alpstable/gidari/config"
+	"github.com/alpstable/gidari/internal/web"
+	"golang.org/x/time/rate"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -178,4 +181,58 @@ func TestTimeseries(t *testing.T) {
 			t.Fatalf("unexpected chunks: %v", timeseries.Chunks)
 		}
 	})
+}
+
+func TestNewFetchConfig(t *testing.T) {
+	t.Parallel()
+
+	testURL, err := url.Parse("https//api.test.com/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	testClient := &web.Client{}
+
+	req := &config.Request{
+		Endpoint:    "/test",
+		Method:      "POST",
+		RateLimiter: rate.NewLimiter(rate.Every(time.Second), 2),
+		Query: map[string]string{
+			"hey": "ho",
+			"foo": "bar",
+		},
+	}
+
+	expected := &web.FetchConfig{
+		Method:      req.Method,
+		URL:         testURL,
+		C:           testClient,
+		RateLimiter: req.RateLimiter,
+	}
+
+	fetchConfig := newFetchConfig(req, *testURL, testClient)
+
+	if fetchConfig.Method != expected.Method {
+		t.Error("unexpected fetch config Method")
+	}
+
+	if fetchConfig.C != expected.C {
+		t.Error("unexpected fetch config Client")
+	}
+
+	if fetchConfig.RateLimiter != expected.RateLimiter {
+		t.Error("unexpected fetch config RateLimiter")
+	}
+
+	// URL Path should be concatenated with request Endpoint
+	if fetchConfig.URL.Path != path.Join(testURL.Path, req.Endpoint) {
+		t.Errorf("unexpected fetch config URL Path: %v", fetchConfig.URL.Path)
+	}
+
+	// Query parameters should be added to the URL Query
+	for k, v := range req.Query {
+		if fetchConfig.URL.Query().Get(k) != v {
+			t.Errorf("unexpected fetch config URL Query for %v", k)
+		}
+	}
 }
