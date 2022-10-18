@@ -287,9 +287,9 @@ func newRepoConfig(ctx context.Context, cfg *config.Config, volume int) (*repoCo
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
-
 		if job == nil {
 			cfg.done <- false
+
 			continue
 		}
 
@@ -368,13 +368,22 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 		if !json.Valid(bytes) {
 			if job.flattenedRequest.clobColumn == "" {
 				job.repoJobs <- nil
-				job.logger.Warnf("response body for %s was HTML, discarding data since no 'clobColumn' was defined in the configuration file", job.fetchConfig.URL)
+				msg := fmt.Sprintf("response body for %s was invalid JSON, "+
+					"discarding data since no 'clobColumn' was defined in the configuration file",
+					job.fetchConfig.URL)
+				logInfo := tools.LogFormatter{Msg: msg}
+				job.logger.Warnf(logInfo.String())
+
 				continue
 			}
 
 			data := make(map[string]string)
-			data[job.flattenedRequest.clobColumn] = fmt.Sprintf("%s", bytes)
+			data[job.flattenedRequest.clobColumn] = string(bytes)
 			bytes, err = json.Marshal(data)
+			if err != nil {
+				job.repoJobs <- nil
+				job.logger.Errorf("failed to marhsal data: %s", err)
+			}
 		}
 
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
