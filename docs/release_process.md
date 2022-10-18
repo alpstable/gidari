@@ -11,7 +11,7 @@ Assume the patch release is `X.Y.Z`
 1. Cherry-pick the issues with label `x.y.z` in the patch from `main` into `release/X.Y`.
 2. Create a PR to update
 	1. the `release/X.Y` branch's `version/version.go` to `vX.Y.Z`
-	2. the install instructions in README.md to `@X.Y.Z`
+	2. the install instructions in README.md on `releaze/X.Y` to `@X.Y.Z`
 3. Create a PR to update the install instructions in README.md on the `main` branch to `@vX.Y.Z`
 4. Draft a new release [here](https://github.com/alpstable/gidari/releases/new)
 	- Create a new tag `vX.Y.Z`
