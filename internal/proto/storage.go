@@ -10,6 +10,8 @@ package proto
 import (
 	"context"
 	"fmt"
+	"github.com/alpstable/gidari/internal/mongo"
+	"github.com/alpstable/gidari/internal/postgres"
 	"strings"
 )
 
@@ -21,7 +23,10 @@ const (
 	MongoType = 0x02
 )
 
-var ErrDNSNotSupported = fmt.Errorf("dns is not supported")
+var (
+	ErrDNSNotSupported = fmt.Errorf("dns is not supported")
+	ErrUnkownScheme    = fmt.Errorf("unknown scheme")
+)
 
 // DNSNotSupported wraps an error with ErrDNSNotSupported.
 func DNSNotSupportedError(dns string) error {
@@ -86,4 +91,31 @@ func SchemeFromConnectionString(dns string) string {
 // Service is a wrapper for a Storage implementation.
 type Service struct {
 	Storage
+}
+
+// NewStorage returns a new storage service.
+func NewStorage(ctx context.Context, dns string) (*StorageService, error) {
+	var stg *StorageService
+
+	scheme := SchemeFromConnectionString(dns)
+	switch scheme {
+	case SchemeFromStorageType(MongoType):
+		mdb, err := mongo.New(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
+		}
+
+		stg = &StorageService{Storage: mdb}
+	case SchemeFromStorageType(PostgresType):
+		pdb, err := postgres.New(ctx, dns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
+		}
+
+		stg = &StorageService{Storage: pdb}
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrUnkownScheme, scheme)
+	}
+
+	return stg, nil
 }
