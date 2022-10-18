@@ -71,6 +71,10 @@ The NoSQL use case should require no overhead from the user. Just include the co
 
 Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
 
+## Releases
+
+See [here](docs/release_process.md) for the release process.
+
 ## Resources
 
 - Public REST APIs from [Postman Documenter](https://documenter.getpostman.com/view/8854915/Szf7znEe)
