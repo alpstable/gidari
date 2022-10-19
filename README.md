@@ -9,6 +9,16 @@
 
 Gidari is a "web-to-storage" tool for querying web APIs and persisting the resulting data onto local storage. A configuration file is used to define how this querying and storing should occur. Once you have a configuration file, you can intiate this transport using the command `gidari --config <configuration.yml>`. See [here](https://youtu.be/NgeOJ50IWhY) for a quick demonstration.
 
+##
+
+* [Installation](#installation)  
+* [Configurations](#configurations)  
+* [SQL](#sql)  
+* [No SQL](#nosql)  
+* [Contributing](#contributing)  
+* [Releases](#releases)  
+* [Resources](#resources)  
+
 ## Installation
 
 ### Command Mode
@@ -32,7 +42,7 @@ Using Gidari in command mode is a two step process:
 1. Create a configuraiton file to instruct the binary on how to make the RESful HTTP requests and where to store the data
 2. Run `gidari --config your_configuration.yml --verbose`
 
-The `configuration.yml` file is used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpstable/gidari/tree/main/internal/transport/testdata/upsert) for example configurations.
+The `configuration.yml` file is used to define a set of rules for making RESTful HTTP requests and where to store the data. See [here](https://github.com/alpstable/gidari/tree/main/e2e/testdata/upsert) for example configurations.
 
 ### Configurations
 
@@ -71,6 +81,10 @@ The NoSQL use case should require no overhead from the user. Just include the co
 ## Contributing
 
 Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
+
+## Releases
+
+See [here](docs/release_process.md) for the release process.
 
 ## Resources
 

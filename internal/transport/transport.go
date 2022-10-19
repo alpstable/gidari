@@ -379,6 +379,7 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 
 			data := make(map[string]string)
 			data[job.flattenedRequest.clobColumn] = string(bytes)
+
 			bytes, err = json.Marshal(data)
 			if err != nil {
 				job.repoJobs <- nil
