@@ -9,3 +9,4 @@ bazel-out
 bazel-testlogs
 bazel-driver
 gidari-cli
+.idea
