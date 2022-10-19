@@ -51,6 +51,15 @@ func TestMongo(t *testing.T) {
 			}...,
 		)
 
+		runner.AddStorageTypeCases(
+			[]proto.TestCase{
+				{
+					Name:        "storage type",
+					StorageType: proto.MongoType,
+				},
+			}...,
+		)
+
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{
