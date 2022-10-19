@@ -1,0 +1,10 @@
+url: https://api.cryptonator.com
+connectionStrings:
+  - mongodb://mongo1:27017/cryptonator
+rateLimit:
+  burst: 1
+  period: 1
+requests:
+  - endpoint: /api/ticker/btc-usd
+    table: chtml
+    clobColumn: data
