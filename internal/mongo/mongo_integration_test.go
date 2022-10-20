@@ -51,6 +51,15 @@ func TestMongo(t *testing.T) {
 			}...,
 		)
 
+		runner.AddIsNoSQLCases(
+			[]proto.TestCase{
+				{
+					Name:            "isNoSQL mongo",
+					ExpectedIsNoSQL: true,
+				},
+			}...,
+		)
+
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{

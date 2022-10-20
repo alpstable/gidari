@@ -59,6 +59,7 @@ func RunTest(ctx context.Context, t *testing.T, stg Storage, runnerCB func(*Test
 // TestCase is a test case for the "TestRunner".
 type TestCase struct {
 	Name                string                 // name is the name of the test case
+	ExpectedIsNoSQL     bool                   // expectedIsNoSQL is a bool
 	ExpectedUpsertSize  int64                  // expectedUpsertSize is in bits
 	ExpectedPrimaryKeys map[string][]string    // expectedPrimaryKeys is a map of table name to primary keys
 	Table               string                 // table is where to insert the data
@@ -72,6 +73,7 @@ type TestCase struct {
 // TestRunner is the storage test runner.
 type TestRunner struct {
 	closeDBCases         []TestCase
+	isNoSQLCases         []TestCase
 	listPrimaryKeysCases []TestCase
 	listTablesCases      []TestCase
 	upsertTxnCases       []TestCase
@@ -94,6 +96,7 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	runner.closeDB(ctx, t)
+	runner.isNoSQL(ctx, t)
 	runner.listTables(ctx, t)
 	runner.listPrimaryKeys(ctx, t)
 	runner.upsertTxn(ctx, t)
@@ -107,6 +110,13 @@ func (runner *TestRunner) AddCloseDBCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.closeDBCases = append(runner.closeDBCases, cases...)
+}
+
+func (runner *TestRunner) AddIsNoSQLCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.isNoSQLCases = append(runner.isNoSQLCases, cases...)
 }
 
 // AddListPrimaryKeysCases will add test cases to the "listPrimaryKeys" test.
@@ -195,6 +205,26 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 			runner.Mutex.Lock()
 			defer runner.Mutex.Unlock()
 
+		})
+	}
+}
+
+// isNoSQL will test the "IsNoSQL" storage method.
+func (runner TestRunner) isNoSQL(_ context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.isNoSQLCases {
+		name := fmt.Sprintf("%s is no sql db", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runner.Mutex.Lock()
+			defer runner.Mutex.Unlock()
+
+			got := runner.Storage.IsNoSQL()
+			if got != tcase.ExpectedIsNoSQL {
+				t.Fatalf("expected IsNoSQL to be: %v", tcase.ExpectedIsNoSQL)
+			}
 		})
 	}
 }

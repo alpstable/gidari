@@ -46,6 +46,15 @@ func TestPostgres(t *testing.T) {
 			}...,
 		)
 
+		runner.AddIsNoSQLCases(
+			[]proto.TestCase{
+				{
+					Name:            "isNoSQL postgres",
+					ExpectedIsNoSQL: false,
+				},
+			}...,
+		)
+
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{

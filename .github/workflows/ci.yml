@@ -31,3 +31,6 @@ jobs:
 
     - name: Run Mongo Integration Tests
       run: make mongo-integration-tests
+
+    - name: Run Repository Integration Tests
+      run: make repository-integration-tests
