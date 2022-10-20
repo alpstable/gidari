@@ -437,7 +437,7 @@ func (runner TestRunner) ping(_ context.Context, t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if err := runner.Storage.Ping(context.Background()); err != nil {
+			if err := runner.Storage.Ping(); err != nil {
 				t.Errorf("An error was returned: %v. Connection to the DB was lost", err)
 			}
 		})

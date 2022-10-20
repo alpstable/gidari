@@ -46,14 +46,6 @@ func TestPostgres(t *testing.T) {
 			}...,
 		)
 
-		runner.AddPingDBCases(
-			[]proto.TestCase{
-				{
-					Name: "check postgres connection",
-				},
-			}...,
-		)
-
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{
@@ -126,6 +118,14 @@ func TestPostgres(t *testing.T) {
 						"pk1":  "1",
 						"pk2":  "2",
 					},
+				},
+			}...,
+		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check postgres connection",
 				},
 			}...,
 		)

@@ -51,14 +51,6 @@ func TestMongo(t *testing.T) {
 			}...,
 		)
 
-		runner.AddPingDBCases(
-			[]proto.TestCase{
-				{
-					Name: "check mongo connection",
-				},
-			}...,
-		)
-
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{
@@ -101,6 +93,14 @@ func TestMongo(t *testing.T) {
 					ExpectedUpsertSize: 0,
 					ForceError:         true,
 					Data:               defaultData,
+				},
+			}...,
+		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check mongo connection",
 				},
 			}...,
 		)
