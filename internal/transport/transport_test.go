@@ -10,7 +10,14 @@
 package transport
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/alpstable/gidari/internal/web"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	"net/url"
+	"path"
 	"reflect"
 	"testing"
 	"time"
@@ -178,4 +185,195 @@ func TestTimeseries(t *testing.T) {
 			t.Fatalf("unexpected chunks: %v", timeseries.Chunks)
 		}
 	})
+}
+
+func TestWebWorker(t *testing.T) {
+	t.Parallel()
+	logger := logrus.New()
+	t.Run("normal json response", func(t *testing.T) {
+		t.Parallel()
+
+		baseurl := "https://pokeapi.co"
+		endpoint := "/api/v2/pokemon/ditto"
+		table := "test"
+
+		webWorkerJobs := make(chan *webJob, 1)
+		repoJobs := make(chan *repoJob, 1)
+
+		client, err := web.NewClient(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("Error while creating client: %s", err)
+		}
+
+		url, err := url.Parse(baseurl)
+		if err != nil {
+			t.Fatalf("Error while parsing url: %s", err)
+		}
+
+		url.Path = path.Join(url.Path, endpoint)
+		rateLimiter := rate.NewLimiter(rate.Every(1), 1)
+
+		cfg := web.FetchConfig{
+			C:           client,
+			Method:      "GET",
+			URL:         url,
+			RateLimiter: rateLimiter,
+		}
+
+		req := flattenedRequest{
+			fetchConfig: &cfg,
+			table:       table,
+		}
+
+		job := webJob{
+			&req,
+			repoJobs,
+			logger,
+		}
+
+		go webWorker(context.Background(), 1, webWorkerJobs)
+
+		webWorkerJobs <- &job
+
+		close(webWorkerJobs)
+
+		for i := 0; i < 1; i++ {
+			result := <-repoJobs
+
+			fmt.Println(result)
+			if result == nil {
+				t.Fatalf("Expected repoJob, go nil")
+			}
+			if result.table != table {
+				t.Fatalf("Expected table to be %s, instead got: %s", table, result.table)
+			}
+		}
+	})
+
+	t.Run("html response with clobColumn not set", func(t *testing.T) {
+		t.Parallel()
+
+		baseurl := "https://api.cryptonator.com"
+		endpoint := "/api/ticker/btc-usd"
+		table := "test"
+
+		webWorkerJobs := make(chan *webJob, 1)
+		repoJobs := make(chan *repoJob, 1)
+
+		client, err := web.NewClient(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("Error while creating client: %s", err)
+		}
+
+		url, err := url.Parse(baseurl)
+		if err != nil {
+			t.Fatalf("Error while parsing url: %s", err)
+		}
+
+		url.Path = path.Join(url.Path, endpoint)
+		rateLimiter := rate.NewLimiter(rate.Every(1), 1)
+
+		cfg := web.FetchConfig{
+			C:           client,
+			Method:      "GET",
+			URL:         url,
+			RateLimiter: rateLimiter,
+		}
+
+		req := flattenedRequest{
+			fetchConfig: &cfg,
+			table:       table,
+		}
+
+		job := webJob{
+			&req,
+			repoJobs,
+			logger,
+		}
+
+		go webWorker(context.Background(), 1, webWorkerJobs)
+
+		webWorkerJobs <- &job
+
+		close(webWorkerJobs)
+
+		for i := 0; i < 1; i++ {
+			result := <-repoJobs
+
+			fmt.Println(result)
+			if result != nil {
+				t.Fatalf("Expected repoJob to be nil")
+			}
+		}
+	})
+
+	t.Run("html response with clobColumn set", func(t *testing.T) {
+		t.Parallel()
+
+		baseurl := "https://api.cryptonator.com"
+		endpoint := "/api/ticker/btc-usd"
+		table := "test"
+		clobColumn := "data"
+
+		webWorkerJobs := make(chan *webJob, 1)
+		repoJobs := make(chan *repoJob, 1)
+
+		client, err := web.NewClient(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("Error while creating client: %s", err)
+		}
+
+		url, err := url.Parse(baseurl)
+		if err != nil {
+			t.Fatalf("Error while parsing url: %s", err)
+		}
+
+		url.Path = path.Join(url.Path, endpoint)
+		rateLimiter := rate.NewLimiter(rate.Every(1), 1)
+
+		cfg := web.FetchConfig{
+			C:           client,
+			Method:      "GET",
+			URL:         url,
+			RateLimiter: rateLimiter,
+		}
+
+		req := flattenedRequest{
+			fetchConfig: &cfg,
+			table:       table,
+			clobColumn:  clobColumn,
+		}
+
+		job := webJob{
+			&req,
+			repoJobs,
+			logger,
+		}
+
+		go webWorker(context.Background(), 1, webWorkerJobs)
+
+		webWorkerJobs <- &job
+
+		close(webWorkerJobs)
+
+		for i := 0; i < 1; i++ {
+			result := <-repoJobs
+
+			if result == nil {
+				t.Fatalf("Expected repoJob not to be nil")
+			}
+			if result.table != table {
+				t.Fatalf("Expected table to be %s, instead got: %s", table, result.table)
+			}
+			var data interface{}
+			if err := json.Unmarshal(result.b, &data); err != nil {
+				t.Fatalf("failed to unmarshal json data")
+			}
+			dataMap := data.(map[string]interface{})
+			if _, ok := dataMap[clobColumn]; !ok {
+				t.Fatalf("expected json data to have a key: %s, but got none", clobColumn)
+			}
+		}
+	})
+
 }
