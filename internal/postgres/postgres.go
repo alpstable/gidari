@@ -545,3 +545,10 @@ func (pg *Postgres) UpsertBinary(ctx context.Context,
 
 	return &proto.UpsertBinaryResponse{}, nil
 }
+
+func (pg *Postgres) Ping(ctx context.Context) error {
+	if err := pg.Ping(ctx); err != nil {
+		return err
+	}
+	return nil
+}

@@ -51,6 +51,14 @@ func TestMongo(t *testing.T) {
 			}...,
 		)
 
+		runner.AddPingDBCases(
+			[]proto.TestCase{
+				{
+					Name: "check mongo connection"
+				}
+			}...,
+		)
+
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{
