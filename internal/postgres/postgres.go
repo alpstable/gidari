@@ -548,8 +548,8 @@ func (pg *Postgres) UpsertBinary(ctx context.Context,
 
 // Ping will return an error if the connection to the DB is lost
 func (pg *Postgres) Ping() error {
-	if err := pg.Ping(); err != nil {
-		return fmt.Errorf("Connection lost, error: %v", err)
+	if err := pg.DB.Ping(); err != nil {
+		return fmt.Errorf("Connection lost: %v", err)
 	}
 	return nil
 }

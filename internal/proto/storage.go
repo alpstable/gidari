@@ -60,7 +60,7 @@ type Storage interface {
 	// containers binary data in the storage device.
 	UpsertBinary(context.Context, *UpsertBinaryRequest) (*UpsertBinaryResponse, error)
 
-	//Ping will indicate that a connection has been successfully established
+	// Ping will indicate that a connection has been successfully established
 	Ping() error
 }
 
