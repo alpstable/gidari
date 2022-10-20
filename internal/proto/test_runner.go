@@ -432,8 +432,8 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 func (runner TestRunner) ping(ctx context.Context, t *testing.T) {
 	t.Helper()
 
-	for _, tcase := range runner.closeDBCases {
-		name := fmt.Sprintf("%s close db", tcase.Name)
+	for _, tcase := range runner.pingCases {
+		name := fmt.Sprintf("%s ping db", tcase.Name)
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
