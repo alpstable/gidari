@@ -59,6 +59,7 @@ func RunTest(ctx context.Context, t *testing.T, stg Storage, runnerCB func(*Test
 // TestCase is a test case for the "TestRunner".
 type TestCase struct {
 	Name                string                 // name is the name of the test case
+	ExpectedIsNoSQL     bool                   // expectedIsNoSQL is a bool
 	ExpectedUpsertSize  int64                  // expectedUpsertSize is in bits
 	ExpectedPrimaryKeys map[string][]string    // expectedPrimaryKeys is a map of table name to primary keys
 	Table               string                 // table is where to insert the data
@@ -74,10 +75,12 @@ type TestCase struct {
 type TestRunner struct {
 	closeDBCases         []TestCase
 	storageTypeCases     []TestCase
+	isNoSQLCases         []TestCase
 	listPrimaryKeysCases []TestCase
 	listTablesCases      []TestCase
 	upsertTxnCases       []TestCase
 	upsertBinaryCases    []TestCase
+	pingCases            []TestCase
 	Mutex                *sync.Mutex
 	Storage              Storage
 }
@@ -96,10 +99,12 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 
 	runner.closeDB(ctx, t)
 	runner.storageType(ctx, t)
+	runner.isNoSQL(ctx, t)
 	runner.listTables(ctx, t)
 	runner.listPrimaryKeys(ctx, t)
 	runner.upsertTxn(ctx, t)
 	runner.upsertBinary(ctx, t)
+	runner.ping(ctx, t)
 }
 
 // AddCloseDBCases will add test cases to the "closeDB" test.
@@ -116,6 +121,13 @@ func (runner *TestRunner) AddStorageTypeCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.storageTypeCases = append(runner.storageTypeCases, cases...)
+}
+
+func (runner *TestRunner) AddIsNoSQLCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.isNoSQLCases = append(runner.isNoSQLCases, cases...)
 }
 
 // AddListPrimaryKeysCases will add test cases to the "listPrimaryKeys" test.
@@ -148,6 +160,14 @@ func (runner *TestRunner) AddUpsertBinaryCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.upsertBinaryCases = append(runner.upsertBinaryCases, cases...)
+}
+
+// AddPingCases will add test cases to the "ping" test.
+func (runner *TestRunner) AddPingCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.pingCases = append(runner.pingCases, cases...)
 }
 
 // forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
@@ -213,6 +233,26 @@ func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
 
 			if tcase.StorageType != runner.Storage.Type() {
 				t.Fatalf("expected storage type : %s, but got type : %s", storageTypeName[tcase.StorageType], storageTypeName[runner.Storage.Type()])
+			}
+		})
+	}
+}
+
+// isNoSQL will test the "IsNoSQL" storage method.
+func (runner TestRunner) isNoSQL(_ context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.isNoSQLCases {
+		name := fmt.Sprintf("%s is no sql db", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runner.Mutex.Lock()
+			defer runner.Mutex.Unlock()
+
+			got := runner.Storage.IsNoSQL()
+			if got != tcase.ExpectedIsNoSQL {
+				t.Fatalf("expected IsNoSQL to be: %v", tcase.ExpectedIsNoSQL)
 			}
 		})
 	}
@@ -445,6 +485,22 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 			}
 
 			truncateTables(ctx, t, runner.Storage, tcase.Table)
+		})
+	}
+}
+
+// ping will test the Ping() storage method.
+func (runner TestRunner) ping(_ context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.pingCases {
+		name := fmt.Sprintf("%s ping db", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := runner.Storage.Ping(); err != nil {
+				t.Errorf("An error was returned: %v", err)
+			}
 		})
 	}
 }
