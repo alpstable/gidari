@@ -46,6 +46,14 @@ postgres-integration-tests:
 	$(GC) clean -testcache
 	./scripts/run-integration-tests.sh pginteg 5
 
+# repository-integration-tests runs all of the repository integration tests in a docker container.
+# Each test is run 5 times to minimize flakiness.
+.PHONY: repository-integration-tests
+repository-integration-tests:
+	chmod +rwx scripts/*.sh
+	$(GC) clean -testcache
+	./scripts/run-integration-tests.sh repinteg 5
+
 # lint runs the linter.
 .PHONY: lint
 lint:
