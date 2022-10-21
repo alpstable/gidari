@@ -335,7 +335,8 @@ func (m *Mongo) UpsertBinary(_ context.Context, _ *proto.UpsertBinaryRequest) (*
 
 func (m *Mongo) Ping() error {
 	if err := m.Client.Ping(context.Background(), readpref.Primary()); err != nil {
-		return fmt.Errorf("Connection lost, error: %v", err)
+		return fmt.Errorf("connection lost, error: %w", err)
 	}
+
 	return nil
 }

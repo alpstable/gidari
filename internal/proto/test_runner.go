@@ -194,7 +194,6 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 
 			runner.Mutex.Lock()
 			defer runner.Mutex.Unlock()
-
 		})
 	}
 }
@@ -430,6 +429,7 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 	}
 }
 
+// ping will test the Ping() storage method.
 func (runner TestRunner) ping(_ context.Context, t *testing.T) {
 	t.Helper()
 
