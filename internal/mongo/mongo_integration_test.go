@@ -105,6 +105,14 @@ func TestMongo(t *testing.T) {
 				},
 			}...,
 		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check mongo connection",
+				},
+			}...,
+		)
 	})
 }
 

@@ -130,5 +130,13 @@ func TestPostgres(t *testing.T) {
 				},
 			}...,
 		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check postgres connection",
+				},
+			}...,
+		)
 	})
 }

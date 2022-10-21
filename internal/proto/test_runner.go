@@ -78,6 +78,7 @@ type TestRunner struct {
 	listTablesCases      []TestCase
 	upsertTxnCases       []TestCase
 	upsertBinaryCases    []TestCase
+	pingCases            []TestCase
 	Mutex                *sync.Mutex
 	Storage              Storage
 }
@@ -100,6 +101,7 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 	runner.listPrimaryKeys(ctx, t)
 	runner.upsertTxn(ctx, t)
 	runner.upsertBinary(ctx, t)
+	runner.ping(ctx, t)
 }
 
 // AddCloseDBCases will add test cases to the "closeDB" test.
@@ -147,6 +149,14 @@ func (runner *TestRunner) AddUpsertBinaryCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.upsertBinaryCases = append(runner.upsertBinaryCases, cases...)
+}
+
+// AddPingCases will add test cases to the "ping" test.
+func (runner *TestRunner) AddPingCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.pingCases = append(runner.pingCases, cases...)
 }
 
 // forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
@@ -445,6 +455,22 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 			}
 
 			truncateTables(ctx, t, runner.Storage, tcase.Table)
+		})
+	}
+}
+
+// ping will test the Ping() storage method.
+func (runner TestRunner) ping(_ context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.pingCases {
+		name := fmt.Sprintf("%s ping db", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := runner.Storage.Ping(); err != nil {
+				t.Errorf("An error was returned: %v", err)
+			}
 		})
 	}
 }
