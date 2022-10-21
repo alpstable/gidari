@@ -199,7 +199,7 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 	}
 }
 
-// storageType will test the type of database
+// storageType will test the type of database.
 func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
 	t.Helper()
 
@@ -212,7 +212,7 @@ func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
 			defer runner.Mutex.Unlock()
 
 			if tcase.StorageType != runner.Storage.Type() {
-				t.Fatalf("expected storage type : %s, but got type : %s", StorageTypeName[tcase.StorageType], StorageTypeName[runner.Storage.Type()])
+				t.Fatalf("expected storage type : %s, but got type : %s", storageTypeName[tcase.StorageType], storageTypeName[runner.Storage.Type()])
 			}
 		})
 	}

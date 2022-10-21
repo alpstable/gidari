@@ -21,7 +21,7 @@ const (
 	MongoType = 0x02
 )
 
-var StorageTypeName = map[uint8]string{
+var storageTypeName = map[uint8]string{
 	PostgresType: "Postgres",
 	MongoType:    "Mongo",
 }
