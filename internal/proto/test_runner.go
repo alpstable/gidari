@@ -204,6 +204,10 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 
 			runner.Mutex.Lock()
 			defer runner.Mutex.Unlock()
+			runner.Storage.Close()
+			if err := runner.Storage.Ping(); err == nil {
+				t.Fatalf("expected err got none")
+			}
 		})
 	}
 }
