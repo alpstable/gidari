@@ -21,12 +21,11 @@ const (
 	MongoType = 0x02
 )
 
-var storageTypeName = map[uint8]string{
-	PostgresType: "Postgres",
-	MongoType:    "MongoDB",
-}
-
 func storageTypeToString(storageType uint8) string {
+	var storageTypeName = map[uint8]string{
+		PostgresType: "Postgres",
+		MongoType:    "MongoDB",
+	}
 	return storageTypeName[storageType]
 }
 
