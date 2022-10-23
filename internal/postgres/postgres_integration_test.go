@@ -46,6 +46,15 @@ func TestPostgres(t *testing.T) {
 			}...,
 		)
 
+		runner.AddStorageTypeCases(
+			[]proto.TestCase{
+				{
+					Name:        "storage type",
+					StorageType: proto.PostgresType,
+        },
+      }...,
+    )
+    
 		runner.AddIsNoSQLCases(
 			[]proto.TestCase{
 				{

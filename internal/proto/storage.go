@@ -21,6 +21,14 @@ const (
 	MongoType = 0x02
 )
 
+func storageTypeToString(storageType uint8) string {
+	var storageTypeName = map[uint8]string{
+		PostgresType: "Postgres",
+		MongoType:    "MongoDB",
+	}
+	return storageTypeName[storageType]
+}
+
 var ErrDNSNotSupported = fmt.Errorf("dns is not supported")
 
 // DNSNotSupported wraps an error with ErrDNSNotSupported.
