@@ -56,10 +56,10 @@ func TestMongo(t *testing.T) {
 				{
 					Name:        "storage type",
 					StorageType: proto.MongoType,
-        },
-      }...,
-    )
-    
+				},
+			}...,
+		)
+
 		runner.AddIsNoSQLCases(
 			[]proto.TestCase{
 				{
