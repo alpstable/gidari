@@ -19,6 +19,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -330,4 +331,12 @@ func (m *Mongo) ListTables(ctx context.Context) (*proto.ListTablesResponse, erro
 // SQL database.
 func (m *Mongo) UpsertBinary(_ context.Context, _ *proto.UpsertBinaryRequest) (*proto.UpsertBinaryResponse, error) {
 	return nil, ErrNotImplemented
+}
+
+func (m *Mongo) Ping() error {
+	if err := m.Client.Ping(context.Background(), readpref.Primary()); err != nil {
+		return fmt.Errorf("connection lost, error: %w", err)
+	}
+
+	return nil
 }

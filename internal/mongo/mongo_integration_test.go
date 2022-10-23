@@ -51,6 +51,24 @@ func TestMongo(t *testing.T) {
 			}...,
 		)
 
+		runner.AddStorageTypeCases(
+			[]proto.TestCase{
+				{
+					Name:        "storage type",
+					StorageType: proto.MongoType,
+				},
+			}...,
+		)
+
+		runner.AddIsNoSQLCases(
+			[]proto.TestCase{
+				{
+					Name:            "isNoSQL mongo",
+					ExpectedIsNoSQL: true,
+				},
+			}...,
+		)
+
 		runner.AddListPrimaryKeysCases(
 			[]proto.TestCase{
 				{
@@ -93,6 +111,14 @@ func TestMongo(t *testing.T) {
 					ExpectedUpsertSize: 0,
 					ForceError:         true,
 					Data:               defaultData,
+				},
+			}...,
+		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check mongo connection",
 				},
 			}...,
 		)

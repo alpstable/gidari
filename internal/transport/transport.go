@@ -9,6 +9,7 @@ package transport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -98,7 +99,7 @@ func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoC
 	}, nil
 }
 
-// newFetchConfig will constrcut a new HTTP request from the transport request.
+// newFetchConfig will construct a new HTTP request from the transport request.
 func newFetchConfig(req *config.Request, rurl url.URL, client *web.Client) *web.FetchConfig {
 	rurl.Path = path.Join(rurl.Path, req.Endpoint)
 
@@ -125,6 +126,7 @@ func newFetchConfig(req *config.Request, rurl url.URL, client *web.Client) *web.
 type flattenedRequest struct {
 	fetchConfig *web.FetchConfig
 	table       string
+	clobColumn  string
 }
 
 // flatten will compress the request information into a "web.FetchConfig" request and a "table" name for storage
@@ -135,6 +137,7 @@ func flattenRequest(req *config.Request, rurl url.URL, client *web.Client) *flat
 	return &flattenedRequest{
 		fetchConfig: fetchConfig,
 		table:       req.Table,
+		clobColumn:  req.ClobColumn,
 	}
 }
 
@@ -221,6 +224,7 @@ func flattenRequestTimeseries(req *config.Request, rurl url.URL, client *web.Cli
 		requests = append(requests, &flattenedRequest{
 			fetchConfig: fetchConfig,
 			table:       req.Table,
+			clobColumn:  req.ClobColumn,
 		})
 	}
 
@@ -283,6 +287,12 @@ func newRepoConfig(ctx context.Context, cfg *config.Config, volume int) (*repoCo
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 	for job := range cfg.jobs {
+		if job == nil {
+			cfg.done <- false
+
+			continue
+		}
+
 		reqs := []*proto.UpsertRequest{
 			{
 				Table: job.table,
@@ -353,6 +363,28 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 		bytes, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			job.logger.Fatal(err)
+		}
+
+		if !json.Valid(bytes) {
+			if job.flattenedRequest.clobColumn == "" {
+				job.repoJobs <- nil
+				msg := fmt.Sprintf("response body for %s was invalid JSON, "+
+					"discarding data since no 'clobColumn' was defined in the configuration file",
+					job.fetchConfig.URL)
+				logInfo := tools.LogFormatter{Msg: msg}
+				job.logger.Warnf(logInfo.String())
+
+				continue
+			}
+
+			data := make(map[string]string)
+			data[job.flattenedRequest.clobColumn] = string(bytes)
+
+			bytes, err = json.Marshal(data)
+			if err != nil {
+				job.repoJobs <- nil
+				job.logger.Errorf("failed to marhsal data: %s", err)
+			}
 		}
 
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
