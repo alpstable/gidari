@@ -51,6 +51,15 @@ func TestPostgres(t *testing.T) {
 				{
 					Name:        "storage type",
 					StorageType: proto.PostgresType,
+        },
+      }...,
+    )
+    
+		runner.AddIsNoSQLCases(
+			[]proto.TestCase{
+				{
+					Name:            "isNoSQL postgres",
+					ExpectedIsNoSQL: false,
 				},
 			}...,
 		)
@@ -127,6 +136,14 @@ func TestPostgres(t *testing.T) {
 						"pk1":  "1",
 						"pk2":  "2",
 					},
+				},
+			}...,
+		)
+
+		runner.AddPingCases(
+			[]proto.TestCase{
+				{
+					Name: "check postgres connection",
 				},
 			}...,
 		)

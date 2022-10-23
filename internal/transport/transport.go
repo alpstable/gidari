@@ -99,7 +99,7 @@ func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoC
 	}, nil
 }
 
-// newFetchConfig will constrcut a new HTTP request from the transport request.
+// newFetchConfig will construct a new HTTP request from the transport request.
 func newFetchConfig(req *config.Request, rurl url.URL, client *web.Client) *web.FetchConfig {
 	rurl.Path = path.Join(rurl.Path, req.Endpoint)
 

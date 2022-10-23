@@ -68,6 +68,9 @@ type Storage interface {
 	// UpsertBinary will insert or update a batch of records that are part of a "property bag"-like structure that
 	// containers binary data in the storage device.
 	UpsertBinary(context.Context, *UpsertBinaryRequest) (*UpsertBinaryResponse, error)
+
+	// Ping will indicate that a connection has been successfully established
+	Ping() error
 }
 
 type StorageService struct{ Storage }
