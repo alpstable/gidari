@@ -233,8 +233,8 @@ func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
 
 			if tcase.StorageType != runner.Storage.Type() {
 				t.Fatalf("expected storage type : %s, but got type : %s",
-					storageTypeToString(tcase.StorageType),
-					storageTypeToString(runner.Storage.Type()))
+					SchemeFromStorageType(tcase.StorageType),
+					SchemeFromStorageType(runner.Storage.Type()))
 			}
 		})
 	}
