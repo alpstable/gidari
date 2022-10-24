@@ -13,9 +13,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/alpstable/gidari/internal/web"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
 	"net/url"
 	"path"
 	"reflect"
@@ -24,6 +21,7 @@ import (
 
 	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/web"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
