@@ -69,6 +69,7 @@ type TestCase struct {
 	BinaryColumn        string                 // binaryColumn is the column to insert the binary data into
 	PrimaryKeyMap       map[string]string      // primaryKeyMap is a map of data columns to primary key columns
 	StorageType         uint8                  // storageType is the type of database
+	OpenFn              func() Storage         // openFn is used to create a DB connection for testing
 }
 
 // TestRunner is the storage test runner.
@@ -215,6 +216,13 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 
 			runner.Mutex.Lock()
 			defer runner.Mutex.Unlock()
+
+			stg := tcase.OpenFn()
+
+			stg.Close()
+			if err := stg.Ping(); err == nil {
+				t.Fatalf("expected err got none")
+			}
 		})
 	}
 }
@@ -233,8 +241,8 @@ func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
 
 			if tcase.StorageType != runner.Storage.Type() {
 				t.Fatalf("expected storage type : %s, but got type : %s",
-					storageTypeToString(tcase.StorageType),
-					storageTypeToString(runner.Storage.Type()))
+					SchemeFromStorageType(tcase.StorageType),
+					SchemeFromStorageType(runner.Storage.Type()))
 			}
 		})
 	}
