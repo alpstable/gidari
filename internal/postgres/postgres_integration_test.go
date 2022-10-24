@@ -42,6 +42,10 @@ func TestPostgres(t *testing.T) {
 			[]proto.TestCase{
 				{
 					Name: "close postgres",
+					OpenFn: func() proto.Storage {
+						stg, _ := New(ctx, defaultConnectionString)
+						return stg
+					},
 				},
 			}...,
 		)
