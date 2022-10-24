@@ -68,11 +68,13 @@ type TestCase struct {
 	ForceError          bool                   // forceError will force an error to occur
 	BinaryColumn        string                 // binaryColumn is the column to insert the binary data into
 	PrimaryKeyMap       map[string]string      // primaryKeyMap is a map of data columns to primary key columns
+	StorageType         uint8                  // storageType is the type of database
 }
 
 // TestRunner is the storage test runner.
 type TestRunner struct {
 	closeDBCases         []TestCase
+	storageTypeCases     []TestCase
 	isNoSQLCases         []TestCase
 	listPrimaryKeysCases []TestCase
 	listTablesCases      []TestCase
@@ -96,6 +98,7 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	runner.closeDB(ctx, t)
+	runner.storageType(ctx, t)
 	runner.isNoSQL(ctx, t)
 	runner.listTables(ctx, t)
 	runner.listPrimaryKeys(ctx, t)
@@ -110,6 +113,14 @@ func (runner *TestRunner) AddCloseDBCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.closeDBCases = append(runner.closeDBCases, cases...)
+}
+
+// AddStorageTypeCases will add test cases to the "storageType" test.
+func (runner *TestRunner) AddStorageTypeCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.storageTypeCases = append(runner.storageTypeCases, cases...)
 }
 
 func (runner *TestRunner) AddIsNoSQLCases(cases ...TestCase) {
@@ -207,6 +218,27 @@ func (runner TestRunner) closeDB(_ context.Context, t *testing.T) {
 			runner.Storage.Close()
 			if err := runner.Storage.Ping(); err == nil {
 				t.Fatalf("expected err got none")
+			}
+		})
+	}
+}
+
+// storageType will test the type of database.
+func (runner TestRunner) storageType(_ context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.storageTypeCases {
+		name := fmt.Sprintf("%s storage type", tcase.Name)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runner.Mutex.Lock()
+			defer runner.Mutex.Unlock()
+
+			if tcase.StorageType != runner.Storage.Type() {
+				t.Fatalf("expected storage type : %s, but got type : %s",
+					SchemeFromStorageType(tcase.StorageType),
+					SchemeFromStorageType(runner.Storage.Type()))
 			}
 		})
 	}

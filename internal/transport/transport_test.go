@@ -10,6 +10,7 @@
 package transport
 
 import (
+	"context"
 	"net/url"
 	"path"
 	"reflect"
@@ -243,4 +244,100 @@ func TestNewFetchConfig(t *testing.T) {
 			}
 		}
 	}
+}
+
+func Test_flattenConfigRequests(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		cfg *config.Config
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantReqs []*flattenedRequest
+		wantErr  bool
+	}{
+		{
+			name: "successfully flatten a config request",
+			args: args{
+				cfg: &config.Config{
+					URL: &url.URL{
+						Path: "path",
+					},
+					Requests: []*config.Request{
+						{
+							Method:   "POST",
+							Endpoint: "endpoint",
+						},
+					},
+				},
+			},
+			wantReqs: []*flattenedRequest{
+				{
+					fetchConfig: &web.FetchConfig{
+						Method: "POST",
+						URL: &url.URL{
+							Path: "path/endpoint",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "fail to flatten config requests when none are passed",
+			args: args{
+				cfg: &config.Config{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "fail to flatten request time series",
+			args: args{
+				cfg: &config.Config{
+					URL: &url.URL{},
+					Requests: []*config.Request{
+						{
+							Timeseries: &config.Timeseries{
+								StartName: "startName",
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotReqs, err := flattenConfigRequests(tt.args.ctx, tt.args.cfg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("flattenConfigRequests() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if len(gotReqs) != len(tt.wantReqs) {
+				t.Errorf("flattenConfigRequests() got %d requests, want %d", len(gotReqs), len(tt.wantReqs))
+			}
+			for _, gotReq := range gotReqs {
+				for _, wantReq := range tt.wantReqs {
+					if !compareRequests(gotReq, wantReq) {
+						t.Errorf("flattenConfigRequests() request comparison failed")
+					}
+				}
+			}
+		})
+	}
+}
+
+func compareRequests(request1, request2 *flattenedRequest) bool {
+	if request1 == nil || request2 == nil {
+		return false
+	}
+	if request1.fetchConfig.URL.Path != request2.fetchConfig.URL.Path {
+		return false
+	}
+	if request1.fetchConfig.Method != request2.fetchConfig.Method {
+		return false
+	}
+	return true
 }
