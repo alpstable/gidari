@@ -5,7 +5,6 @@
 - [Integration Testing](#integration-testing)
   - [Network Updates](#network-updates)
   - [Running Integration Tests](#running-integration-tests)
-- [Socials](#socials)
 
 Thank you for your interest in contributing to Gidari! Please make sure to fork this repository before working through issues.
 
@@ -25,7 +24,18 @@ To develop locally you need to install the following dependencies:
 
 1. Docker: https://docs.docker.com/get-docker/
 2. Go: https://go.dev/doc/install
-3. protobuf: http://google.github.io/proto-lens/installing-protoc.html
+3. Google protobuf compiler (protoc):
+
+> ### Mac OS and Linux
+>
+> - http://google.github.io/proto-lens/installing-protoc.html
+
+> ### Windows
+>
+> - Download the latest release (e.g., "protoc-21.8-win64.zip") under "Assets" https://github.com/protocolbuffers/protobuf/releases
+>
+> - Add to PATH by extracting to "C:\protoc-XX.X-winXX" (Be sure to replace 'X' with your appropriate release and system type)
+
 4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
 
 ## Build
