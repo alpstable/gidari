@@ -47,6 +47,10 @@ func TestMongo(t *testing.T) {
 			[]proto.TestCase{
 				{
 					Name: "close mongo",
+					OpenFn: func() proto.Storage {
+						stg, _ := New(ctx, defaultConnectionString)
+						return stg
+					},
 				},
 			}...,
 		)
