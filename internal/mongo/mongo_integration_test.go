@@ -126,6 +126,18 @@ func TestMongo(t *testing.T) {
 				},
 			}...,
 		)
+
+		runner.AddTruncateCases(
+			[]proto.TestCase{
+				{
+					Name: "check Trucate function",
+					OpenFn: func() proto.Storage {
+						stg, _ := New(ctx, defaultConnectionString)
+						return stg
+					},
+				},
+			}...,
+		)
 	})
 }
 
