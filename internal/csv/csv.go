@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -98,36 +97,35 @@ func flattenStruct(record *structpb.Struct) (map[string]string, error) {
 
 // addHeader will extend the headersRowByTable slice with any new keys from the "structpb.Struct" map.
 func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]string, error) {
-	return nil, nil
+	// Check the the table exists in the headerRowByTable map, if it doesn't create it.
+	if _, ok := wstate.headerRowByTable[table]; !ok {
+		wstate.headerRowByTable[table] = &row{header: true, data: []string{}}
+	}
 
-	//wstate.mtx.Lock()
-	//defer wstate.mtx.Unlock()
+	flatMap, err := flattenStruct(record)
+	if err != nil {
+		return nil, err
+	}
 
-	//// Check the the table exists in the headerRowByTable map, if it doesn't create it.
-	//if _, ok := wstate.headerRowByTable[table]; !ok {
-	//	wstate.headerRowByTable[table] = &row{header: true, data: []string{}}
-	//}
+	// Get the existing parts of the header and put them in a set.
+	headerSet := make(map[string]struct{})
+	for _, header := range wstate.headerRowByTable[table].data {
+		headerSet[header] = struct{}{}
+	}
 
-	//// Join header parts by a period.
-	//flatStruct, err := flattenStruct(record)
-	//if err != nil {
-	//	return nil, err
-	//}
+	// Collect the row data.
+	rowData := make([]string, 0, len(flatMap))
 
-	//// Existing header parts.
-	//existingParts := make(map[string]struct{})
-	//for _, part := range wstate.headerRowByTable[table].data {
-	//	existingParts[part] = struct{}{}
-	//}
+	for fieldName := range flatMap {
+		// Check to see if the header already exists, if it doesn't add it.
+		if _, ok := headerSet[fieldName]; !ok {
+			wstate.headerRowByTable[table].data = append(wstate.headerRowByTable[table].data, fieldName)
+		}
 
-	//// Exclude the parts that are already in the header.
-	//for _, part := range flatStruct.header {
-	//	if _, ok := existingParts[part]; !ok {
-	//		wstate.headerRowByTable[table].data = append(wstate.headerRowByTable[table].data, part)
-	//	}
-	//}
+		rowData = append(rowData, flatMap[fieldName])
+	}
 
-	//return flatStruct.data, nil
+	return rowData, nil
 }
 
 // getHeader will return the header row for a given table.
@@ -219,7 +217,7 @@ func (csv *CSV) writeHeader(ctx context.Context, table string, header *row) erro
 
 	input, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	lines := strings.Split(string(input), "\n")
@@ -232,7 +230,7 @@ func (csv *CSV) writeHeader(ctx context.Context, table string, header *row) erro
 	output := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(filename, []byte(output), 0644)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	return nil
@@ -254,12 +252,14 @@ func (csv *CSV) Upsert(ctx context.Context, req <-chan *proto.UpsertRequest) (*p
 
 		for r := range req {
 			if err := csv.writeBody(ctx, state, r); err != nil {
+				fmt.Println("err", err)
 				return err
 			}
 		}
 
 		for table, header := range state.headerRowByTable {
 			if err := csv.writeHeader(ctx, table, header); err != nil {
+				fmt.Println("err", err)
 				return err
 			}
 		}

@@ -47,12 +47,12 @@ func TestComplexUpsert(t *testing.T) {
 			reqs: []*proto.UpsertRequest{
 				{
 					Table: "test_6b3fe527-4268-4b4d-8477-2da84df678c6",
-					Data:  []byte(`{"id": 1, "name": "test"}`),
+					Data:  []byte(`{"id":1,"name":"test","info":{"age":10,"address":"test"}}`),
 				},
 			},
 			want: [][]string{
-				{"id", "name"},
-				{"1", "test"},
+				{"id", "name", "info.age", "info.address"},
+				{"1.000000", "test", "10.000000", "test"},
 			},
 		},
 	} {
