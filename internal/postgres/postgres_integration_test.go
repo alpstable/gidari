@@ -163,6 +163,5 @@ func TestPostgres(t *testing.T) {
 				},
 			}...,
 		)
-
 	})
 }

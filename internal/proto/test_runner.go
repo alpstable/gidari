@@ -175,7 +175,6 @@ func (runner *TestRunner) AddPingCases(cases ...TestCase) {
 
 // Adding cases for testing out the Truncate() storage method on multiple tables
 func (runner TestRunner) AddTruncateCases(cases ...TestCase) {
-
 	runner.Mutex.Lock()
 	defer runner.Mutex.Unlock()
 
@@ -545,7 +544,6 @@ func (runner TestRunner) truncate(ctx context.Context, t *testing.T) {
 				t.Fatalf("Failed to truncate Storage: %v", err)
 			}
 			stg.Close()
-
 		})
 	}
 }
