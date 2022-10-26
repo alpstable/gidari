@@ -4,6 +4,7 @@ __debug_bin
 .DS_Store
 .db
 .git
+.idea
 bazel-bin
 bazel-out
 bazel-testlogs
