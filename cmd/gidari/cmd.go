@@ -41,7 +41,7 @@ func main() {
 	}
 
 	cmd.Flags().StringVar(&configFilepath, "config", "c", "path to configuration")
-	cmd.Flags().BoolVar(&verbose, "verbose", false, "print log data as the binary executes")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "print log data as the binary executes")
 
 	if err := cmd.MarkFlagRequired("config"); err != nil {
 		logrus.Fatalf("error marking flag as required: %v", err)
