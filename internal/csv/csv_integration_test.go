@@ -34,6 +34,34 @@ func TestUpsert(t *testing.T) {
 	}
 }
 
+func stressProtoUpsertRequest(t *testing.T, size int) []*proto.UpsertRequest {
+	t.Helper()
+
+	var reqs []*proto.UpsertRequest
+
+	for i := 0; i < size; i++ {
+		reqs = append(reqs, &proto.UpsertRequest{
+			Table: "test_93affb89-4c3e-484b-8a5a-7f7f85107abc",
+			Data:  []byte(`{"id":1,"name":"test","info":{"age":10,"address":"test"}}`),
+		})
+	}
+
+	return reqs
+}
+
+func stressResults(t *testing.T, size int) [][]string {
+	t.Helper()
+
+	var results [][]string
+
+	results = append(results, []string{"id", "name", "info.age", "info.address"})
+	for i := 0; i < size; i++ {
+		results = append(results, []string{"1.000000", "test", "10.000000", "test"})
+	}
+
+	return results
+}
+
 func TestComplexUpsert(t *testing.T) {
 	t.Parallel()
 
@@ -54,6 +82,11 @@ func TestComplexUpsert(t *testing.T) {
 				{"id", "name", "info.age", "info.address"},
 				{"1.000000", "test", "10.000000", "test"},
 			},
+		},
+		{
+			name: "stress",
+			reqs: stressProtoUpsertRequest(t, 1000),
+			want: stressResults(t, 1000),
 		},
 	} {
 		tcase := tcase

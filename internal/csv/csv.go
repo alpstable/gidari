@@ -97,6 +97,9 @@ func flattenStruct(record *structpb.Struct) (map[string]string, error) {
 
 // addHeader will extend the headersRowByTable slice with any new keys from the "structpb.Struct" map.
 func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]string, error) {
+	wstate.mtx.Lock()
+	defer wstate.mtx.Unlock()
+
 	// Check the the table exists in the headerRowByTable map, if it doesn't create it.
 	if _, ok := wstate.headerRowByTable[table]; !ok {
 		wstate.headerRowByTable[table] = &row{header: true, data: []string{}}
@@ -107,22 +110,34 @@ func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]s
 		return nil, err
 	}
 
-	// Get the existing parts of the header and put them in a set.
-	headerSet := make(map[string]struct{})
-	for _, header := range wstate.headerRowByTable[table].data {
-		headerSet[header] = struct{}{}
+	// Get the existing parts of the header and put them in a set. This map is a bijection between the header
+	// name and it's position in the header row.
+	headerSet := make(map[string]int)
+	for pos, header := range wstate.headerRowByTable[table].data {
+		headerSet[header] = pos
 	}
 
 	// Collect the row data.
 	rowData := make([]string, 0, len(flatMap))
 
-	for fieldName := range flatMap {
+	for fieldName, fieldValue := range flatMap {
 		// Check to see if the header already exists, if it doesn't add it.
 		if _, ok := headerSet[fieldName]; !ok {
 			wstate.headerRowByTable[table].data = append(wstate.headerRowByTable[table].data, fieldName)
+
+			// Update the headerSet map.
+			headerSet[fieldName] = len(wstate.headerRowByTable[table].data) - 1
 		}
 
-		rowData = append(rowData, flatMap[fieldName])
+		pos := headerSet[fieldName]
+
+		// If the position is greater than the length of the rowData slice, then we need to fill in the
+		// missing positions with empty strings.
+		if pos >= len(rowData) {
+			rowData = append(rowData, make([]string, pos-len(rowData)+1)...)
+		}
+
+		rowData[pos] = fieldValue
 	}
 
 	return rowData, nil
@@ -252,14 +267,12 @@ func (csv *CSV) Upsert(ctx context.Context, req <-chan *proto.UpsertRequest) (*p
 
 		for r := range req {
 			if err := csv.writeBody(ctx, state, r); err != nil {
-				fmt.Println("err", err)
 				return err
 			}
 		}
 
 		for table, header := range state.headerRowByTable {
 			if err := csv.writeHeader(ctx, table, header); err != nil {
-				fmt.Println("err", err)
 				return err
 			}
 		}

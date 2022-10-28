@@ -159,7 +159,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 	for _, tcase := range []struct {
 		name string
 		reqs []*proto.UpsertRequest
-		want [][]string
+		want map[string][]string
 	}{
 		{
 			name: "empty",
@@ -169,6 +169,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(``),
 				},
 			},
+			want: map[string][]string{},
 		},
 		{
 			name: "single row",
@@ -178,9 +179,9 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`{"id":1,"name":"test"}`),
 				},
 			},
-			want: [][]string{
-				{"id", "name"},
-				{"1.000000", "test"},
+			want: map[string][]string{
+				"id":   {"1.000000"},
+				"name": {"test"},
 			},
 		},
 		{
@@ -191,9 +192,9 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`{"id":1,"properties":{"name":"test"}}`),
 				},
 			},
-			want: [][]string{
-				{"id", "properties.name"},
-				{"1.000000", "test"},
+			want: map[string][]string{
+				"id":              {"1.000000"},
+				"properties.name": {"test"},
 			},
 		},
 		{
@@ -204,10 +205,10 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`[{"id":1,"name":"test"},{"id":2,"name":"test","age":10}]`),
 				},
 			},
-			want: [][]string{
-				{"id", "name", "age"},
-				{"1.000000", "test"},
-				{"2.000000", "test", "10.000000"},
+			want: map[string][]string{
+				"id":   {"1.000000", "2.000000"},
+				"name": {"test", "test"},
+				"age":  {"", "10.000000"},
 			},
 		},
 		{
@@ -218,10 +219,10 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`[{"id":1,"name":"test"},{"id":2,"age":10,"name":"test"}]`),
 				},
 			},
-			want: [][]string{
-				{"id", "name", "age"},
-				{"1.000000", "test"},
-				{"2.000000", "test", "10.000000"},
+			want: map[string][]string{
+				"id":   {"1.000000", "2.000000"},
+				"name": {"test", "test"},
+				"age":  {"", "10.000000"},
 			},
 		},
 		{
@@ -232,11 +233,10 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`[{},{"id":1,"name":"test"},{"id":2,"age":10,"name":"test"}]`),
 				},
 			},
-			want: [][]string{
-				{"id", "name", "age"},
-				{},
-				{"1.000000", "test"},
-				{"2.000000", "test", "10.000000"},
+			want: map[string][]string{
+				"id":   {"", "1.000000", "2.000000"},
+				"name": {"", "test", "test"},
+				"age":  {"", "", "10.000000"},
 			},
 		},
 		{
@@ -245,15 +245,14 @@ func TestDecodeUpsertRequest(t *testing.T) {
 				{
 					Table: "test",
 					Data: []byte(`[{},{"id":1,"name":"test"},{"other":"test"},
-{"age":10,"name":"test"}]`),
+{"age":10,"name"//:"test"}]`),
 				},
 			},
-			want: [][]string{
-				{"id", "name", "other", "age"},
-				{},
-				{"1.000000", "test"},
-				{"", "", "test"},
-				{"", "test", "", "10.000000"},
+			want: map[string][]string{
+				"id":    {"", "1.000000", "", ""},
+				"name":  {"", "test", "", "test"},
+				"age":   {"", "", "", "10.000000"},
+				"other": {"", "", "test", ""},
 			},
 		},
 		{
@@ -276,12 +275,11 @@ func TestDecodeUpsertRequest(t *testing.T) {
 					Data:  []byte(`{"other":"test"}`),
 				},
 			},
-			want: [][]string{
-				{"id", "name", "age", "other"},
-				{"1.000000", "test"},
-				{"1.000000", "test", "10.000000"},
-				{"1.000000"},
-				{"", "", "", "test"},
+			want: map[string][]string{
+				"id":    {"1.000000", "1.000000", "1.000000", ""},
+				"name":  {"test", "test", "", ""},
+				"age":   {"", "10.000000", "", ""},
+				"other": {"", "", "", "test"},
 			},
 		},
 	} {
@@ -308,14 +306,22 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			}
 
 			for table, headerRow := range state.headerRowByTable {
-				if !sameStringSlice(t, headerRow.data, tcase.want[0]) {
-					t.Errorf("unexpected header row: got %v, want %v", headerRow, tcase.want[0])
-				}
-
 				for idx, got := range channeledRows[table] {
-					if !sameStringSlice(t, got, tcase.want[idx+1]) {
+					want := []string{}
+					for _, headerName := range headerRow.data {
+						if idx < len(tcase.want[headerName]) {
+							want = append(want, tcase.want[headerName][idx])
+						}
+					}
+
+					// Add trailing empty columns to "got" if it's shorter than "want".
+					for i := len(got); i < len(want); i++ {
+						got = append(got, "")
+					}
+
+					if !sameStringSlice(t, got, want) {
 						t.Errorf("unexpected header row for table %q: got %v, want %v",
-							table, got, tcase.want[idx+1])
+							table, got, want)
 					}
 				}
 			}
