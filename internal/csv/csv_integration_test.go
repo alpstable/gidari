@@ -11,29 +11,6 @@ import (
 	"github.com/alpstable/gidari/internal/proto"
 )
 
-func TestUpsert(t *testing.T) {
-	ctx := context.Background()
-	csv, err := New(ctx, "testdata")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := &proto.UpsertRequest{
-		Table: "test",
-		Data:  []byte(`{"id": 1, "name": "test"}`),
-	}
-
-	ch := make(chan *proto.UpsertRequest)
-	_, errGroup := csv.Upsert(ctx, ch)
-
-	ch <- req
-	close(ch)
-
-	if err := errGroup.Wait(); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func stressProtoUpsertRequest(t *testing.T, size int) []*proto.UpsertRequest {
 	t.Helper()
 
