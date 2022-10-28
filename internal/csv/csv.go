@@ -2,15 +2,13 @@ package csv
 
 import (
 	"context"
+	gocsv "encoding/csv"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
-
-	gocsv "encoding/csv"
 
 	"github.com/alpstable/gidari/internal/proto"
 	"golang.org/x/sync/errgroup"
@@ -20,6 +18,9 @@ import (
 var (
 	// ErrNoDir is returned when the directory does not exist.
 	ErrNoDir = fmt.Errorf("directory does not exist")
+
+	// ErrUnknownValueType is returned when the value type is unknown.
+	ErrUnknownValueType = fmt.Errorf("unknown value type")
 )
 
 // CSV is a wrapper for an "encoding/csv" reader/writer used to perform CRUD operations on CSV files in a given
@@ -73,7 +74,7 @@ func flattenStruct(record *structpb.Struct) (map[string]string, error) {
 			// the header should be "a.b.c" and the data should be "1".
 			subStruct, err := flattenStruct(fieldValue.GetStructValue())
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to flatten struct: %w", err)
 			}
 
 			for subFieldName, subFieldValue := range subStruct {
@@ -88,7 +89,7 @@ func flattenStruct(record *structpb.Struct) (map[string]string, error) {
 		case *structpb.Value_NullValue:
 			flatMap[fieldName] = ""
 		default:
-			return nil, fmt.Errorf("unknown value type: %s", reflect.TypeOf(fieldValue.Kind))
+			return nil, fmt.Errorf("%w: %T", ErrUnknownValueType, fieldValue.Kind)
 		}
 	}
 
@@ -107,7 +108,7 @@ func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]s
 
 	flatMap, err := flattenStruct(record)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to flatten struct: %w", err)
 	}
 
 	// Get the existing parts of the header and put them in a set. This map is a bijection between the header
@@ -143,18 +144,6 @@ func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]s
 	return rowData, nil
 }
 
-// getHeader will return the header row for a given table.
-func (wstate *writeState) getHeader(table string) *row {
-	wstate.mtx.RLock()
-	defer wstate.mtx.RUnlock()
-
-	if header, ok := wstate.headerRowByTable[table]; ok {
-		return header
-	}
-
-	return nil
-}
-
 // decodeUpsertRequest will convert the JSON data from a "proto.UpsertRequest" into CSV data.
 //
 // It is not possible to only get a header rows as the header row is determined by the keys of a map.
@@ -168,20 +157,20 @@ func decodeUpsertRequest(req *proto.UpsertRequest, state *writeState, rowCh chan
 
 	records, err := proto.DecodeUpsertRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decode proto upsert request: %w", err)
 	}
 
 	// Iterate over the records and send them to the row channel.
 	for _, record := range records {
 		rowData, err := state.addHeaders(req.Table, record)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to add headers: %w", err)
 		}
 
 		rowCh <- &row{data: rowData}
 	}
 
-	return err
+	return nil
 }
 
 // writeBody will write the body of the CSV file. While writing to the file, writeBody will persist the header row data
@@ -191,14 +180,21 @@ func decodeUpsertRequest(req *proto.UpsertRequest, state *writeState, rowCh chan
 // writeBody must have some way of maintaining a constant state between calls.
 func (csv *CSV) writeBody(ctx context.Context, state *writeState, req *proto.UpsertRequest) error {
 	rows := make(chan *row)
-	go decodeUpsertRequest(req, state, rows)
+
+	errs, _ := errgroup.WithContext(ctx)
+
+	errs.Go(func() error {
+		return decodeUpsertRequest(req, state, rows)
+	})
 
 	// Create the file if it does not exist.
 	filname := filepath.Join(csv.Dir, req.Table) + ".csv"
 
-	file, err := os.OpenFile(filname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	const filemode = 0o644
+
+	file, err := os.OpenFile(filname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, filemode)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
@@ -215,24 +211,28 @@ func (csv *CSV) writeBody(ctx context.Context, state *writeState, req *proto.Ups
 		}
 
 		if err := writer.Write(row.data); err != nil {
-			panic(err)
+			return fmt.Errorf("failed to write row: %w", err)
 		}
 	}
 
 	if err := writer.Error(); err != nil {
-		return err
+		return fmt.Errorf("error writing CSV file: %w", err)
+	}
+
+	if err := errs.Wait(); err != nil {
+		return fmt.Errorf("error decoding upsert request: %w", err)
 	}
 
 	return nil
 }
 
 // writeHeader will write the header row to the top of the CSV file.
-func (csv *CSV) writeHeader(ctx context.Context, table string, header *row) error {
+func (csv *CSV) writeHeader(_ context.Context, table string, header *row) error {
 	filename := filepath.Join(csv.Dir, table) + ".csv"
 
-	input, err := ioutil.ReadFile(filename)
+	input, err := os.ReadFile(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	lines := strings.Split(string(input), "\n")
@@ -243,9 +243,12 @@ func (csv *CSV) writeHeader(ctx context.Context, table string, header *row) erro
 	lines[0] = strings.Join(header.data, ",")
 
 	output := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(filename, []byte(output), 0644)
+
+	const fileperm = 0o600
+
+	err = os.WriteFile(filename, []byte(output), os.FileMode(fileperm))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write header to file: %w", err)
 	}
 
 	return nil
@@ -256,7 +259,7 @@ func (csv *CSV) writeHeader(ctx context.Context, table string, header *row) erro
 // function will simply append the data to the end of the file. (2) if the file does not exist, then this function will
 // create the file and write the data to it.
 //
-// Consistant column order is not guarunteed.
+// Consistent column order is not guaranteed.
 func (csv *CSV) Upsert(ctx context.Context, req <-chan *proto.UpsertRequest) (*proto.UpsertResponse, *errgroup.Group) {
 	errs, ctx := errgroup.WithContext(ctx)
 	errs.Go(func() error {
@@ -267,13 +270,13 @@ func (csv *CSV) Upsert(ctx context.Context, req <-chan *proto.UpsertRequest) (*p
 
 		for r := range req {
 			if err := csv.writeBody(ctx, state, r); err != nil {
-				return err
+				return fmt.Errorf("failed to write body: %w", err)
 			}
 		}
 
 		for table, header := range state.headerRowByTable {
 			if err := csv.writeHeader(ctx, table, header); err != nil {
-				return err
+				return fmt.Errorf("failed to write header: %w", err)
 			}
 		}
 

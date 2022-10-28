@@ -122,7 +122,6 @@ func TestComplexUpsert(t *testing.T) {
 
 					linNum++
 				}
-
 			}
 		})
 	}

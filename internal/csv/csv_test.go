@@ -2,9 +2,11 @@ package csv
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/alpstable/gidari/internal/proto"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -16,7 +18,7 @@ func TestNew(t *testing.T) {
 
 		ctx := context.Background()
 		_, err := New(ctx, "testdata-dne")
-		if err != ErrNoDir {
+		if !errors.Is(err, ErrNoDir) {
 			t.Fatalf("expected ErrNoDir, got %v", err)
 		}
 	})
@@ -32,33 +34,36 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func sameStringSlice(t *testing.T, x, y []string) bool {
+func sameStringSlice(t *testing.T, arr1, arr2 []string) bool {
 	t.Helper()
 
-	if len(x) != len(y) {
+	if len(arr1) != len(arr2) {
 		return false
 	}
+
 	// create a map of string -> int
-	diff := make(map[string]int, len(x))
-	for _, _x := range x {
+	diff := make(map[string]int, len(arr1))
+	for _, val := range arr1 {
 		// 0 value for int is 0, so just increment a counter for the string
-		diff[_x]++
+		diff[val]++
 	}
-	for _, _y := range y {
+
+	for _, val := range arr2 {
 		// If the string _y is not in diff bail out early
-		if _, ok := diff[_y]; !ok {
+		if _, ok := diff[val]; !ok {
 			return false
 		}
-		diff[_y] -= 1
-		if diff[_y] == 0 {
-			delete(diff, _y)
+
+		diff[val]--
+		if diff[val] == 0 {
+			delete(diff, val)
 		}
 	}
+
 	return len(diff) == 0
 }
 
 func TestFlattenStruct(t *testing.T) {
-
 	t.Parallel()
 
 	for _, tcase := range []struct {
@@ -72,6 +77,7 @@ func TestFlattenStruct(t *testing.T) {
 			table: "test",
 			object: func() *structpb.Struct {
 				spb, _ := structpb.NewStruct(map[string]interface{}{})
+
 				return spb
 			}(),
 			want: map[string]string{},
@@ -83,6 +89,7 @@ func TestFlattenStruct(t *testing.T) {
 				spb, _ := structpb.NewStruct(map[string]interface{}{
 					"foo": "bar",
 				})
+
 				return spb
 			}(),
 			want: map[string]string{
@@ -98,6 +105,7 @@ func TestFlattenStruct(t *testing.T) {
 						"bar": "baz",
 					},
 				})
+
 				return spb
 			}(),
 			want: map[string]string{
@@ -118,6 +126,7 @@ func TestFlattenStruct(t *testing.T) {
 					},
 					"garply": 1,
 				})
+
 				return spb
 			}(),
 			want: map[string]string{
@@ -245,7 +254,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 				{
 					Table: "test",
 					Data: []byte(`[{},{"id":1,"name":"test"},{"other":"test"},
-{"age":10,"name"//:"test"}]`),
+{"age":10,"name":"test"}]`),
 				},
 			},
 			want: map[string][]string{
@@ -293,10 +302,18 @@ func TestDecodeUpsertRequest(t *testing.T) {
 
 			for _, req := range tcase.reqs {
 				rows := make(chan *row)
-				go decodeUpsertRequest(req, state, rows)
+
+				errs, _ := errgroup.WithContext(context.Background())
+				errs.Go(func() error {
+					return decodeUpsertRequest(req, state, rows)
+				})
 
 				for row := range rows {
 					channeledRows[req.Table] = append(channeledRows[req.Table], row.data)
+				}
+
+				if err := errs.Wait(); err != nil {
+					t.Fatal(err)
 				}
 			}
 
