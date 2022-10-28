@@ -101,7 +101,7 @@ func (wstate *writeState) addHeaders(table string, record *structpb.Struct) ([]s
 	wstate.mtx.Lock()
 	defer wstate.mtx.Unlock()
 
-	// Check the the table exists in the headerRowByTable map, if it doesn't create it.
+	// Check the table exists in the headerRowByTable map, if it doesn't create it.
 	if _, ok := wstate.headerRowByTable[table]; !ok {
 		wstate.headerRowByTable[table] = &row{header: true, data: []string{}}
 	}
