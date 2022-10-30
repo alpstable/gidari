@@ -3,7 +3,6 @@ module github.com/alpstable/gidari
 go 1.19
 
 require (
-	github.com/google/uuid v1.1.2
 	github.com/lib/pq v1.10.7
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.0
