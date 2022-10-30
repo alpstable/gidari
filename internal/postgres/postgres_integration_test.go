@@ -151,5 +151,17 @@ func TestPostgres(t *testing.T) {
 				},
 			}...,
 		)
+
+		runner.AddTruncateCases(
+			[]proto.TestCase{
+				{
+					Name: "Trucate case",
+					OpenFn: func() proto.Storage {
+						stg, _ := New(ctx, defaultConnectionString)
+						return stg
+					},
+				},
+			}...,
+		)
 	})
 }

@@ -82,6 +82,7 @@ type TestRunner struct {
 	upsertTxnCases       []TestCase
 	upsertBinaryCases    []TestCase
 	pingCases            []TestCase
+	truncateCases        []TestCase
 	Mutex                *sync.Mutex
 	Storage              Storage
 }
@@ -105,6 +106,7 @@ func (runner TestRunner) Run(ctx context.Context, t *testing.T) {
 	runner.listPrimaryKeys(ctx, t)
 	runner.upsertTxn(ctx, t)
 	runner.upsertBinary(ctx, t)
+	runner.truncate(ctx, t)
 	runner.ping(ctx, t)
 }
 
@@ -169,6 +171,14 @@ func (runner *TestRunner) AddPingCases(cases ...TestCase) {
 	defer runner.Mutex.Unlock()
 
 	runner.pingCases = append(runner.pingCases, cases...)
+}
+
+// Adding cases for testing out the Truncate() storage method on multiple tables.
+func (runner *TestRunner) AddTruncateCases(cases ...TestCase) {
+	runner.Mutex.Lock()
+	defer runner.Mutex.Unlock()
+
+	runner.truncateCases = append(runner.truncateCases, cases...)
 }
 
 // forceTxnError forces an error to occur in the transaction. It sends two requests to further test the reseliency of
@@ -511,6 +521,29 @@ func (runner TestRunner) ping(_ context.Context, t *testing.T) {
 			if err := runner.Storage.Ping(); err != nil {
 				t.Errorf("An error was returned: %v", err)
 			}
+		})
+	}
+}
+
+// truncate will test the Truncate() storage method.
+func (runner TestRunner) truncate(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	for _, tcase := range runner.truncateCases {
+		name := fmt.Sprintf("%s truncateCase", tcase.Name)
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runner.Mutex.Lock()
+			defer runner.Mutex.Unlock()
+
+			stg := tcase.OpenFn()
+
+			if _, err := stg.Truncate(ctx, &TruncateRequest{}); err != nil {
+				t.Fatalf("Failed to truncate Storage: %v", err)
+			}
+			stg.Close()
 		})
 	}
 }
