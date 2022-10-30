@@ -17,9 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alpstable/gidari/internal/proto"
-	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -478,13 +478,13 @@ func (pg *Postgres) StartTx(ctx context.Context) (*proto.Txn, error) {
 	}
 
 	// Instantiate a new transaction on the Postgres connection and store it in the activeTx map.
-	txnID := uuid.New().String()
 
 	pgtx, err := pg.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return txn, fmt.Errorf("failed to start transaction: %w", err)
 	}
 
+	txnID := time.Now().UnixNano()
 	pg.activeTx.Store(txnID, pgtx)
 
 	// Create a copy of the parent context with a transaction ID.
