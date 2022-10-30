@@ -173,8 +173,8 @@ func (runner *TestRunner) AddPingCases(cases ...TestCase) {
 	runner.pingCases = append(runner.pingCases, cases...)
 }
 
-// Adding cases for testing out the Truncate() storage method on multiple tables
-func (runner TestRunner) AddTruncateCases(cases ...TestCase) {
+// Adding cases for testing out the Truncate() storage method on multiple tables.
+func (runner *TestRunner) AddTruncateCases(cases ...TestCase) {
 	runner.Mutex.Lock()
 	defer runner.Mutex.Unlock()
 
