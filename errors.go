@@ -5,7 +5,7 @@
 // You may obtain a copy of the License at
 //
 //	http://www.apache.org/licenses/LICENSE-2.0
-package config
+package gidari
 
 import "fmt"
 
@@ -18,6 +18,8 @@ var (
 	ErrSettingTimeseriesChunks  = fmt.Errorf("failed to set timeseries chunks")
 	ErrUnableToParse            = fmt.Errorf("unable to parse")
 	ErrNoRequests               = fmt.Errorf("no requests defined")
+	ErrInvalidEndTimeSize       = fmt.Errorf("invalid end time size, expected 1")
+	ErrInvalidStartTimeSize     = fmt.Errorf("invalid start time size, expected 1")
 )
 
 // MissingConfigFieldError is returned when a configuration field is missing.
