@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -51,6 +51,7 @@ type Config struct {
 
 	Logger         *logrus.Logger
 	StgConstructor proto.Constructor
+	Storage        []proto.Storage
 	Truncate       bool
 
 	URL *url.URL `yaml:"-"`

@@ -15,7 +15,7 @@ containers:
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:
-	protoc --proto_path=internal/proto --go_out=internal/proto internal/proto/db.proto
+	protoc --proto_path=proto --go_out=proto proto/db.proto
 
 # test runs all of the unit tests locally. Each test is run 5 times to minimize flakiness.
 .PHONY: tests

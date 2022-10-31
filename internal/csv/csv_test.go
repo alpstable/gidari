@@ -12,7 +12,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -172,6 +172,8 @@ func TestFlattenStruct(t *testing.T) {
 func TestDecodeUpsertRequest(t *testing.T) {
 	t.Parallel()
 
+	testTable := &proto.Table{Name: "test"}
+
 	for _, tcase := range []struct {
 		name string
 		reqs []*proto.UpsertRequest
@@ -181,7 +183,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "empty",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(``),
 				},
 			},
@@ -191,7 +193,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "single row",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"id":1,"name":"test"}`),
 				},
 			},
@@ -204,7 +206,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "single row object",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"id":1,"properties":{"name":"test"}}`),
 				},
 			},
@@ -217,7 +219,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "smaller row before larger row",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`[{"id":1,"name":"test"},{"id":2,"name":"test","age":10}]`),
 				},
 			},
@@ -231,7 +233,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "smaller row before larger row unordered",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`[{"id":1,"name":"test"},{"id":2,"age":10,"name":"test"}]`),
 				},
 			},
@@ -245,7 +247,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "empty leading row",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`[{},{"id":1,"name":"test"},{"id":2,"age":10,"name":"test"}]`),
 				},
 			},
@@ -259,7 +261,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "sparse rows with uneven columns",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data: []byte(`[{},{"id":1,"name":"test"},{"other":"test"},
 {"age":10,"name":"test"}]`),
 				},
@@ -275,19 +277,19 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			name: "multiple requests",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"id":1,"name":"test"}`),
 				},
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"id":1,"name":"test","age":10}`),
 				},
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"id":1}`),
 				},
 				{
-					Table: "test",
+					Table: testTable,
 					Data:  []byte(`{"other":"test"}`),
 				},
 			},
@@ -316,7 +318,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 				})
 
 				for row := range rows {
-					channeledRows[req.Table] = append(channeledRows[req.Table], row.data)
+					channeledRows[req.Table.Name] = append(channeledRows[req.Table.Name], row.data)
 				}
 
 				if err := errs.Wait(); err != nil {

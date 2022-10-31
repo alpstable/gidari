@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 )
 
 func stressProtoUpsertRequest(t *testing.T, size int) []*proto.UpsertRequest {
@@ -25,7 +25,7 @@ func stressProtoUpsertRequest(t *testing.T, size int) []*proto.UpsertRequest {
 
 	for i := 0; i < size; i++ {
 		reqs = append(reqs, &proto.UpsertRequest{
-			Table: "test_93affb89-4c3e-484b-8a5a-7f7f85107abc",
+			Table: &proto.Table{Name: "test_93affb89-4c3e-484b-8a5a-7f7f85107abc"},
 			Data:  []byte(`{"id":1,"name":"test","info":{"age":10,"address":"test"}}`),
 		})
 	}
@@ -58,7 +58,7 @@ func TestComplexUpsert(t *testing.T) {
 			name: "single row",
 			reqs: []*proto.UpsertRequest{
 				{
-					Table: "test_6b3fe527-4268-4b4d-8477-2da84df678c6",
+					Table: &proto.Table{Name: "test_6b3fe527-4268-4b4d-8477-2da84df678c6"},
 					Data:  []byte(`{"id":1,"name":"test","info":{"age":10,"address":"test"}}`),
 				},
 			},
@@ -90,16 +90,16 @@ func TestComplexUpsert(t *testing.T) {
 			tables := make(map[string]struct{})
 
 			for _, req := range tcase.reqs {
-				if _, ok := tables[req.Table]; !ok {
+				if _, ok := tables[req.Table.Name]; !ok {
 					t.Cleanup(func() {
-						filename := filepath.Join("testdata", req.Table+".csv")
+						filename := filepath.Join("testdata", req.Table.Name+".csv")
 						if err := os.Remove(filename); err != nil {
 							t.Fatal(err)
 						}
 					})
 				}
 
-				tables[req.Table] = struct{}{}
+				tables[req.Table.Name] = struct{}{}
 				reqCh <- req
 			}
 			close(reqCh)

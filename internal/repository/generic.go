@@ -11,9 +11,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alpstable/gidari/internal/mongo"
-	"github.com/alpstable/gidari/internal/postgres"
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 )
 
 // ErrFailedToCreateRepository is returned when the repository layer fails to create a new repository.
@@ -42,51 +40,14 @@ type GenericService struct {
 	*proto.Txn
 }
 
-// NewStorage returns a new storage service.
-func NewStorage(ctx context.Context, dns string) (*proto.StorageService, error) {
-	var stg *proto.StorageService
-
-	scheme := proto.SchemeFromConnectionString(dns)
-	switch scheme {
-	case proto.SchemeFromStorageType(proto.MongoType):
-		mdb, err := mongo.New(ctx, dns)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct mongo storage: %w", err)
-		}
-
-		stg = &proto.StorageService{Storage: mdb}
-	case proto.SchemeFromStorageType(proto.PostgresType):
-		pdb, err := postgres.New(ctx, dns)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct postgres storage: %w", err)
-		}
-
-		stg = &proto.StorageService{Storage: pdb}
-	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnkownScheme, scheme)
-	}
-
-	return stg, nil
-}
-
 // New returns a new Generic service.
-func New(ctx context.Context, dns string) (*GenericService, error) {
-	stg, err := NewStorage(ctx, dns)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct storage: %w", err)
-	}
-
+func New(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 	return &GenericService{stg, nil}, nil
 }
 
 // NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
 // storage operations made by the repository layer.
-func NewTx(ctx context.Context, dns string) (*GenericService, error) {
-	stg, err := NewStorage(ctx, dns)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct storage: %w", err)
-	}
-
+func NewTx(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 	tx, err := stg.StartTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)

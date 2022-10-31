@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/alpstable/gidari/config"
-	"github.com/alpstable/gidari/internal/proto"
 	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
+	"github.com/alpstable/gidari/proto"
 	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 )
@@ -73,14 +73,14 @@ type repoCloser func()
 func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoCloser, error) {
 	repos := []repository.Generic{}
 
-	for _, dns := range cfg.ConnectionStrings {
-		repo, err := repository.NewTx(ctx, dns)
+	for _, stg := range cfg.Storage {
+		repo, err := repository.NewTx(ctx, stg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
 		}
 
 		logInfo := tools.LogFormatter{
-			Msg: fmt.Sprintf("created repository for %q", dns),
+			Msg: fmt.Sprintf("created repository for %q", stg.Type()),
 		}
 		cfg.Logger.Info(logInfo.String())
 
@@ -295,7 +295,7 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 
 		reqs := []*proto.UpsertRequest{
 			{
-				Table: job.table,
+				Table: &proto.Table{Name: job.table},
 				Data:  job.b,
 			},
 		}
@@ -425,9 +425,16 @@ func truncate(ctx context.Context, cfg *config.Config, truncateRequest *proto.Tr
 			return fmt.Errorf("unable to truncate tables: %w", err)
 		}
 
+		tables := truncateRequest.GetTables()
+
+		tableNames := make([]string, len(tables))
+		for idx, table := range tables {
+			tableNames[idx] = table.GetName()
+		}
+
 		rt := repo.Type()
-		tables := strings.Join(truncateRequest.Tables, ", ")
-		msg := fmt.Sprintf("truncated tables on %q: %v", proto.SchemeFromStorageType(rt), tables)
+		tablesCSV := strings.Join(tableNames, ", ")
+		msg := fmt.Sprintf("truncated tables on %q: %v", proto.SchemeFromStorageType(rt), tablesCSV)
 
 		logInfo := tools.LogFormatter{
 			Duration: time.Since(start),
@@ -454,14 +461,14 @@ func Truncate(ctx context.Context, cfg *config.Config) error {
 		for _, req := range cfg.Requests {
 			// Add the table to the list of tables to truncate.
 			if req.Truncate != nil && *req.Truncate {
-				truncateRequest.Tables = append(truncateRequest.Tables, req.Table)
+				truncateRequest.Tables = append(truncateRequest.Tables, &proto.Table{Name: req.Table})
 			}
 		}
 	} else {
 		// checking for request-specific truncate
 		for _, req := range cfg.Requests {
 			if table := req.Table; req.Truncate != nil && *req.Truncate && table != "" {
-				truncateRequest.Tables = append(truncateRequest.Tables, table)
+				truncateRequest.Tables = append(truncateRequest.Tables, &proto.Table{Name: table})
 			}
 		}
 	}

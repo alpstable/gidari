@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )

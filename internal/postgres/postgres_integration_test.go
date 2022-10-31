@@ -13,7 +13,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 )
 
 const defaultConnectionString = "postgresql://root:root@postgres1:5432/defaultdb?sslmode=disable"
