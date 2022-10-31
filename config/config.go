@@ -11,7 +11,6 @@ import (
 	"net/url"
 
 	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/tools"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,18 +32,27 @@ type Authentication struct {
 	Auth2  *Auth2  `yaml:"auth2"`
 }
 
+type StorageOptions struct {
+	Storage proto.Storage
+
+	// ConnectionString is the URI to connect to the database. This is only valid using the CLI.
+	ConnectionString *string `yaml:"connectionString"`
+
+	// Database is the name of the database to run operations against. This is an optional field.
+	Database *string `yaml:"database"`
+}
+
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
 // the repositories defined by the "ConnectionStrings" list.
 type Config struct {
-	RawURL            string           `yaml:"url"`
-	Authentication    Authentication   `yaml:"authentication"`
-	ConnectionStrings []string         `yaml:"connectionStrings"`
-	Requests          []*Request       `yaml:"requests"`
-	RateLimitConfig   *RateLimitConfig `yaml:"rateLimit"`
+	RawURL          string           `yaml:"url"`
+	Authentication  Authentication   `yaml:"authentication"`
+	Requests        []*Request       `yaml:"requests"`
+	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
+	StorageOptions  []StorageOptions `yaml:"storage"`
 
 	Logger         *logrus.Logger
 	StgConstructor proto.Constructor
-	Storage        []proto.Storage
 	Truncate       bool
 
 	URL *url.URL `yaml:"-"`
@@ -58,13 +66,6 @@ func (cfg *Config) Validate() error {
 
 	if err := cfg.RateLimitConfig.validate(); err != nil {
 		return ErrInvalidRateLimit
-	}
-
-	if cfg.ConnectionStrings == nil {
-		logWarn := tools.LogFormatter{
-			Msg: "no connectionStrings specified in the config file",
-		}
-		cfg.Logger.Warn(logWarn.String())
 	}
 
 	return nil

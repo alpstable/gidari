@@ -1,6 +1,8 @@
 url: https://pokeapi.co
-connectionStrings:
-  - mongodb://mongo1:27017/pokemon
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: pokemon
 rateLimit:
   burst: 1
   period: 1

@@ -19,12 +19,15 @@ import (
 
 	"github.com/alpstable/gidari"
 	"github.com/alpstable/gidari/config"
+	"github.com/alpstable/gmongo"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/time/rate"
 	"gopkg.in/yaml.v2"
 )
 
-func newConfig(_ context.Context, file *os.File) (*config.Config, error) {
+func newConfig(ctx context.Context, file *os.File) (*config.Config, error) {
 	var cfg config.Config
 
 	cfg.Logger = logrus.New()
@@ -71,6 +74,30 @@ func newConfig(_ context.Context, file *os.File) (*config.Config, error) {
 		}
 
 		req.RateLimiter = rateLimiter
+	}
+
+	// Add storage using the connection strings.
+	for idx, stgOpts := range cfg.StorageOptions {
+		// If the connection string has "mongodb:" as a prefix, then it is a MongoDB connection string.
+		connStr := stgOpts.ConnectionString
+		if connStr != nil && strings.HasPrefix(*connStr, "mongodb:") {
+			// Create a MongoDB client using the official MongoDB Go Driver.
+			clientOptions := options.Client().ApplyURI(*connStr)
+			client, _ := mongo.Connect(ctx, clientOptions)
+
+			// Ping the client
+			if err := client.Ping(ctx, nil); err != nil {
+				return nil, fmt.Errorf("unable to ping MongoDB client: %w", err)
+			}
+
+			// Create a MongoDB storage.
+			mstg, err := gmongo.New(ctx, client)
+			if err != nil {
+				return nil, fmt.Errorf("unable to create MongoDB storage: %w", err)
+			}
+
+			cfg.StorageOptions[idx].Storage = mstg
+		}
 	}
 
 	return &cfg, nil

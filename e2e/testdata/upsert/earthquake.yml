@@ -1,6 +1,8 @@
 url: https://earthquake.usgs.gov
-connectionStrings:
-  - mongodb://mongo1:27017/earthquakes
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: earthquakes
 rateLimit:
   burst: 5
   period: 1

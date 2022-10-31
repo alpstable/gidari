@@ -42,12 +42,25 @@ type GenericService struct {
 
 // New returns a new Generic service.
 func New(ctx context.Context, stg proto.Storage) (*GenericService, error) {
+	if stg == nil {
+		return nil, fmt.Errorf("storage is nil")
+	}
+
 	return &GenericService{stg, nil}, nil
 }
 
 // NewTx returns a new Generic service with an initialized transaction object that can be used to commit or rollback
 // storage operations made by the repository layer.
 func NewTx(ctx context.Context, stg proto.Storage) (*GenericService, error) {
+	if stg == nil {
+		return nil, fmt.Errorf("storage is nil")
+	}
+
+	// Ping the database to ensure that the connection is valid.
+	if err := stg.Ping(); err != nil {
+		return nil, fmt.Errorf("unable to ping database: %w", err)
+	}
+
 	tx, err := stg.StartTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)

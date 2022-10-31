@@ -1,6 +1,8 @@
 url: https://openlibrary.org
-connectionStrings:
-  - mongodb://mongo1:27017/open-library
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: open-library
 rateLimit:
   burst: 5
   period: 1

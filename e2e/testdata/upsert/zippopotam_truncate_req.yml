@@ -1,6 +1,8 @@
 url: http://api.zippopotam.us
-connectionStrings:
-  - mongodb://mongo1:27017/zippopotam
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: zippopotam
 rateLimit:
   burst: 1
   period: 1

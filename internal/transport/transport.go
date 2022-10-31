@@ -69,12 +69,23 @@ func connect(ctx context.Context, cfg *config.Config) (*web.Client, error) {
 
 type repoCloser func()
 
-// repos will return a slice of generic repositories along with associated transaction instances.
-func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoCloser, error) {
-	repos := []repository.Generic{}
+type repo struct {
+	repository.Generic
 
-	for _, stg := range cfg.Storage {
-		repo, err := repository.NewTx(ctx, stg)
+	// closable is a flag that indicates whether or not the repository is closable. A repository is only closable
+	// if it is created by a connection string. If a repository is created by a client or a database, then it is
+	// the responsibility of the caller to close.
+	closable bool
+	database *string
+}
+
+// repos will return a slice of generic repositories along with associated transaction instances.
+func repos(ctx context.Context, cfg *config.Config) ([]repo, repoCloser, error) {
+	repos := []repo{}
+
+	for _, stgOpts := range cfg.StorageOptions {
+		stg := stgOpts.Storage
+		genRepository, err := repository.NewTx(ctx, stg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
 		}
@@ -84,11 +95,19 @@ func repos(ctx context.Context, cfg *config.Config) ([]repository.Generic, repoC
 		}
 		cfg.Logger.Info(logInfo.String())
 
-		repos = append(repos, repo)
+		repos = append(repos, repo{
+			Generic:  genRepository,
+			database: stgOpts.Database,
+			closable: stgOpts.ConnectionString == nil,
+		})
 	}
 
 	return repos, func() {
 		for _, repo := range repos {
+			if !repo.closable {
+				continue
+			}
+
 			repo.Close()
 
 			logInfo := tools.LogFormatter{
@@ -263,11 +282,12 @@ type repoJob struct {
 }
 
 type repoConfig struct {
-	repos      []repository.Generic
+	repos      []repo
 	closeRepos func()
 	jobs       chan *repoJob
 	done       chan bool
 	logger     *logrus.Logger
+	database   *string
 }
 
 func newRepoConfig(ctx context.Context, cfg *config.Config, volume int) (*repoConfig, error) {
@@ -276,13 +296,16 @@ func newRepoConfig(ctx context.Context, cfg *config.Config, volume int) (*repoCo
 		return nil, err
 	}
 
-	return &repoConfig{
+	config := &repoConfig{
 		repos:      repos,
 		closeRepos: closeRepos,
 		jobs:       make(chan *repoJob, volume*len(repos)),
 		done:       make(chan bool, volume),
 		logger:     cfg.Logger,
-	}, nil
+	}
+
+	return config, nil
+
 }
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
@@ -302,6 +325,11 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 
 		for _, req := range reqs {
 			for _, repo := range cfg.repos {
+				// If the database is set, then set it on the request.
+				if database := repo.database; database != nil {
+					req.Table.Database = *database
+				}
+
 				txfn := func(sctx context.Context, repo repository.Generic) error {
 					start := time.Now()
 
@@ -420,6 +448,13 @@ func truncate(ctx context.Context, cfg *config.Config, truncateRequest *proto.Tr
 	for _, repo := range repos {
 		start := time.Now()
 
+		// If the database is set, then set it on the request.
+		if database := repo.database; database != nil {
+			for _, table := range truncateRequest.Tables {
+				table.Database = *database
+			}
+		}
+
 		_, err := repo.Truncate(ctx, truncateRequest)
 		if err != nil {
 			return fmt.Errorf("unable to truncate tables: %w", err)
@@ -500,7 +535,9 @@ func Upsert(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	defer repoConfig.closeRepos()
+	defer func() {
+		repoConfig.closeRepos()
+	}()
 
 	// Start the repository workers.
 	for id := 1; id <= threads; id++ {

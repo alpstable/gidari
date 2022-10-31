@@ -30,22 +30,6 @@ e2e:
 	$(GC) clean -testcache
 	./scripts/run-e2e-tests.sh
 
-# mongo-integration-tests runs all of the mongo integration tests in a docker container. Each test is run 5 times
-# to minimize flakiness.
-.PHONY: mongo-integration-tests
-mongo-integration-tests:
-	chmod +rwx scripts/*.sh
-	$(GC) clean -testcache
-	./scripts/run-integration-tests.sh mdbinteg 5
-
-# postgres-integration-tests runs all of the postgres integration tests in a docker container. Each test is run 5
-# times to minimize flakiness.
-.PHONY: postgres-integration-tests
-postgres-integration-tests:
-	chmod +rwx scripts/*.sh
-	$(GC) clean -testcache
-	./scripts/run-integration-tests.sh postgres-integration
-
 # repository-integration-tests runs all of the repository integration tests in a docker container.
 # Each test is run 5 times to minimize flakiness.
 .PHONY: repository-integration-tests
