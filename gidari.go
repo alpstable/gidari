@@ -10,8 +10,6 @@ package gidari
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/transport"
@@ -24,21 +22,4 @@ func Transport(ctx context.Context, cfg *config.Config) error {
 	}
 
 	return nil
-}
-
-// TransportFile will construct the transport operation using a configuration YAML file.
-func TransportFile(ctx context.Context, file *os.File) error {
-	cfg, err := config.New(ctx, file)
-	if err != nil {
-		return fmt.Errorf("unable to create new config: %w", err)
-	}
-
-	// Disable logger
-	cfg.Logger.SetOutput(io.Discard)
-
-	if err != nil {
-		return fmt.Errorf("unable to create new config: %w", err)
-	}
-
-	return Transport(ctx, cfg)
 }

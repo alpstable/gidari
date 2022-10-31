@@ -9,14 +9,72 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alpstable/gidari"
 	"github.com/alpstable/gidari/config"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
+	"gopkg.in/yaml.v2"
 )
+
+func newConfig(_ context.Context, file *os.File) (*config.Config, error) {
+	var cfg config.Config
+
+	cfg.Logger = logrus.New()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get file stat for reading: %w", err)
+	}
+
+	bytes := make([]byte, info.Size())
+
+	_, err = file.Read(bytes)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read file: %w", err)
+	}
+
+	if err := yaml.Unmarshal(bytes, &cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal YAML: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	cfg.URL, err = url.Parse(cfg.RawURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse URL: %w", err)
+	}
+
+	// create a rate limiter to pass to all "flattenedRequest". This has to be defined outside of the scope of
+	// individual "flattenedRequest"s so that they all share the same rate limiter, even concurrent requests to
+	// different endpoints could cause a rate limit error on a web API.
+	rateLimiter := rate.NewLimiter(rate.Every(*cfg.RateLimitConfig.Period), *cfg.RateLimitConfig.Burst)
+
+	// Update default request data.
+	for _, req := range cfg.Requests {
+		if req.Method == "" {
+			req.Method = http.MethodGet
+		}
+
+		if req.Table == "" {
+			endpointParts := strings.Split(req.Endpoint, "/")
+			req.Table = endpointParts[len(endpointParts)-1]
+		}
+
+		req.RateLimiter = rateLimiter
+	}
+
+	return &cfg, nil
+}
 
 func TestUpsert(t *testing.T) {
 	t.Parallel()
@@ -43,7 +101,7 @@ func TestUpsert(t *testing.T) {
 				t.Fatalf("error opening fixture: %v", err)
 			}
 
-			cfg, err := config.New(ctx, file)
+			cfg, err := newConfig(ctx, file)
 			if err != nil {
 				t.Fatalf("error creating config: %v", err)
 			}
