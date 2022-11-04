@@ -1,5 +1,3 @@
-//go:build utests
-
 // Copyright 2022 The Gidari Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -7,19 +5,17 @@
 // You may obtain a copy of the License at
 //
 //	http://www.apache.org/licenses/LICENSE-2.0
-package transport
+package gidari
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"path"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -30,7 +26,7 @@ func TestTimeseries(t *testing.T) {
 	t.Run("chunks where end date is before last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		timeseries := &config.Timeseries{
+		timeseries := &Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -82,7 +78,7 @@ func TestTimeseries(t *testing.T) {
 	t.Run("chunks where end date is equal to last iteration", func(t *testing.T) {
 		t.Parallel()
 
-		timeseries := &config.Timeseries{
+		timeseries := &Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -133,7 +129,7 @@ func TestTimeseries(t *testing.T) {
 
 	t.Run("chunks where end date is after last iteration", func(t *testing.T) {
 		t.Parallel()
-		timeseries := &config.Timeseries{
+		timeseries := &Timeseries{
 			StartName: "start",
 			EndName:   "end",
 			Period:    18000,
@@ -240,7 +236,6 @@ func TestWebWorker(t *testing.T) {
 		for i := 0; i < 1; i++ {
 			result := <-repoJobs
 
-			fmt.Println(result)
 			if result == nil {
 				t.Fatalf("Expected repoJob, go nil")
 			}
@@ -300,7 +295,6 @@ func TestWebWorker(t *testing.T) {
 		for i := 0; i < 1; i++ {
 			result := <-repoJobs
 
-			fmt.Println(result)
 			if result != nil {
 				t.Fatalf("Expected repoJob to be nil")
 			}
@@ -375,7 +369,6 @@ func TestWebWorker(t *testing.T) {
 			}
 		}
 	})
-
 }
 
 func TestNewFetchConfig(t *testing.T) {
@@ -391,11 +384,11 @@ func TestNewFetchConfig(t *testing.T) {
 	testRateLimiter := rate.NewLimiter(rate.Every(time.Second), 2)
 
 	for _, tcase := range []struct {
-		req      *config.Request
+		req      *Request
 		expected *web.FetchConfig
 	}{
 		{
-			req: &config.Request{
+			req: &Request{
 				Endpoint:    "/test",
 				Method:      "POST",
 				RateLimiter: testRateLimiter,
@@ -415,26 +408,26 @@ func TestNewFetchConfig(t *testing.T) {
 		fetchConfig := newFetchConfig(tcase.req, *testURL, testClient)
 
 		if fetchConfig.Method != tcase.expected.Method {
-			t.Error("unexpected fetch config Method")
+			t.Error("unexpected fetchMethod")
 		}
 
 		if fetchConfig.C != tcase.expected.C {
-			t.Error("unexpected fetch config Client")
+			t.Error("unexpected fetchClient")
 		}
 
 		if fetchConfig.RateLimiter != tcase.expected.RateLimiter {
-			t.Error("unexpected fetch config RateLimiter")
+			t.Error("unexpected fetchRateLimiter")
 		}
 
 		// URL Path should be concatenated with request Endpoint
 		if fetchConfig.URL.Path != path.Join(testURL.Path, tcase.req.Endpoint) {
-			t.Errorf("unexpected fetch config URL Path: %v", fetchConfig.URL.Path)
+			t.Errorf("unexpected fetchURL Path: %v", fetchConfig.URL.Path)
 		}
 
 		// Query parameters should be added to the URL Query
 		for k, v := range tcase.req.Query {
 			if fetchConfig.URL.Query().Get(k) != v {
-				t.Errorf("unexpected fetch config URL Query for %v", k)
+				t.Errorf("unexpected fetchURL Query for %v", k)
 			}
 		}
 	}
@@ -443,7 +436,7 @@ func TestNewFetchConfig(t *testing.T) {
 func Test_flattenConfigRequests(t *testing.T) {
 	type args struct {
 		ctx context.Context
-		cfg *config.Config
+		cfg *Config
 	}
 	tests := []struct {
 		name     string
@@ -452,13 +445,13 @@ func Test_flattenConfigRequests(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "successfully flatten a config request",
+			name: "successfully flatten arequest",
 			args: args{
-				cfg: &config.Config{
+				cfg: &Config{
 					URL: &url.URL{
 						Path: "path",
 					},
-					Requests: []*config.Request{
+					Requests: []*Request{
 						{
 							Method:   "POST",
 							Endpoint: "endpoint",
@@ -479,20 +472,20 @@ func Test_flattenConfigRequests(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "fail to flatten config requests when none are passed",
+			name: "fail to flattenrequests when none are passed",
 			args: args{
-				cfg: &config.Config{},
+				cfg: &Config{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "fail to flatten request time series",
 			args: args{
-				cfg: &config.Config{
+				cfg: &Config{
 					URL: &url.URL{},
-					Requests: []*config.Request{
+					Requests: []*Request{
 						{
-							Timeseries: &config.Timeseries{
+							Timeseries: &Timeseries{
 								StartName: "startName",
 							},
 						},

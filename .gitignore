@@ -1,12 +1,6 @@
-__debug_bin
 .vscode
 .auth.env
 .DS_Store
 .db
 .git
 .idea
-bazel-bin
-bazel-out
-bazel-testlogs
-bazel-driver
-gidari-cli

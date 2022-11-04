@@ -255,7 +255,6 @@ func ExampleGenericService_ListPrimaryKeys() {
 	}
 
 	tablePKs := rsp.GetPKSet()[table].GetList()
-	fmt.Println(tablePKs[0])
 
 	// Output:
 	// _id

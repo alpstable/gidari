@@ -299,7 +299,6 @@ func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, e
 	}
 
 	return config, nil
-
 }
 
 func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
