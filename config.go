@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/alpstable/gidari/proto"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -120,7 +119,6 @@ type Config struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
 	StorageOptions  []StorageOptions `yaml:"storage"`
 
-	Logger         *logrus.Logger
 	StgConstructor proto.Constructor
 	Truncate       bool
 

@@ -12,19 +12,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/alpstable/gidari/internal/repository"
 	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/internal/web/auth"
 	"github.com/alpstable/gidari/proto"
-	"github.com/alpstable/gidari/tools"
-	"github.com/sirupsen/logrus"
 )
 
 // connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
@@ -85,11 +83,6 @@ func repos(ctx context.Context, cfg *Config) ([]repo, repoCloser, error) {
 			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
 		}
 
-		logInfo := tools.LogFormatter{
-			Msg: fmt.Sprintf("created repository for %q", stg.Type()),
-		}
-		cfg.Logger.Info(logInfo.String())
-
 		repos = append(repos, repo{
 			Generic:  genRepository,
 			database: stgOpts.Database,
@@ -104,11 +97,6 @@ func repos(ctx context.Context, cfg *Config) ([]repo, repoCloser, error) {
 			}
 
 			repo.Close()
-
-			logInfo := tools.LogFormatter{
-				Msg: fmt.Sprintf("closed repository for %q", proto.SchemeFromStorageType(repo.Type())),
-			}
-			cfg.Logger.Info(logInfo.String())
 		}
 	}, nil
 }
@@ -281,7 +269,6 @@ type repoConfig struct {
 	closeRepos func()
 	jobs       chan *repoJob
 	done       chan bool
-	logger     *logrus.Logger
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
@@ -295,7 +282,6 @@ func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, e
 		closeRepos: closeRepos,
 		jobs:       make(chan *repoJob, volume*len(repos)),
 		done:       make(chan bool, volume),
-		logger:     cfg.Logger,
 	}
 
 	return config, nil
@@ -324,31 +310,14 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 				}
 
 				txfn := func(sctx context.Context, repo repository.Generic) error {
-					start := time.Now()
-
-					rsp, err := repo.Upsert(sctx, req)
+					_, err := repo.Upsert(sctx, req)
 					if err != nil {
-						cfg.logger.Fatalf("error upserting data: %v", err)
-
 						return fmt.Errorf("error upserting data: %w", err)
 					}
 
-					rt := repo.Type()
-
-					msg := fmt.Sprintf("partial upsert completed: %s.%s", proto.SchemeFromStorageType(rt), req.Table)
-					logInfo := tools.LogFormatter{
-						WorkerID:      workerID,
-						WorkerName:    "repository",
-						Duration:      time.Since(start),
-						Msg:           msg,
-						UpsertedCount: rsp.UpsertedCount,
-						MatchedCount:  rsp.MatchedCount,
-					}
-
-					cfg.logger.Infof(logInfo.String())
-
 					return nil
 				}
+
 				// Put the data onto the transaction channel for storage.
 				repo.Transact(txfn)
 			}
@@ -361,39 +330,30 @@ func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
 type webJob struct {
 	*flattenedRequest
 	repoJobs chan<- *repoJob
-	logger   *logrus.Logger
 }
 
 func newWebJob(cfg *Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
 	return &webJob{
 		flattenedRequest: req,
 		repoJobs:         repoJobs,
-		logger:           cfg.Logger,
 	}
 }
 
 func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 	for job := range jobs {
-		start := time.Now()
-
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
-			job.logger.Fatal(err)
+			log.Fatalf("error fetching data: %v", err)
 		}
 
 		bytes, err := io.ReadAll(rsp.Body)
 		if err != nil {
-			job.logger.Fatal(err)
+			log.Fatalf("error reading response body: %v", err)
 		}
 
 		if !json.Valid(bytes) {
 			if job.flattenedRequest.clobColumn == "" {
 				job.repoJobs <- nil
-				msg := fmt.Sprintf("response body for %s was invalid JSON, "+
-					"discarding data since no 'clobColumn' was defined in the configuration file",
-					job.fetchConfig.URL)
-				logInfo := tools.LogFormatter{Msg: msg}
-				job.logger.Warnf(logInfo.String())
 
 				continue
 			}
@@ -404,27 +364,11 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 			bytes, err = json.Marshal(data)
 			if err != nil {
 				job.repoJobs <- nil
-				job.logger.Errorf("failed to marhsal data: %s", err)
+				log.Fatalf("failed to marhsal data: %v", err)
 			}
 		}
 
 		job.repoJobs <- &repoJob{b: bytes, req: *rsp.Request, table: job.table}
-
-		// strings.Replace is used to ensure no line endings are present in the user input.
-		escapedPath := strings.ReplaceAll(rsp.Request.URL.Path, "\n", "")
-		escapedPath = strings.ReplaceAll(escapedPath, "\r", "")
-
-		escapedHost := strings.ReplaceAll(rsp.Request.URL.Host, "\n", "")
-		escapedHost = strings.ReplaceAll(escapedHost, "\r", "")
-
-		logInfo := tools.LogFormatter{
-			WorkerID:   workerID,
-			WorkerName: "web",
-			Duration:   time.Since(start),
-			Host:       escapedHost,
-			Msg:        fmt.Sprintf("web request completed: %s", escapedPath),
-		}
-		job.logger.Infof(logInfo.String())
 	}
 }
 
@@ -444,8 +388,6 @@ func truncate(ctx context.Context, cfg *Config) error {
 	truncateRequest := new(proto.TruncateRequest)
 	setTruncateRequestTables(truncateRequest, cfg)
 
-	start := time.Now()
-
 	repos, closeRepos, err := repos(ctx, cfg)
 	if err != nil {
 		return err
@@ -454,8 +396,6 @@ func truncate(ctx context.Context, cfg *Config) error {
 	defer closeRepos()
 
 	for _, repo := range repos {
-		start := time.Now()
-
 		// If the database is set, then set it on the request.
 		if database := repo.database; database != nil {
 			for _, table := range truncateRequest.Tables {
@@ -474,23 +414,7 @@ func truncate(ctx context.Context, cfg *Config) error {
 		for idx, table := range tables {
 			tableNames[idx] = table.GetName()
 		}
-
-		rt := repo.Type()
-		tablesCSV := strings.Join(tableNames, ", ")
-		msg := fmt.Sprintf("truncated tables on %q: %v", proto.SchemeFromStorageType(rt), tablesCSV)
-
-		logInfo := tools.LogFormatter{
-			Duration: time.Since(start),
-			Msg:      msg,
-		}
-		cfg.Logger.Infof(logInfo.String())
 	}
-
-	logInfo := tools.LogFormatter{
-		Duration: time.Since(start),
-		Msg:      "truncate completed",
-	}
-	cfg.Logger.Info(logInfo.String())
 
 	return nil
 }
@@ -502,7 +426,6 @@ func truncate(ctx context.Context, cfg *Config) error {
 // of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
 // for some repository transactions to succeed and others to fail.
 func upsert(ctx context.Context, cfg *Config) error {
-	start := time.Now()
 	threads := runtime.NumCPU()
 
 	if err := truncate(ctx, cfg); err != nil {
@@ -528,8 +451,6 @@ func upsert(ctx context.Context, cfg *Config) error {
 		go repositoryWorker(ctx, id, repoConfig)
 	}
 
-	cfg.Logger.Info(tools.LogFormatter{Msg: "repository workers started"}.String())
-
 	webWorkerJobs := make(chan *webJob, len(cfg.Requests))
 
 	// Start the same number of web workers as the cores on the machine.
@@ -537,14 +458,10 @@ func upsert(ctx context.Context, cfg *Config) error {
 		go webWorker(ctx, id, webWorkerJobs)
 	}
 
-	cfg.Logger.Info(tools.LogFormatter{Msg: "web workers started"}.String())
-
 	// Enqueue the worker jobs
 	for _, req := range flattenedRequests {
 		webWorkerJobs <- newWebJob(cfg, req, repoConfig.jobs)
 	}
-
-	cfg.Logger.Info(tools.LogFormatter{Msg: "web worker jobs enqueued"}.String())
 
 	// Wait for all of the data to flush.
 	for a := 1; a <= len(flattenedRequests); a++ {
@@ -557,9 +474,6 @@ func upsert(ctx context.Context, cfg *Config) error {
 			return fmt.Errorf("unable to commit transaction: %w", err)
 		}
 	}
-
-	logInfo := tools.LogFormatter{Duration: time.Since(start), Msg: "upsert completed"}
-	cfg.Logger.Info(logInfo.String())
 
 	return nil
 }

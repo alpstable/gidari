@@ -65,3 +65,6 @@ You will also need to sync your /etc/hosts file with the docker containers:
 ### Running Integration Tests
 
 To test locally first build the containers for integration tests using `make containers`. Then run `make tests`.
+
+## Troubleshooting
+
