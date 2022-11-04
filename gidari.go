@@ -287,7 +287,7 @@ func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, e
 	return config, nil
 }
 
-func repositoryWorker(_ context.Context, workerID int, cfg *repoConfig) {
+func repositoryWorker(_ context.Context, _ int, cfg *repoConfig) {
 	for job := range cfg.jobs {
 		if job == nil {
 			cfg.done <- false
@@ -332,14 +332,14 @@ type webJob struct {
 	repoJobs chan<- *repoJob
 }
 
-func newWebJob(cfg *Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
+func newWebJob(_ *Config, req *flattenedRequest, repoJobs chan<- *repoJob) *webJob {
 	return &webJob{
 		flattenedRequest: req,
 		repoJobs:         repoJobs,
 	}
 }
 
-func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
+func webWorker(ctx context.Context, _ int, jobs <-chan *webJob) {
 	for job := range jobs {
 		rsp, err := web.Fetch(ctx, job.fetchConfig)
 		if err != nil {
@@ -364,6 +364,7 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 			bytes, err = json.Marshal(data)
 			if err != nil {
 				job.repoJobs <- nil
+
 				log.Fatalf("failed to marhsal data: %v", err)
 			}
 		}

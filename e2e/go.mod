@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/alpstable/gmongo v0.0.0-20221031003252-3374e1d4f260 // indirect
+	github.com/alpstable/gmongo v0.0.0-20221031043101-be47f52cf05a // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect

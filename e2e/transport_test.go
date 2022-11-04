@@ -18,19 +18,15 @@ import (
 	"testing"
 
 	"github.com/alpstable/gidari"
-	"github.com/alpstable/gidari/config"
 	"github.com/alpstable/gmongo"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/time/rate"
 	"gopkg.in/yaml.v2"
 )
 
-func newConfig(ctx context.Context, file *os.File) (*config.Config, error) {
-	var cfg config.Config
-
-	cfg.Logger = logrus.New()
+func newConfig(ctx context.Context, file *os.File) (*gidari.Config, error) {
+	var cfg gidari.Config
 
 	info, err := file.Stat()
 	if err != nil {
@@ -106,7 +102,7 @@ func newConfig(ctx context.Context, file *os.File) (*config.Config, error) {
 func TestUpsert(t *testing.T) {
 	t.Parallel()
 
-	// Iterate over the fixtures/upsert directory and run each configuration file.
+	// Iterate over the fixtures/upsert directory and run each gidari.ration file.
 	fixtureRoot := "testdata/upsert"
 
 	fixtures, err := os.ReadDir(fixtureRoot)
@@ -130,18 +126,16 @@ func TestUpsert(t *testing.T) {
 
 			cfg, err := newConfig(ctx, file)
 			if err != nil {
-				t.Fatalf("error creating config: %v", err)
+				t.Fatalf("error creating gidari. %v", err)
 			}
-
-			cfg.Logger = logrus.New()
 
 			// Fill in the authentication details for the fixture.
 			cfgAuth := cfg.Authentication
 			if cfgAuth.APIKey != nil {
 				// The "passhprase" field in the fixture should be the name of the auth map entry. That
 				// is how we lookup which authentication details to use.
-				cfg.Authentication = config.Authentication{
-					APIKey: &config.APIKey{
+				cfg.Authentication = gidari.Authentication{
+					APIKey: &gidari.APIKey{
 						Key:        os.Getenv(cfgAuth.APIKey.Key),
 						Secret:     os.Getenv(cfgAuth.APIKey.Secret),
 						Passphrase: os.Getenv(cfgAuth.APIKey.Passphrase),
@@ -152,8 +146,8 @@ func TestUpsert(t *testing.T) {
 			if cfgAuth.Auth2 != nil {
 				// The "bearer" field in the fixture should be the name of the auth map entry. That
 				// is how we lookup which authentication details to use.
-				cfg.Authentication = config.Authentication{
-					Auth2: &config.Auth2{
+				cfg.Authentication = gidari.Authentication{
+					Auth2: &gidari.Auth2{
 						Bearer: os.Getenv(cfgAuth.Auth2.Bearer),
 					},
 				}
