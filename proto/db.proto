@@ -88,3 +88,4 @@ message TruncateResponse {
 	// DeletedCount of records deleted
 	int32 deletedCount = 1;
 }
+

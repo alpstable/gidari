@@ -47,8 +47,6 @@ issues:
         - goerr113
         - maintidx
         - lll
-    - path: proto/db.pb.go
+    - path: proto/*
       linters:
-        - goanalysis_metalinter
         - goimports
-        - go-diff

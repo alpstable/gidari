@@ -79,6 +79,7 @@ func repos(ctx context.Context, cfg *Config) ([]repo, repoCloser, error) {
 
 	for _, stgOpts := range cfg.StorageOptions {
 		stg := stgOpts.Storage
+
 		genRepository, err := repository.NewTx(ctx, stg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create repository: %w", err)
@@ -281,7 +282,6 @@ type repoConfig struct {
 	jobs       chan *repoJob
 	done       chan bool
 	logger     *logrus.Logger
-	database   *string
 }
 
 func newRepoConfig(ctx context.Context, cfg *Config, volume int) (*repoConfig, error) {
@@ -428,26 +428,21 @@ func webWorker(ctx context.Context, workerID int, jobs <-chan *webJob) {
 	}
 }
 
+// setTruncateRequestTables will set the tables data to truncate from the configuration structure. If "Truncate" is set
+// on the configuration, then all tables in the request will be truncated before the data is upserted.
+func setTruncateRequestTables(treq *proto.TruncateRequest, cfg *Config) {
+	for _, req := range cfg.Requests {
+		if (req.Truncate != nil && *req.Truncate && req.Table != "") || cfg.Truncate {
+			treq.Tables = append(treq.Tables, &proto.Table{Name: req.Table})
+		}
+	}
+}
+
 // Truncate will truncate the defined tables in the configuration.
 func truncate(ctx context.Context, cfg *Config) error {
 	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
-
-	if cfg.Truncate {
-		for _, req := range cfg.Requests {
-			// Add the table to the list of tables to truncate.
-			if req.Truncate != nil && *req.Truncate {
-				truncateRequest.Tables = append(truncateRequest.Tables, &proto.Table{Name: req.Table})
-			}
-		}
-	} else {
-		// checking for request-specific truncate
-		for _, req := range cfg.Requests {
-			if table := req.Table; req.Truncate != nil && *req.Truncate && table != "" {
-				truncateRequest.Tables = append(truncateRequest.Tables, &proto.Table{Name: table})
-			}
-		}
-	}
+	setTruncateRequestTables(truncateRequest, cfg)
 
 	start := time.Now()
 

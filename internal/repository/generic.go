@@ -18,6 +18,7 @@ import (
 var (
 	ErrFailedToCreateRepository = fmt.Errorf("failed to create repository")
 	ErrUnkownScheme             = fmt.Errorf("unknown scheme")
+	ErrNilStorage               = fmt.Errorf("storage is nil")
 )
 
 // FailedToCreateRepositoryError is a helper function that returns a new error with the ErrFailedToCreateRepository
@@ -43,7 +44,7 @@ type GenericService struct {
 // New returns a new Generic service.
 func New(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 	if stg == nil {
-		return nil, fmt.Errorf("storage is nil")
+		return nil, ErrNilStorage
 	}
 
 	return &GenericService{stg, nil}, nil
@@ -53,7 +54,7 @@ func New(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 // storage operations made by the repository layer.
 func NewTx(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 	if stg == nil {
-		return nil, fmt.Errorf("storage is nil")
+		return nil, ErrNilStorage
 	}
 
 	// Ping the database to ensure that the connection is valid.

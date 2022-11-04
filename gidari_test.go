@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/alpstable/gidari/internal/web"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -185,13 +184,15 @@ func TestTimeseries(t *testing.T) {
 
 func TestWebWorker(t *testing.T) {
 	t.Parallel()
-	logger := logrus.New()
+
 	t.Run("normal json response", func(t *testing.T) {
 		t.Parallel()
 
-		baseurl := "https://pokeapi.co"
-		endpoint := "/api/v2/pokemon/ditto"
-		table := "test"
+		const (
+			baseurl  = "https://pokeapi.co"
+			endpoint = "/api/v2/pokemon/ditto"
+			table    = "test"
+		)
 
 		webWorkerJobs := make(chan *webJob, 1)
 		repoJobs := make(chan *repoJob, 1)
@@ -222,9 +223,8 @@ func TestWebWorker(t *testing.T) {
 		}
 
 		job := webJob{
-			&req,
-			repoJobs,
-			logger,
+			flattenedRequest: &req,
+			repoJobs:         repoJobs,
 		}
 
 		go webWorker(context.Background(), 1, webWorkerJobs)
@@ -281,9 +281,8 @@ func TestWebWorker(t *testing.T) {
 		}
 
 		job := webJob{
-			&req,
-			repoJobs,
-			logger,
+			flattenedRequest: &req,
+			repoJobs:         repoJobs,
 		}
 
 		go webWorker(context.Background(), 1, webWorkerJobs)
@@ -339,9 +338,8 @@ func TestWebWorker(t *testing.T) {
 		}
 
 		job := webJob{
-			&req,
-			repoJobs,
-			logger,
+			flattenedRequest: &req,
+			repoJobs:         repoJobs,
 		}
 
 		go webWorker(context.Background(), 1, webWorkerJobs)
@@ -363,7 +361,11 @@ func TestWebWorker(t *testing.T) {
 			if err := json.Unmarshal(result.b, &data); err != nil {
 				t.Fatalf("failed to unmarshal json data")
 			}
-			dataMap := data.(map[string]interface{})
+			dataMap, ok := data.(map[string]interface{})
+			if !ok {
+				t.Fatalf("failed to convert data to map[string]interface{}")
+			}
+
 			if _, ok := dataMap[clobColumn]; !ok {
 				t.Fatalf("expected json data to have a key: %s, but got none", clobColumn)
 			}
@@ -434,10 +436,12 @@ func TestNewFetchConfig(t *testing.T) {
 }
 
 func Test_flattenConfigRequests(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
-		ctx context.Context
 		cfg *Config
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -495,18 +499,24 @@ func Test_flattenConfigRequests(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotReqs, err := flattenConfigRequests(tt.args.ctx, tt.args.cfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("flattenConfigRequests() error = %v, wantErr %v", err, tt.wantErr)
+
+	for _, tcase := range tests {
+		tcase := tcase
+
+		t.Run(tcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotReqs, err := flattenConfigRequests(context.Background(), tcase.args.cfg)
+			if (err != nil) != tcase.wantErr {
+				t.Errorf("flattenConfigRequests() error = %v, wantErr %v", err, tcase.wantErr)
+
 				return
 			}
-			if len(gotReqs) != len(tt.wantReqs) {
-				t.Errorf("flattenConfigRequests() got %d requests, want %d", len(gotReqs), len(tt.wantReqs))
+			if len(gotReqs) != len(tcase.wantReqs) {
+				t.Errorf("flattenConfigRequests() got %d requests, want %d", len(gotReqs), len(tcase.wantReqs))
 			}
 			for _, gotReq := range gotReqs {
-				for _, wantReq := range tt.wantReqs {
+				for _, wantReq := range tcase.wantReqs {
 					if !compareRequests(gotReq, wantReq) {
 						t.Errorf("flattenConfigRequests() request comparison failed")
 					}
@@ -520,11 +530,14 @@ func compareRequests(request1, request2 *flattenedRequest) bool {
 	if request1 == nil || request2 == nil {
 		return false
 	}
+
 	if request1.fetchConfig.URL.Path != request2.fetchConfig.URL.Path {
 		return false
 	}
+
 	if request1.fetchConfig.Method != request2.fetchConfig.Method {
 		return false
 	}
+
 	return true
 }
