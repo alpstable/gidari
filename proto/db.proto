@@ -85,5 +85,6 @@ message TruncateRequest {
 }
 
 message TruncateResponse {
-	repeated Table tables = 1;
+	// DeletedCount of records deleted
+	int32 deletedCount = 1;
 }
