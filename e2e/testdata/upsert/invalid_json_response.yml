@@ -1,6 +1,8 @@
 url: https://api.cryptonator.com
-connectionStrings:
-  - mongodb://mongo1:27017/cryptonator
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: cryptonator
 rateLimit:
   burst: 1
   period: 1

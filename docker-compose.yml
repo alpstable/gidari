@@ -23,6 +23,11 @@ services:
       - mongo_network
       - postgres_network
 
+  postgres-integration:
+    build:
+      context: .
+      dockerfile: docker/postgres.Dockerfile
+
   lint:
     build:
       context: .

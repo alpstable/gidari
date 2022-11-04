@@ -7,7 +7,7 @@ option go_package = ".;proto";
 
 // Create a record in the database. Optionally include an "id" field otherwise it's set automatically.
 message UpsertRequest {
-	string table = 1;
+	Table table = 1;
 	int32 dataType = 3;
 	bytes data = 4;
 }
@@ -23,7 +23,7 @@ message UpsertResponse {
 // UpsertBinaryRequest is a request to upsert a binary record into storage.
 message UpsertBinaryRequest {
 	// table is the name of the table or collection to upsert data into.
-	string table = 1;
+	Table table = 1;
 
 	// binaryColumn is the name of the column to upsert binary data into.
 	string binaryColumn = 2;
@@ -56,6 +56,8 @@ message ListPrimaryKeysResponse {
 
 message Table {
 	int64 size = 1;
+	string name = 2;
+	string database =3;
 }
 
 message ListTablesResponse {
@@ -69,7 +71,7 @@ message ReadRequest {
 
 	google.protobuf.Struct required = 2;
 	google.protobuf.Struct options = 3;
-	string table = 4;
+	Table table = 4;
 }
 
 message ReadResponse {
@@ -78,11 +80,12 @@ message ReadResponse {
 }
 
 message TruncateRequest {
-	// Optional table name. Defaults to 'default'
-	repeated string tables = 1;
+	// Tables is a slice of tables to truncate.
+	repeated Table tables = 1;
 }
 
 message TruncateResponse {
-	// Number of records deleted
+	// DeletedCount of records deleted
 	int32 deletedCount = 1;
 }
+

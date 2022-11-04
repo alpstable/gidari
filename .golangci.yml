@@ -47,3 +47,6 @@ issues:
         - goerr113
         - maintidx
         - lll
+    - path: proto/*
+      linters:
+        - goimports

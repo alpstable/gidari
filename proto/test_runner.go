@@ -28,7 +28,7 @@ func truncateStorage(ctx context.Context, t *testing.T, stg Storage) {
 }
 
 // truncateTables will truncate the specified tables in the storage.
-func truncateTables(ctx context.Context, t *testing.T, stg Storage, tables ...string) {
+func truncateTables(ctx context.Context, t *testing.T, stg Storage, tables ...*Table) {
 	t.Helper()
 
 	if _, err := stg.Truncate(ctx, &TruncateRequest{
@@ -62,7 +62,7 @@ type TestCase struct {
 	ExpectedIsNoSQL     bool                   // expectedIsNoSQL is a bool
 	ExpectedUpsertSize  int64                  // expectedUpsertSize is in bits
 	ExpectedPrimaryKeys map[string][]string    // expectedPrimaryKeys is a map of table name to primary keys
-	Table               string                 // table is where to insert the data
+	Table               *Table                 // table is where to insert the data
 	Data                map[string]interface{} // data is the data to insert
 	Rollback            bool                   // rollback will rollback the transaction
 	ForceError          bool                   // forceError will force an error to occur
@@ -312,7 +312,7 @@ func (runner TestRunner) listTables(_ context.Context, t *testing.T) {
 				t.Fatalf("expected tables, got none")
 			}
 
-			if rsp.GetTableSet()[tcase.Table].Size == 0 {
+			if rsp.GetTableSet()[tcase.Table.Name].Size == 0 {
 				t.Fatalf("expected table size to be greater than zero")
 			}
 
@@ -324,7 +324,7 @@ func (runner TestRunner) listTables(_ context.Context, t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			if rsp.GetTableSet()[tcase.Table].Size != 0 {
+			if rsp.GetTableSet()[tcase.Table.Name].Size != 0 {
 				t.Fatalf("expected table size to be zero")
 			}
 		})
@@ -434,7 +434,7 @@ func (runner TestRunner) upsertTxn(ctx context.Context, t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			size := tableInfo.GetTableSet()[tcase.Table].GetSize()
+			size := tableInfo.GetTableSet()[tcase.Table.Name].GetSize()
 			if size != tcase.ExpectedUpsertSize {
 				t.Fatalf("expected upsert count to be %d, got %d",
 					tcase.ExpectedUpsertSize, size)
@@ -500,7 +500,7 @@ func (runner TestRunner) upsertBinary(ctx context.Context, t *testing.T) {
 				t.Fatalf("failed to list tables: %v", err)
 			}
 
-			if size := tableInfo.GetTableSet()[tcase.Table].GetSize(); size != tcase.ExpectedUpsertSize {
+			if size := tableInfo.GetTableSet()[tcase.Table.Name].GetSize(); size != tcase.ExpectedUpsertSize {
 				t.Fatalf("expected upsert count to be %d, got %d", tcase.ExpectedUpsertSize, size)
 			}
 

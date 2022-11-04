@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alpstable/gidari/internal/proto"
+	"github.com/alpstable/gidari/proto"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -169,7 +169,7 @@ func decodeUpsertRequest(req *proto.UpsertRequest, state *writeState, rowCh chan
 
 	// Iterate over the records and send them to the row channel.
 	for _, record := range records {
-		rowData, err := state.addHeaders(req.Table, record)
+		rowData, err := state.addHeaders(req.Table.Name, record)
 		if err != nil {
 			return fmt.Errorf("failed to add headers: %w", err)
 		}
@@ -195,7 +195,7 @@ func (csv *CSV) writeBody(ctx context.Context, state *writeState, req *proto.Ups
 	})
 
 	// Create the file if it does not exist.
-	filname := filepath.Join(csv.Dir, req.Table) + ".csv"
+	filname := filepath.Join(csv.Dir, req.Table.Name) + ".csv"
 
 	const filemode = 0o644
 
@@ -212,7 +212,7 @@ func (csv *CSV) writeBody(ctx context.Context, state *writeState, req *proto.Ups
 	// Write the data to the file.
 	for row := range rows {
 		if row.header {
-			state.headerRowByTable[req.Table] = row
+			state.headerRowByTable[req.Table.Name] = row
 
 			continue
 		}

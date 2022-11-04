@@ -1,6 +1,8 @@
 url: https://chroniclingamerica.loc.gov
-connectionStrings:
-  - mongodb://mongo1:27017/histam
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: histam
 rateLimit:
   burst: 1
   period: 1

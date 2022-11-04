@@ -15,7 +15,7 @@ containers:
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:
-	protoc --proto_path=internal/proto --go_out=internal/proto internal/proto/db.proto
+	protoc --proto_path=proto --go_out=proto proto/db.proto
 
 # test runs all of the unit tests locally. Each test is run 5 times to minimize flakiness.
 .PHONY: tests
@@ -29,22 +29,6 @@ e2e:
 	chmod +rwx scripts/*.sh
 	$(GC) clean -testcache
 	./scripts/run-e2e-tests.sh
-
-# mongo-integration-tests runs all of the mongo integration tests in a docker container. Each test is run 5 times
-# to minimize flakiness.
-.PHONY: mongo-integration-tests
-mongo-integration-tests:
-	chmod +rwx scripts/*.sh
-	$(GC) clean -testcache
-	./scripts/run-integration-tests.sh mdbinteg 5
-
-# postgres-integration-tests runs all of the postgres integration tests in a docker container. Each test is run 5
-# times to minimize flakiness.
-.PHONY: postgres-integration-tests
-postgres-integration-tests:
-	chmod +rwx scripts/*.sh
-	$(GC) clean -testcache
-	./scripts/run-integration-tests.sh pginteg 5
 
 # repository-integration-tests runs all of the repository integration tests in a docker container.
 # Each test is run 5 times to minimize flakiness.

@@ -1,6 +1,8 @@
 url: https://ghibliapi.herokuapp.com
-connectionStrings:
-  - mongodb://mongo1:27017/studio-ghibli
+storage:
+  -
+    connectionString: mongodb://mongo1:27017
+    database: studio-ghibli
 rateLimit:
   burst: 5
   period: 1

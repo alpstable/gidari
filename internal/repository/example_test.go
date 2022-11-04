@@ -16,8 +16,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/alpstable/gidari/internal/proto"
 	"github.com/alpstable/gidari/internal/repository"
+	"github.com/alpstable/gidari/proto"
 	"github.com/alpstable/gidari/tools"
 )
 
@@ -255,7 +255,6 @@ func ExampleGenericService_ListPrimaryKeys() {
 	}
 
 	tablePKs := rsp.GetPKSet()[table].GetList()
-	fmt.Println(tablePKs[0])
 
 	// Output:
 	// _id

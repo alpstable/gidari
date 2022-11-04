@@ -30,7 +30,7 @@ func TestDecodeUpsertBinaryRequest(t *testing.T) {
 			name: "valid",
 			args: args{
 				req: &UpsertBinaryRequest{
-					Table:        "tests1",
+					Table:        &Table{Name: "tests1"},
 					BinaryColumn: "test_string",
 					PrimaryKeyMap: map[string]string{
 						"id": "1",
