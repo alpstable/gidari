@@ -36,11 +36,18 @@ type Authentication struct {
 type StorageOptions struct {
 	Storage proto.Storage
 
-	// ConnectionString is the URI to connect to the database. This is only valid using the CLI.
-	ConnectionString *string `yaml:"connectionString"`
+	// Database is the name of the database to run operations against. This is an optional field and will not be
+	// needed for every storage device. It is needed for storage like MongoDB, for instance, which needs a client
+	// to make transactions. But it is not needed by PostgreSQL or a file system.
+	Database *string
 
-	// Database is the name of the database to run operations against. This is an optional field.
-	Database *string `yaml:"database"`
+	// Close indicates that the storage should be closed after the transport operation. It is not recommended to
+	// set this to true unless you are running a single transport operation. The primary use case for this is
+	// with CLI commands that create connections to a database given a connection string.
+	Close bool `yaml:"-"`
+
+	// Connection string is the URI to connect to the database. This is only valid using the CLI.
+	ConnectionString *string `yaml:"connectionString"`
 }
 
 // RateLimitConfig is the data needed for constructing a rate limit for the HTTP requests.
@@ -48,7 +55,7 @@ type RateLimitConfig struct {
 	// Burst represents the number of requests that we limit over a period frequency.
 	Burst *int `yaml:"burst"`
 
-	// Period is the number of times to allow a burst per second.
+	// Period is the time between each burst.
 	Period *time.Duration `yaml:"period"`
 }
 
@@ -119,8 +126,7 @@ type Config struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
 	StorageOptions  []StorageOptions `yaml:"storage"`
 
-	StgConstructor proto.Constructor
-	Truncate       bool
+	Truncate bool `yaml:"-"`
 
 	URL *url.URL `yaml:"-"`
 }
