@@ -10,5 +10,7 @@ RUN go mod download
 
 COPY . .
 
+WORKDIR cmd/gidari
+
 # Run the tests.
-ENTRYPOINT ["go", "test", "-v", "./..."]
+CMD ["go", "test", "-count", "3", "-v", "./..."]

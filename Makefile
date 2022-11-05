@@ -36,6 +36,13 @@ e2e:
 	$(GC) clean -testcache
 	./scripts/run-e2e-tests.sh
 
+# e2e runs all of the end-to-end tests locally.
+.PHONY: cmd-tests
+cmd-tests:
+	chmod +rwx scripts/*.sh
+	$(GC) clean -testcache
+	./scripts/run-cmd-tests.sh
+
 # repository-integration-tests runs all of the repository integration tests in a docker container.
 # Each test is run 5 times to minimize flakiness.
 .PHONY: repository-integration-tests

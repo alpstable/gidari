@@ -15,10 +15,10 @@ services:
       - mongo_network
       - postgres_network
 
-  integration:
+  cmd:
     build:
       context: .
-      dockerfile: docker/integration.Dockerfile
+      dockerfile: docker/cmd.Dockerfile
     networks:
       - mongo_network
       - postgres_network
