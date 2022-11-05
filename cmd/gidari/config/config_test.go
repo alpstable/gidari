@@ -39,7 +39,7 @@ func TestReadFile(t *testing.T) {
 				},
 				StorageOptions: []gidari.StorageOptions{
 					{
-						ConnectionString: strPtr("mongodb://localhost:27017"),
+						ConnectionString: strPtr("mongodb://mongo1:27017"),
 						Database:         strPtr("histam"),
 					},
 				},
@@ -139,7 +139,7 @@ func TestAllStorage(t *testing.T) {
 			config: &gidari.Config{
 				StorageOptions: []gidari.StorageOptions{
 					{
-						ConnectionString: strPtr("mongodb://localhost:27017"),
+						ConnectionString: strPtr("mongodb://mongo1:27017"),
 						Database:         strPtr("test"),
 					},
 				},
