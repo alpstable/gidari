@@ -31,8 +31,3 @@ docker-compose -f "docker-compose.yml" exec -T mongo1 /scripts/wait-for-mongodb.
 
 echo "Creating replica set..."
 docker-compose -f "docker-compose.yml" exec -T mongo1 /scripts/rs-init.sh
-
-docker-compose -f "docker-compose.yml" up -d \
-	--remove-orphans \
-	--force-recreate \
-	--build postgres1

@@ -15,14 +15,6 @@ services:
       - mongo_network
       - postgres_network
 
-  cmd:
-    build:
-      context: .
-      dockerfile: docker/cmd.Dockerfile
-    networks:
-      - mongo_network
-      - postgres_network
-
   mongo1:
     hostname: mongo1
     image: mongo
@@ -63,19 +55,3 @@ services:
       - mongo_network
     volumes:
       - ./.db/mongo3:/data/db
-
-  postgres1:
-    hostname: postgres1
-    networks:
-      - postgres_network
-    image: postgres:11.1
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: defaultdb
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./.db/postgres1:/var/lib/postgresql/dat
-      - ./internal/postgres/queries/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
-    restart: "unless-stopped"
