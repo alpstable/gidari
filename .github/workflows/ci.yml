@@ -20,8 +20,8 @@ jobs:
     - name: Make Docker Containers
       run: make containers
 
-        #- name: Run Test
-        #  run: make tests
+    - name: Run Test
+      run: make tests
 
     - name: Run CMD Tests
       run: make cmd-tests

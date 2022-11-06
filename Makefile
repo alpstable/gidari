@@ -27,8 +27,6 @@ proto:
 tests:
 	$(GC) clean -testcache && go test -v -count=5 -tags=utests ./...
 
-	(cd cmd/gidari && $(GC) clean -testcache && go test -v -count=5 -tags=utests ./...)
-
 # e2e runs all of the end-to-end tests locally.
 .PHONY: e2e
 e2e:
