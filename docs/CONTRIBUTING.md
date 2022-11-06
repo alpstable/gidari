@@ -2,9 +2,11 @@
 
 - [Dependencies](#dependencies)
 - [Build](#build)
+- [Testing](#testing)
 - [Integration Testing](#integration-testing)
   - [Network Updates](#network-updates)
   - [Running Integration Tests](#running-integration-tests)
+- [Testing with the CLI](#testing-with-the-cli)
 
 Thank you for your interest in contributing to Gidari! Please make sure to fork this repository before working through issues.
 
@@ -38,12 +40,12 @@ To develop locally you need to install the following dependencies:
 
 4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
 
-## Build
+## Testing
 
-To build a binary (this is not a required step):
+To test run 
 
 ```
-make
+make tests
 ```
 
 ## Integration Testing
@@ -59,12 +61,18 @@ You will also need to sync your /etc/hosts file with the docker containers:
 127.0.0.1 mongo1
 127.0.0.1 mongo2
 127.0.0.1 mongo3
-127.0.0.1 postgres1
 ```
 
 ### Running Integration Tests
 
-To test locally first build the containers for integration tests using `make containers`. Then run `make tests`.
+To test locally first build the containers for integration tests using `make containers`. Then run `make e2e`.
 
-## Troubleshooting
+## Testing with the CLI
 
+You may want to test the Gidari CLI with changes you make in Gidari. To do this we will use the go.mod [repalce directive](https://go.dev/ref/mod#go-mod-file-replace). You will need to fork the [github.com/alpstable/gidari-cli](https://github.com/alpstable/gidari-cli) repository and add the following to the go.mod file:
+
+```go.mod
+replace github.com/alpstable/gidari => your/local/gidari/fork
+```
+
+Then run `make` in the gidari-cli fork, this will create a binary that uses your local gidari fork.
