@@ -34,7 +34,7 @@ There are two ways to use this library:
 1. Create a cursor that will buffer HTTP responses to iterate over
 2. Use an adapter library to transport data from an HTTP endpoint to a storage device.
 
-See [examples](examples/) for common use cases.
+See [examples](examples/) for common use cases. To setup and environment to test locally, run `make containers`.
 
 ### Cursor
 
@@ -60,15 +60,16 @@ func main() {
 	ctx := context.TODO()
 
 	// Create a MongoDB client using the official MongoDB Go Driver.
-	clientOptions := options.Client().ApplyURI("mongodb://mongo1:27017")
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, _ := mongo.Connect(ctx, clientOptions)
 
 	// Plug the client into a Gidari MongoDB Storage adapater.
 	mdbStorage, _ := gmongo.New(ctx, client)
 
-	// Include the adapter in the storage slice of the transport configuration. This particular transport will
-	// make a request to "api.zippopotam.us" for zip code data in Seatle. Once the request is completed, the
-	// resulting data will be persisted in the "zip_codes" database on the "seatle" table.
+	// Include the adapter in the storage slice of the transport configuration.
+	// This particular transport will make a request to "api.zippopotam.us" for
+	// zip code data in Seatle. Once the request is completed, the resulting
+	// data will be persisted in the "zip_codes" database on the "seatle" table.
 	err := gidari.Transport(ctx, &gidari.Config{
 		URL: func() *url.URL {
 			url, _ := url.Parse("http://api.zippopotam.us")
