@@ -1,7 +1,5 @@
 .vscode
-.auth.env
 .DS_Store
 .db
 .git
 .idea
-.gidari-cli
