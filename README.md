@@ -31,13 +31,13 @@ For information on using the CLI, see [here](https://github.com/alpstable/gidari
 
 Supported SQL options 
 
-- [Postgres](https://github.com/alpstable/gpostgres)
+- [Postgres](https://github.com/alpstable/gpostgres) (WIP)
 
 ## NoSQL
 
 Supported NoSQL options 
 
-- [CSV](https://github.com/alpstable/gcsv)
+- [CSV](https://github.com/alpstable/gcsv) (WIP)
 - [MongoDB](https://github.com/alpstable/gmongo)
 
 ## Contributing
