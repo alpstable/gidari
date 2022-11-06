@@ -23,23 +23,6 @@ services:
       - mongo_network
       - postgres_network
 
-  postgres-integration:
-    build:
-      context: .
-      dockerfile: docker/postgres.Dockerfile
-
-  lint:
-    build:
-      context: .
-      dockerfile: docker/lint.Dockerfile
-
-  fmt:
-    build:
-      context: .
-      dockerfile: docker/fmt.Dockerfile
-    volumes:
-      - .:/app
-
   mongo1:
     hostname: mongo1
     image: mongo

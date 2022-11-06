@@ -153,7 +153,9 @@ func TestAllStorage(t *testing.T) {
 
 			var err error
 
-			tcase.config.StorageOptions, err = addAllStorage(context.Background(), tcase.config.StorageOptions)
+			tcase.config.StorageOptions, err = addAllStorage(context.Background(),
+				tcase.config.StorageOptions)
+
 			if err != nil {
 				t.Fatalf("error getting storage: %v", err)
 			}
