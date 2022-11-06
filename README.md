@@ -27,15 +27,85 @@ go get github.com/alpstable/gidari@latest
 
 For information on using the CLI, see [here](https://github.com/alpstable/gidari-cli).
 
+## Usage
+
+There are two ways to use this library:
+
+1. Create a cursor that will buffer HTTP responses to iterate over
+2. Use an adapter library to transport data from an HTTP endpoint to a storage device.
+
+See [examples](examples/) for common use cases.
+
+### Cursor
+
+TODO
+
+### Adapter Library
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/config"
+	"github.com/alpstable/gmongo"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+func main() {
+	ctx := context.TODO()
+
+	// Create a MongoDB client using the official MongoDB Go Driver.
+	clientOptions := options.Client().ApplyURI("mongodb://mongo1:27017")
+	client, _ := mongo.Connect(ctx, clientOptions)
+
+	// Plug the client into a Gidari MongoDB Storage adapater.
+	mdbStorage, _ := gmongo.New(ctx, client)
+
+	// Include the adapter in the storage slice of the transport configuration. This particular transport will
+	// make a request to "api.zippopotam.us" for zip code data in Seatle. Once the request is completed, the
+	// resulting data will be persisted in the "zip_codes" database on the "seatle" table.
+	err := gidari.Transport(ctx, &gidari.Config{
+		URL: func() *url.URL {
+			url, _ := url.Parse("http://api.zippopotam.us")
+
+			return url
+		}(),
+		Requests: []*gidari.Request{
+			{
+				Endpoint:    "/us/98121",
+				Method:      http.MethodGet,
+				Table:       "seatle",
+				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 1),
+			},
+		},
+		StorageOptions: []gidari.StorageOptions{
+			{
+				Storage:  storage,
+				Database: "zip_codes",
+			},
+		},
+	})
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
 ## SQL
 
-Supported SQL options 
+Supported SQL options
 
 - [Postgres](https://github.com/alpstable/gpostgres) (WIP)
 
 ## NoSQL
 
-Supported NoSQL options 
+Supported NoSQL options
 
 - [CSV](https://github.com/alpstable/gcsv) (WIP)
 - [MongoDB](https://github.com/alpstable/gmongo)

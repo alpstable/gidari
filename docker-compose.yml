@@ -3,17 +3,14 @@ version: '3'
 networks:
   mongo_network:
     driver: bridge
-  postgres_network:
-    driver: bridge
 
 services:
-  e2e:
+  examples:
     build:
       context: .
-      dockerfile: docker/e2e.Dockerfile
+      dockerfile: docker/examples.Dockerfile
     networks:
       - mongo_network
-      - postgres_network
 
   mongo1:
     hostname: mongo1

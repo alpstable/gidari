@@ -68,7 +68,7 @@ type repo struct {
 	// if it is created by a connection string. If a repository is created by a client or a database, then it is
 	// the responsibility of the caller to close.
 	closable bool
-	database *string
+	database string
 }
 
 // repos will return a slice of generic repositories along with associated transaction instances.
@@ -136,6 +136,11 @@ type flattenedRequest struct {
 func flattenRequest(req *Request, rurl url.URL, client *web.Client) *flattenedRequest {
 	fetchConfig := newFetchConfig(req, rurl, client)
 
+	// If the table is not set on the request, then set it using the last path segment of the endpoint.
+	if req.Table == "" {
+		req.Table = path.Base(req.Endpoint)
+	}
+
 	return &flattenedRequest{
 		fetchConfig: fetchConfig,
 		table:       req.Table,
@@ -147,9 +152,8 @@ func flattenRequest(req *Request, rurl url.URL, client *web.Client) *flattenedRe
 // queying a web API.
 func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 	// If layout is not set, then default it to be RFC3339
-	if timeseries.Layout == nil {
-		str := time.RFC3339
-		timeseries.Layout = &str
+	if timeseries.Layout == "" {
+		timeseries.Layout = time.RFC3339
 	}
 
 	query := rurl.Query()
@@ -159,7 +163,7 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 		return ErrInvalidStartTimeSize
 	}
 
-	start, err := time.Parse(*timeseries.Layout, startSlice[0])
+	start, err := time.Parse(timeseries.Layout, startSlice[0])
 	if err != nil {
 		return fmt.Errorf("failed to parse start time: %w", err)
 	}
@@ -169,12 +173,13 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 		return ErrInvalidEndTimeSize
 	}
 
-	end, err := time.Parse(*timeseries.Layout, endSlice[0])
+	end, err := time.Parse(timeseries.Layout, endSlice[0])
 	if err != nil {
 		return fmt.Errorf("unable to parse end time: %w", err)
 	}
 
 	for start.Before(end) {
+		fmt.Println(timeseries.Period)
 		next := start.Add(time.Second * time.Duration(timeseries.Period))
 		if next.Before(end) {
 			timeseries.Chunks = append(timeseries.Chunks, [2]time.Time{start, next})
@@ -184,6 +189,8 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 
 		start = next
 	}
+
+	fmt.Printf("chunks: %v\n", timeseries.Chunks)
 
 	return nil
 }
@@ -218,8 +225,8 @@ func flattenRequestTimeseries(req *Request, rurl url.URL, client *web.Client) ([
 	for _, chunk := range timeseries.Chunks {
 		// copy the request and update it to reflect the partitioned timeseries
 		chunkReq := req
-		chunkReq.Query[timeseries.StartName] = chunk[0].Format(*timeseries.Layout)
-		chunkReq.Query[timeseries.EndName] = chunk[1].Format(*timeseries.Layout)
+		chunkReq.Query[timeseries.StartName] = chunk[0].Format(timeseries.Layout)
+		chunkReq.Query[timeseries.EndName] = chunk[1].Format(timeseries.Layout)
 
 		fetchConfig := newFetchConfig(chunkReq, rurl, client)
 
@@ -304,10 +311,7 @@ func repositoryWorker(_ context.Context, _ int, cfg *repoConfig) {
 
 		for _, req := range reqs {
 			for _, repo := range cfg.repos {
-				// If the database is set, then set it on the request.
-				if database := repo.database; database != nil {
-					req.Table.Database = *database
-				}
+				req.Table.Database = repo.database
 
 				txfn := func(sctx context.Context, repo repository.Generic) error {
 					_, err := repo.Upsert(sctx, req)
@@ -390,11 +394,8 @@ func truncate(ctx context.Context, cfg *Config, repoConfig *repoConfig) error {
 	setTruncateRequestTables(truncateRequest, cfg)
 
 	for _, repo := range repoConfig.repos {
-		// If the database is set, then set it on the request.
-		if database := repo.database; database != nil {
-			for _, table := range truncateRequest.Tables {
-				table.Database = *database
-			}
+		for _, table := range truncateRequest.Tables {
+			table.Database = repo.database
 		}
 
 		_, err := repo.Truncate(ctx, truncateRequest)

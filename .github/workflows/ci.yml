@@ -23,5 +23,5 @@ jobs:
     - name: Run Test
       run: make tests
 
-    - name: Run E2E
-      run: make e2e
+    - name: Run Examples
+      run: make examples

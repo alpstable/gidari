@@ -18,12 +18,10 @@ proto:
 tests:
 	$(GC) clean -testcache && go test -v -count=5 -tags=utests ./...
 
-# e2e runs all of the end-to-end tests locally.
-.PHONY: e2e
-e2e:
-	chmod +rwx scripts/*.sh
-	$(GC) clean -testcache
-	./scripts/run-e2e-tests.sh
+# examples runs all of the example in a Go Docker container.
+.PHONY: examples
+examples:
+	chmod +rwx scripts/*.sh && ./scripts/run-examples.sh
 
 # fmt runs the formatter.
 .PHONY: fmt

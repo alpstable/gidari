@@ -10,7 +10,6 @@ package gidari
 import (
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestValidate(t *testing.T) {
@@ -26,8 +25,8 @@ func TestValidate(t *testing.T) {
 	t.Run("Period Empty", func(t *testing.T) {
 		t.Parallel()
 		rlc := RateLimitConfig{
-			Burst:  new(int),
-			Period: nil,
+			Burst:  1,
+			Period: 0,
 		}
 		if errors.Is(rlc.validate(), MissingRateLimitFieldError("period")) {
 			t.Errorf("expect: %v, got: %v", MissingRateLimitFieldError("period"), rlc.validate())
@@ -36,8 +35,8 @@ func TestValidate(t *testing.T) {
 	t.Run("Burst Empty", func(t *testing.T) {
 		t.Parallel()
 		rlc := RateLimitConfig{
-			Burst:  nil,
-			Period: new(time.Duration),
+			Burst:  0,
+			Period: 1,
 		}
 		if errors.Is(rlc.validate(), MissingRateLimitFieldError("burst")) {
 			t.Errorf("expect: %v, got: %v", MissingRateLimitFieldError("burst"), rlc.validate())
@@ -46,8 +45,8 @@ func TestValidate(t *testing.T) {
 	t.Run("Valid input", func(t *testing.T) {
 		t.Parallel()
 		rlc := RateLimitConfig{
-			Burst:  new(int),
-			Period: new(time.Duration),
+			Burst:  1,
+			Period: 1,
 		}
 		if rlc.validate() != nil {
 			t.Errorf("expect: %v, got: %v", nil, rlc.validate())

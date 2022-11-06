@@ -1,15 +1,13 @@
-module github.com/alpstable/gidari/e2e
+module github.com/alpstable/gidari/examples/mongodb
 
 go 1.19
 
-replace github.com/alpstable/gidari => ../
+replace github.com/alpstable/gidari => ../../
 
 require (
-	github.com/alpstable/gidari v0.0.0-20221030223101-0562042f4484
-	github.com/alpstable/gmongo v0.0.0-20221031043101-be47f52cf05a
-	go.mongodb.org/mongo-driver v1.10.3
-	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
-	gopkg.in/yaml.v2 v2.4.0
+	github.com/alpstable/gidari v0.0.0-20221106191643-d53cdac2d61f
+	github.com/alpstable/gmongo v0.0.0-20221106194455-977f4e3bb3d6
+	go.mongodb.org/mongo-driver v1.11.0
 )
 
 require (
@@ -17,7 +15,6 @@ require (
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.1 // indirect
 	github.com/xdg-go/stringprep v1.0.3 // indirect
@@ -25,5 +22,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

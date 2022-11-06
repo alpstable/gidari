@@ -39,7 +39,7 @@ type StorageOptions struct {
 	// Database is the name of the database to run operations against. This is an optional field and will not be
 	// needed for every storage device. It is needed for storage like MongoDB, for instance, which needs a client
 	// to make transactions. But it is not needed by PostgreSQL or a file system.
-	Database *string
+	Database string
 
 	// Close indicates that the storage should be closed after the transport operation. It is not recommended to
 	// set this to true unless you are running a single transport operation. The primary use case for this is
@@ -53,18 +53,18 @@ type StorageOptions struct {
 // RateLimitConfig is the data needed for constructing a rate limit for the HTTP requests.
 type RateLimitConfig struct {
 	// Burst represents the number of requests that we limit over a period frequency.
-	Burst *int `yaml:"burst"`
+	Burst int `yaml:"burst"`
 
 	// Period is the time between each burst.
-	Period *time.Duration `yaml:"period"`
+	Period time.Duration `yaml:"period"`
 }
 
 func (rl RateLimitConfig) validate() error {
-	if rl.Burst == nil {
+	if rl.Burst == 0 {
 		return MissingRateLimitFieldError("burst")
 	}
 
-	if rl.Period == nil {
+	if rl.Period == 0 {
 		return MissingRateLimitFieldError("period")
 	}
 
@@ -82,7 +82,7 @@ type Timeseries struct {
 
 	// Layout is the time layout for parsing the "Start" and "End" values into "time.Time". The default is assumed
 	// to be RFC3339.
-	Layout *string `yaml:"layout"`
+	Layout string `yaml:"layout"`
 
 	// Chunks are the time ranges for which we can query the API. These are broken up into pieces for API requests
 	// that only return a limited number of results.
