@@ -179,7 +179,6 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 	}
 
 	for start.Before(end) {
-		fmt.Println(timeseries.Period)
 		next := start.Add(time.Second * time.Duration(timeseries.Period))
 		if next.Before(end) {
 			timeseries.Chunks = append(timeseries.Chunks, [2]time.Time{start, next})
@@ -189,8 +188,6 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 
 		start = next
 	}
-
-	fmt.Printf("chunks: %v\n", timeseries.Chunks)
 
 	return nil
 }
