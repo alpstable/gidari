@@ -7,5 +7,7 @@ COPY . .
 
 WORKDIR cmd/gidari
 
+RUN go mod download
+
 # Run the tests.
 CMD ["go", "test", "-count", "3", "-v", "./..."]
