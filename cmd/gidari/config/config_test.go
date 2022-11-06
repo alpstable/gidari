@@ -167,7 +167,8 @@ func TestAllStorage(t *testing.T) {
 					t.Fatal("got nil storage.Storage")
 				}
 
-				fmt.Println("stg", stg)
+				fmt.Printf("%+v\n", stg)
+
 				if err := stg.Ping(); err != nil {
 					t.Fatalf("error pinging storage: %v", err)
 				}
