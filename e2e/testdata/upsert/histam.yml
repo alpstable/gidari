@@ -5,7 +5,7 @@ storage:
     database: histam
 rateLimit:
   burst: 1
-  period: 1
+  period: 1s
 requests:
   -
     endpoint: /search/titles/results

@@ -86,7 +86,7 @@ func repos(ctx context.Context, cfg *Config) ([]repo, repoCloser, error) {
 		repos = append(repos, repo{
 			Generic:  genRepository,
 			database: stgOpts.Database,
-			closable: stgOpts.ConnectionString == nil,
+			closable: stgOpts.Close,
 		})
 	}
 
@@ -384,19 +384,12 @@ func setTruncateRequestTables(treq *proto.TruncateRequest, cfg *Config) {
 }
 
 // Truncate will truncate the defined tables in the configuration.
-func truncate(ctx context.Context, cfg *Config) error {
+func truncate(ctx context.Context, cfg *Config, repoConfig *repoConfig) error {
 	// truncateRequest is a special request that will truncate the table before upserting data.
 	truncateRequest := new(proto.TruncateRequest)
 	setTruncateRequestTables(truncateRequest, cfg)
 
-	repos, closeRepos, err := repos(ctx, cfg)
-	if err != nil {
-		return err
-	}
-
-	defer closeRepos()
-
-	for _, repo := range repos {
+	for _, repo := range repoConfig.repos {
 		// If the database is set, then set it on the request.
 		if database := repo.database; database != nil {
 			for _, table := range truncateRequest.Tables {
@@ -429,10 +422,6 @@ func truncate(ctx context.Context, cfg *Config) error {
 func upsert(ctx context.Context, cfg *Config) error {
 	threads := runtime.NumCPU()
 
-	if err := truncate(ctx, cfg); err != nil {
-		return err
-	}
-
 	flattenedRequests, err := flattenConfigRequests(ctx, cfg)
 	if err != nil {
 		return err
@@ -440,6 +429,10 @@ func upsert(ctx context.Context, cfg *Config) error {
 
 	repoConfig, err := newRepoConfig(ctx, cfg, len(flattenedRequests))
 	if err != nil {
+		return err
+	}
+
+	if err := truncate(ctx, cfg, repoConfig); err != nil {
 		return err
 	}
 
