@@ -2,8 +2,6 @@ module github.com/alpstable/gidari/cmd/gidari
 
 go 1.19
 
-replace github.com/alpstable/gidari => ../../
-
 require (
 	github.com/alpstable/gidari v0.0.0-20221104034313-735a8c686ce0
 	github.com/sirupsen/logrus v1.9.0
