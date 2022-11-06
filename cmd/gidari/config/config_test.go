@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -166,6 +167,7 @@ func TestAllStorage(t *testing.T) {
 					t.Fatal("got nil storage.Storage")
 				}
 
+				fmt.Println("stg", stg)
 				if err := stg.Ping(); err != nil {
 					t.Fatalf("error pinging storage: %v", err)
 				}
