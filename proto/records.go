@@ -27,8 +27,7 @@ var (
 	ErrFailedToGetColumns      = fmt.Errorf("failed to get columns")
 )
 
-// decodeRecords will parse a slice of data into a records slice.
-func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
+func newSlice(data interface{}) ([]interface{}, error) {
 	var out []interface{}
 
 	dataValue := reflect.ValueOf(data)
@@ -39,13 +38,22 @@ func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
 		}
 	case reflect.Map:
 		out = append(out, dataValue.Interface())
-
 	case reflect.Array, reflect.Bool, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Float32,
 		reflect.Float64, reflect.Func, reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
 		reflect.Interface, reflect.Invalid, reflect.Pointer, reflect.String, reflect.Struct,
 		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8, reflect.Uintptr,
 		reflect.UnsafePointer:
 		return nil, fmt.Errorf("%w: %v", ErrUnsupportedDataType, dataValue.Kind())
+	}
+
+	return out, nil
+}
+
+// decodeRecords will parse a slice of data into a records slice.
+func decodeRecords(data interface{}) ([]*structpb.Struct, error) {
+	out, err := newSlice(data)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
 	}
 
 	records := make([]*structpb.Struct, 0)
@@ -142,6 +150,36 @@ func DecodeUpsertBinaryRequest(req *UpsertBinaryRequest) ([]*structpb.Struct, er
 	}
 
 	return binRecords, nil
+}
+
+// DecodeIteratorResult will attempt to transform a blob of JSON data into a slice of IteratorResult object that each
+// contain one JSON object as "data".
+func DecodeIteratorResults(endpoint string, jsonBytes []byte) ([]*IteratorResult, error) {
+	var data interface{}
+	if err := json.Unmarshal(jsonBytes, &data); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
+	}
+
+	out, err := newSlice(data)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
+	}
+
+	results := make([]*IteratorResult, len(out))
+
+	for idx, r := range out {
+		record, err := json.Marshal(r)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
+		}
+
+		results[idx] = &IteratorResult{
+			Endpoint: endpoint,
+			Data:     record,
+		}
+	}
+
+	return results, nil
 }
 
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to

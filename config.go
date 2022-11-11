@@ -133,13 +133,13 @@ type Config struct {
 
 // Validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) Validate() error {
-	if cfg.RateLimitConfig == nil {
-		return MissingConfigFieldError("rateLimit")
-	}
+	//if cfg.RateLimitConfig == nil {
+	//	return MissingConfigFieldError("rateLimit")
+	//}
 
-	if err := cfg.RateLimitConfig.validate(); err != nil {
-		return ErrInvalidRateLimit
-	}
+	//if err := cfg.RateLimitConfig.validate(); err != nil {
+	//	return ErrInvalidRateLimit
+	//}
 
 	return nil
 }

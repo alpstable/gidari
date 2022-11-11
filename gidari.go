@@ -270,6 +270,7 @@ type repoJob struct {
 
 type repoConfig struct {
 	repos      []repo
+	endpoint   string
 	closeRepos func()
 	jobs       chan *repoJob
 	done       chan bool

@@ -89,3 +89,11 @@ message TruncateResponse {
 	int32 deletedCount = 1;
 }
 
+message IteratorResult {
+	// Endpoint is the HTTP Url endpoint that was used to get the data for the IteratorResult.
+	string endpoint = 1;
+
+	// Data is the response data from the endpoint.
+	bytes data = 2;
+}
+

@@ -69,3 +69,47 @@ func TestDecodeUpsertBinaryRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeIteratorResults(t *testing.T) {
+	t.Parallel()
+
+	for _, tcase := range []struct {
+		name      string
+		endpoint  string
+		jsonBytes []byte
+		want      []*IteratorResult
+	}{
+		{
+			name:      "object",
+			endpoint:  "tests1",
+			jsonBytes: []byte(`{"x":1}`),
+			want: []*IteratorResult{
+				{Data: []byte(`{"x":1}`), Endpoint: "tests1"},
+			},
+		},
+		{
+			name:      "array",
+			endpoint:  "tests1",
+			jsonBytes: []byte(`[{"x":1},{"x":2}]`),
+			want: []*IteratorResult{
+				{Data: []byte(`{"x":1}`), Endpoint: "tests1"},
+				{Data: []byte(`{"x":2}`), Endpoint: "tests1"},
+			},
+		},
+	} {
+		tcase := tcase
+
+		t.Run(tcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := DecodeIteratorResults(tcase.endpoint, tcase.jsonBytes)
+			if err != nil {
+				t.Errorf("DecodeIteratorResults() error = %v, wantErr %v", err, false)
+			}
+
+			if !reflect.DeepEqual(got, tcase.want) {
+				t.Errorf("DecodeIteratorResults() = %v, want %v", got, tcase.want)
+			}
+		})
+	}
+}
