@@ -1,3 +1,10 @@
+// Copyright 2022 The Gidari Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
 package gidari
 
 import (
@@ -168,7 +175,6 @@ func startResponseWorker(_ context.Context, cfg responseWorkerConfig) {
 			cfg.errCh <- err
 		}
 	}
-
 }
 
 type webWorkerJob struct {
@@ -311,7 +317,6 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 	}()
 
 	go func() {
-
 		// Wait for all the web workers to finish.
 		for i := 0; i < jobCount; i++ {
 			<-done
