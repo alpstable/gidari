@@ -44,6 +44,10 @@ type Iterator struct {
 
 // NewIterator returns an Iterator object for the given configuration.
 func NewIterator(ctx context.Context, cfg *Config) (*Iterator, error) {
+	if cfg == nil {
+		return nil, ErrNilConfig
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}

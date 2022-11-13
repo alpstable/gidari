@@ -143,6 +143,7 @@ type Config struct {
 
 	Truncate bool `yaml:"-"`
 
+	// URL is a required field and is used to construct the HTTP request to fetch data from the web API.
 	URL *url.URL `yaml:"-"`
 
 	// Client is the HTTP client used to run the requests defined on the configuraiton. This is an optional field
@@ -157,5 +158,9 @@ type Config struct {
 
 // Validate will ensure that the configuration is valid for querying the web API.
 func (cfg *Config) Validate() error {
+	if cfg.URL == nil {
+		return ErrMissingURL
+	}
+
 	return nil
 }

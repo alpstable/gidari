@@ -20,10 +20,6 @@ import (
 	"github.com/alpstable/gidari/proto"
 )
 
-var (
-	ErrNilConfig = fmt.Errorf("config is nil")
-)
-
 // Transport will construct the transport operation using a "transport.Config" object.
 func Transport(ctx context.Context, cfg *Config) error {
 	if cfg == nil {
