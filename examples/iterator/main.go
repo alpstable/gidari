@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"time"
 
 	"github.com/alpstable/gidari"
@@ -20,17 +20,42 @@ func main() {
 		log.Fatalf("failed to create iterator: %v", err)
 	}
 
-	iter.Next(ctx)
-	fmt.Println(iter.Current)
+	defer iter.Close(ctx)
 
-	iter.Next(ctx)
-	fmt.Println(iter.Current)
+	urlByteSize := map[string][]int{}
 
-	//for itr.Next(ctx) {
-	//	//fmt.Printf("current: %v\n", len(itr.Current.Data))
-	//	//fmt.Printf("url: %v\n", itr.Current.Endpoint)
-	//}
+	for iter.Next(ctx) {
+		current := iter.Current
+		urlByteSize[current.GetURL()] = append(urlByteSize[current.GetURL()], len(current.GetData()))
+	}
 
+	if err := iter.Err(); err != nil {
+		log.Fatalf("iterator error: %v", err)
+	}
+
+	const (
+		charURL  = "https://www.anapioficeandfire.com/api/characters"
+		bookURL  = "https://www.anapioficeandfire.com/api/books"
+		houseURL = "https://www.anapioficeandfire.com/api/houses"
+	)
+
+	expected := map[string][]int{
+		charURL:  {339, 624, 361, 380, 319, 326, 364, 365, 324, 331},
+		bookURL:  {24856, 43974, 57575, 3346, 69752, 4990, 4283, 49062, 3454, 3341},
+		houseURL: {447, 745, 293, 703, 458, 358, 2187, 676, 342, 887},
+	}
+
+	if !reflect.DeepEqual(urlByteSize[charURL], expected[charURL]) {
+		log.Fatalf("unexpected character byte want: %v, got: %v", expected[charURL], urlByteSize[charURL])
+	}
+
+	if !reflect.DeepEqual(urlByteSize[bookURL], expected[bookURL]) {
+		log.Fatalf("unexpected book byte want: %v, got: %v", expected[bookURL], urlByteSize[bookURL])
+	}
+
+	if !reflect.DeepEqual(urlByteSize[houseURL], expected[houseURL]) {
+		log.Fatalf("unexpected house byte want: %v, got: %v", expected[houseURL], urlByteSize[houseURL])
+	}
 }
 
 // asoiafConfig is a sample configuration to fetch data from "https://anapioficeandfire.com".

@@ -8,6 +8,7 @@
 package gidari
 
 import (
+	"net/http"
 	"net/url"
 	"time"
 
@@ -129,6 +130,10 @@ type Config struct {
 	Truncate bool `yaml:"-"`
 
 	URL *url.URL `yaml:"-"`
+
+	// Client is the HTTP client used to run the requests defined on the configuraiton. This is an optional field
+	// and will default to http.DefaultClient if not set.
+	Client *http.Client `yaml:"-"`
 }
 
 // Validate will ensure that the configuration is valid for querying the web API.

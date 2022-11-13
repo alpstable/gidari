@@ -90,10 +90,13 @@ message TruncateResponse {
 }
 
 message IteratorResult {
-	// Endpoint is the HTTP Url endpoint that was used to get the data for the IteratorResult.
-	string endpoint = 1;
+	// URL is the URI that was used to get the data for the IteratorResult.
+	string URL = 1;
 
 	// Data is the response data from the endpoint.
 	bytes data = 2;
+
+	// Done is true if there are no more results, i.e. this is the final result.
+	bool done = 3;
 }
 

@@ -154,7 +154,7 @@ func DecodeUpsertBinaryRequest(req *UpsertBinaryRequest) ([]*structpb.Struct, er
 
 // DecodeIteratorResult will attempt to transform a blob of JSON data into a slice of IteratorResult object that each
 // contain one JSON object as "data".
-func DecodeIteratorResults(endpoint string, jsonBytes []byte) ([]*IteratorResult, error) {
+func DecodeIteratorResults(uri string, jsonBytes []byte) ([]*IteratorResult, error) {
 	var data interface{}
 	if err := json.Unmarshal(jsonBytes, &data); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
@@ -174,8 +174,8 @@ func DecodeIteratorResults(endpoint string, jsonBytes []byte) ([]*IteratorResult
 		}
 
 		results[idx] = &IteratorResult{
-			Endpoint: endpoint,
-			Data:     record,
+			Data: record,
+			URL:  uri,
 		}
 	}
 
