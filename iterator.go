@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"runtime"
 
 	"github.com/alpstable/gidari/internal/web"
@@ -13,22 +12,15 @@ import (
 	"github.com/alpstable/gidari/proto"
 )
 
-type responseWorkerJob struct {
-	rsp       []byte
-	uri       *url.URL
-	tableName string
-}
-
-type responseJobFn func(context.Context, *responseWorkerJob) (*proto.IteratorResult, error)
-
-type webWorkerJob struct {
-	req *flattenedRequest
-}
-
 // Iterator holds the request state of a gidari configuration and can be used to iterate over the request results.
 type Iterator struct {
 	// Current is a byte slice of the most recent request pushed onto the iterator by the "Next" method.
 	Current *proto.IteratorResult
+
+	// httpResponseHandler is an optional function that can be used to run custom logic on the response worker job. By
+	// default this function is nil and the response worker will attempt to decode the response body into an
+	// IteratorResult.
+	httpResponseHandler HTTPResponseHandler
 
 	// cfg is the configuration for the iterator.
 	cfg *Config
@@ -46,12 +38,8 @@ type Iterator struct {
 	// by the "Err" method.
 	errCh chan error
 
+	// err is the error that was encountered by the iterator and is propagated to the user with the "Err" method.
 	err error
-
-	// responseJobFn is an optional function that can be used to run custom logic on the response worker job. By
-	// default this function is nil and the response worker will attempt to decode the response body into an
-	// IteratorResult.
-	responseJobFn responseJobFn
 }
 
 // NewIterator returns an Iterator object for the given configuration.
@@ -61,17 +49,71 @@ func NewIterator(ctx context.Context, cfg *Config) (*Iterator, error) {
 	}
 
 	iter := &Iterator{
-		cfg:   cfg,
-		errCh: make(chan error, 1),
+		cfg:                 cfg,
+		errCh:               make(chan error, 1),
+		httpResponseHandler: defaultHTTPResponseHandler,
+	}
+
+	if cfg.HTTPResponseHandler != nil {
+		iter.httpResponseHandler = cfg.HTTPResponseHandler
 	}
 
 	return iter, nil
 }
 
-// Close will close the iterator and release any resources.
-func (iter *Iterator) Close(ctx context.Context) {
-	//close(iter.currentChan)
+// sanitizeInvalidJSON will sanitize invalid JSON by convering the source bytes into a string and using the clob column
+// on the request to create a valid JSON object. This function will return "false" if there is an error creating the
+// new JSON object or if the source is invalid JSON and no clob column is defined for the request.
+func sanitizeInvalidJSON(src []byte, clobColumn string) ([]byte, bool, error) {
+	// If the source is valid JSON, then we can return the source bytes.
+	if json.Valid(src) {
+		return src, true, nil
+	}
+
+	// If the source is invalid JSON and there is no clob column defined, then we cannot sanitize the JSON.
+	if clobColumn == "" {
+		return nil, false, nil
+	}
+
+	// If the source is invalid JSON and there is a clob column defined, then we can create a new JSON object
+	// using the clob column.
+	obj := map[string]string{
+		clobColumn: string(src),
+	}
+
+	newSrc, err := json.Marshal(obj)
+	if err != nil {
+		return nil, false, fmt.Errorf("error marshaling new JSON object: %w", err)
+	}
+
+	return newSrc, true, nil
 }
+
+// defaultHTTPResponseHandler is the default response job function that is used to process HTTP response data into
+// proto.IteratorResult objects.
+func defaultHTTPResponseHandler(ctx context.Context, rsp HTTPResponse) ([]*proto.IteratorResult, error) {
+	// read the bytes from the response body.
+	src, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	// sanitize the bytes if they are invalid JSON.
+	src, ok, err := sanitizeInvalidJSON(src, rsp.ClobColumn)
+	if err != nil {
+		return nil, fmt.Errorf("error sanitizing invalid JSON: %w", err)
+	}
+
+	// if the bytes are invalid JSON and we cannot sanitize them, then we cannot process the response.
+	if !ok {
+		return nil, nil
+	}
+
+	return proto.DecodeIteratorResults(rsp.URL.String(), src)
+}
+
+// Close will close the iterator and release any resources.
+func (iter *Iterator) Close(ctx context.Context) {}
 
 // Err returns any error encountered by the iterator.
 func (iter *Iterator) Err() error {
@@ -80,11 +122,33 @@ func (iter *Iterator) Err() error {
 
 type responseWorkerConfig struct {
 	coreNum                      int
-	jobs                         <-chan *responseWorkerJob
+	jobs                         <-chan HTTPResponse
 	currentIteratorResultJobChan chan<- *proto.IteratorResult
 	done                         chan<- bool
 	errCh                        chan<- error
-	fn                           responseJobFn
+	handler                      HTTPResponseHandler
+}
+
+// responseWorkerResults will process the response worker job and push the results onto the current channel.
+func responseWorkerResults(ctx context.Context, cfg responseWorkerConfig, rsp HTTPResponse) error {
+	defer func() {
+		cfg.done <- true
+	}()
+
+	if rsp.Body == nil {
+		return nil
+	}
+
+	results, err := cfg.handler(context.Background(), rsp)
+	if err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		cfg.currentIteratorResultJobChan <- result
+	}
+
+	return nil
 }
 
 func startResponseWorker(_ context.Context, cfg responseWorkerConfig) {
@@ -96,93 +160,23 @@ func startResponseWorker(_ context.Context, cfg responseWorkerConfig) {
 	}()
 
 	for job := range cfg.jobs {
-		if job == nil {
-			cfg.done <- true
-
-			continue
+		if err := responseWorkerResults(context.Background(), cfg, job); err != nil {
+			cfg.errCh <- err
 		}
-
-		// TODO: move this block to its own function.
-		if cfg.fn != nil {
-			result, err := cfg.fn(context.Background(), job)
-			if err != nil {
-				cfg.errCh <- fmt.Errorf("failed to run response job function: %w", err)
-			} else {
-				cfg.currentIteratorResultJobChan <- result
-			}
-
-			cfg.done <- true
-
-			continue
-		}
-
-		results, err := proto.DecodeIteratorResults(job.uri.String(), job.rsp)
-		if err != nil {
-			cfg.errCh <- fmt.Errorf("error decoding iterator results: %w", err)
-
-			continue
-		}
-
-		for _, result := range results {
-			cfg.currentIteratorResultJobChan <- result
-		}
-
-		cfg.done <- true
 	}
 
+}
+
+type webWorkerJob struct {
+	req *flattenedRequest
 }
 
 type webWorkerConfig struct {
 	coreNum               int
 	jobs                  <-chan webWorkerJob
-	responseWorkerJobChan chan<- *responseWorkerJob
+	responseWorkerJobChan chan<- HTTPResponse
 	done                  chan<- bool
 	errCh                 chan<- error
-}
-
-// fetch is a helper function that fetches the given request and returns the response body.
-func fetch(ctx context.Context, cfg *web.FetchConfig) ([]byte, error) {
-	rsp, err := web.Fetch(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch: %w", err)
-	}
-
-	bytes, err := io.ReadAll(rsp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
-	}
-
-	defer rsp.Body.Close()
-
-	return bytes, nil
-}
-
-// sanitizeInvalidJSON will sanitize invalid JSON by convering the source bytes into a string and using the clob column
-// on the request to create a valid JSON object. This function will return "false" if there is an error creating the
-// new JSON object or if the source is invalid JSON and no clob column is defined for the request.
-func sanitizeInvalidJSON(src []byte, cfg webWorkerJob) ([]byte, bool, error) {
-	// If the source is valid JSON, then we can return the source bytes.
-	if json.Valid(src) {
-		return src, true, nil
-	}
-
-	// If the source is invalid JSON and there is no clob column defined, then we cannot sanitize the JSON.
-	if cfg.req.clobColumn == "" {
-		return nil, false, nil
-	}
-
-	// If the source is invalid JSON and there is a clob column defined, then we can create a new JSON object
-	// using the clob column.
-	obj := map[string]string{
-		cfg.req.clobColumn: string(src),
-	}
-
-	newSrc, err := json.Marshal(obj)
-	if err != nil {
-		return nil, false, fmt.Errorf("error marshaling new JSON object: %w", err)
-	}
-
-	return newSrc, true, nil
 }
 
 // startWebWorker will start a worker that will make a request to the given URL and push the response onto the
@@ -198,30 +192,16 @@ func startWebWorker(ctx context.Context, cfg webWorkerConfig) {
 	for job := range cfg.jobs {
 		fetchConfig := job.req.fetchConfig
 
-		rspBytes, err := fetch(ctx, fetchConfig)
+		rsp, err := web.Fetch(ctx, job.req.fetchConfig)
 		if err != nil {
-			cfg.errCh <- fmt.Errorf("error fetching: %w", err)
-		}
-
-		// Sanitize the response bytes. If the response bytes are invalid JSON then return nil on the
-		// responseWorkerJobChan.
-		sanitizedRspBytes, ok, err := sanitizeInvalidJSON(rspBytes, job)
-		if err != nil {
-			cfg.errCh <- fmt.Errorf("error sanitizing invalid JSON: %w", err)
+			cfg.errCh <- fmt.Errorf("error fetching url: %w", err)
 
 			continue
 		}
 
-		if !ok {
-			cfg.responseWorkerJobChan <- nil
-
-			continue
-		}
-
-		cfg.responseWorkerJobChan <- &responseWorkerJob{
-			rsp:       sanitizedRspBytes,
-			uri:       fetchConfig.URL,
-			tableName: job.req.table,
+		cfg.responseWorkerJobChan <- HTTPResponse{
+			Response: rsp.Response,
+			URL:      fetchConfig.URL,
 		}
 
 		cfg.done <- true
@@ -287,7 +267,7 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 	// reponseWorkerJobChan is responsible for decoding an HTTP response body into a slice of
 	// IteratorResults which will be pushed to the currentChan. This channel is buffered to be equal to
 	// the number of responses we expect to receive, which should be equal to the number of requests made.
-	responseWorkerJobChan := make(chan *responseWorkerJob, reqCount)
+	responseWorkerJobChan := make(chan HTTPResponse, reqCount)
 
 	// webWorkerJobChan is responsible for making HTTP requests and pushing the response body onto the
 	// responseWorkerJobChan. This channel is buffered to be equal to the number of requests made.
@@ -302,7 +282,7 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 			done:                         done,
 			currentIteratorResultJobChan: iter.currentChan,
 			errCh:                        iter.errCh,
-			fn:                           iter.responseJobFn,
+			handler:                      iter.httpResponseHandler,
 		})
 	}
 

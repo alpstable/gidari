@@ -10,6 +10,7 @@ package gidari
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"path"
 	"time"
@@ -19,10 +20,37 @@ import (
 	"github.com/alpstable/gidari/proto"
 )
 
+var (
+	ErrNilConfig = fmt.Errorf("config is nil")
+)
+
 // Transport will construct the transport operation using a "transport.Config" object.
 func Transport(ctx context.Context, cfg *Config) error {
-	if err := upsert(ctx, cfg); err != nil {
-		return fmt.Errorf("unable to upsert the config: %w", err)
+	if cfg == nil {
+		return ErrNilConfig
+	}
+
+	upserter, err := newUpserter(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("unable to create upserter: %w", err)
+	}
+
+	cfg.HTTPResponseHandler = upserter.HTTPResponseHandler
+
+	// Create an iterator that will iterate over the requests in the configuration file.
+	iter, err := NewIterator(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("unable to create iterator: %w", err)
+	}
+
+	defer iter.Close(ctx)
+
+	for iter.Next(ctx) {
+		// TODO - do something with the response.
+	}
+
+	if err := iter.Err(); err != nil {
+		return fmt.Errorf("error iterating over requests: %w", err)
 	}
 
 	return nil
@@ -264,14 +292,22 @@ func newUpserter(ctx context.Context, cfg *Config) (*upserter, error) {
 	return upserter, nil
 }
 
-func (upserter *upserter) responseJobFn(ctx context.Context, job *responseWorkerJob) (*proto.IteratorResult, error) {
+func (upserter *upserter) HTTPResponseHandler(ctx context.Context, rsp HTTPResponse) ([]*proto.IteratorResult, error) {
 	errChan := make(chan error, len(upserter.repositories))
+
+	// Get bytes from response body.
+	body, err := ioutil.ReadAll(rsp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	defer rsp.Body.Close()
 
 	for _, repo := range upserter.repositories {
 		go func(repo genericRepository) {
 			req := &proto.UpsertRequest{
-				Table: &proto.Table{Name: job.tableName, Database: repo.database},
-				Data:  job.rsp,
+				Table: &proto.Table{Name: rsp.TableName, Database: repo.database},
+				Data:  body,
 			}
 
 			err := upsert_(ctx, req, repo)
@@ -291,37 +327,4 @@ func (upserter *upserter) responseJobFn(ctx context.Context, job *responseWorker
 	}
 
 	return nil, nil
-}
-
-// upsert will use the configuration file to upsert data from the
-//
-// For each DNS entry in the configuration file, a repository will be created and used to upsert data. For each
-// repository, a transaction will be created and used to upsert data. The transaction will be committed at the end
-// of the upsert operation. If the transaction fails, the transaction will be rolled back. Note that it is possible
-// for some repository transactions to succeed and others to fail.
-func upsert(ctx context.Context, cfg *Config) error {
-	// Create an iterator that will iterate over the requests in the configuration file.
-	iter, err := NewIterator(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("unable to create iterator: %w", err)
-	}
-
-	defer iter.Close(ctx)
-
-	upserter, err := newUpserter(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("unable to create upserter: %w", err)
-	}
-
-	iter.responseJobFn = upserter.responseJobFn
-
-	for iter.Next(ctx) {
-		// TODO - do something with the response.
-	}
-
-	if err := iter.Err(); err != nil {
-		return fmt.Errorf("error iterating over requests: %w", err)
-	}
-
-	return nil
 }

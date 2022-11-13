@@ -133,15 +133,7 @@ type FetchResponse struct {
 	// Request is the request that was made to the server.
 	Request *http.Request
 
-	// Body is the response body from the server.
-	Body io.ReadCloser
-}
-
-func newFetchResponse(req *http.Request, body io.ReadCloser) *FetchResponse {
-	return &FetchResponse{
-		Request: req,
-		Body:    body,
-	}
+	Response *http.Response
 }
 
 // Fetch will make an HTTP request using the underlying client and endpoint.
@@ -175,5 +167,8 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 		return nil, fmt.Errorf("error validating response: %w", err)
 	}
 
-	return newFetchResponse(req, rsp.Body), nil
+	return &FetchResponse{
+		Request:  req,
+		Response: rsp,
+	}, nil
 }

@@ -26,7 +26,12 @@ func main() {
 
 	for iter.Next(ctx) {
 		current := iter.Current
-		urlByteSize[current.GetURL()] = append(urlByteSize[current.GetURL()], len(current.GetData()))
+
+		url := current.GetURL()
+		byteSize := len(current.GetData())
+
+		log.Printf("URL: %s, ByteSize: %v", url, byteSize)
+		urlByteSize[url] = append(urlByteSize[url], byteSize)
 	}
 
 	if err := iter.Err(); err != nil {
