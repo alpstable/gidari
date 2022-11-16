@@ -119,8 +119,9 @@ type Request struct {
 	RateLimiter *rate.Limiter
 }
 
-// HTTPResponse is a wrapper for the HTTP response body returned by fetching on an endpoint defined by a Request.
-type HTTPResponse struct {
+// WebResult is a wrapper for the HTTP response body returned by fetching on an endpoint defined by a Request. It
+// also holds other data that is requird for constructing a "proto.IteratorResult" slice for end-user consumption.
+type WebResult struct {
 	*http.Response
 
 	ClobColumn string
@@ -128,9 +129,9 @@ type HTTPResponse struct {
 	URL        *url.URL
 }
 
-// HTTPResponseHandler is a function that is used to process the HTTP response body into a slice of
+// WebResultAssigner is a function that is used to process the HTTP response body into a slice of
 // proto.IteratorResult objects.
-type HTTPResponseHandler func(context.Context, HTTPResponse) ([]*proto.IteratorResult, error)
+type WebResultAssigner func(context.Context, WebResult) ([]*proto.IteratorResult, error)
 
 // Config is the configuration used to query data from the web using HTTP requests and storing that data using
 // the repositories defined by the "ConnectionStrings" list.
@@ -153,7 +154,7 @@ type Config struct {
 	// HTTPResponseHAndler is an optional function that is used in the iterator process to transform the HTTP
 	// response body into a slice of proto.IteratorResult objects. Note that this function cannot be set on a
 	// Transport, it will be overwritten by the Transport's upserter's HTTPResponseHandler.
-	HTTPResponseHandler HTTPResponseHandler `yaml:"-"`
+	HTTPResponseHandler WebResultAssigner `yaml:"-"`
 }
 
 // Validate will ensure that the configuration is valid for querying the web API.

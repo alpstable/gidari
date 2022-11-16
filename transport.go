@@ -288,7 +288,7 @@ func newUpserter(ctx context.Context, cfg *Config) (*upserter, error) {
 	return upserter, nil
 }
 
-func (upserter *upserter) HTTPResponseHandler(ctx context.Context, rsp HTTPResponse) ([]*proto.IteratorResult, error) {
+func (upserter *upserter) HTTPResponseHandler(ctx context.Context, rsp WebResult) ([]*proto.IteratorResult, error) {
 	errChan := make(chan error, len(upserter.repositories))
 
 	// Get bytes from response body.

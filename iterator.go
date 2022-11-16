@@ -24,10 +24,7 @@ type Iterator struct {
 	// Current is a byte slice of the most recent request pushed onto the iterator by the "Next" method.
 	Current *proto.IteratorResult
 
-	// httpResponseHandler is an optional function that can be used to run custom logic on the response worker job. By
-	// default this function is nil and the response worker will attempt to decode the response body into an
-	// IteratorResult.
-	httpResponseHandler HTTPResponseHandler
+	webResultAssigner WebResultAssigner
 
 	// cfg is the configuration for the iterator.
 	cfg *Config
@@ -60,67 +57,76 @@ func NewIterator(ctx context.Context, cfg *Config) (*Iterator, error) {
 	}
 
 	iter := &Iterator{
-		cfg:                 cfg,
-		errCh:               make(chan error, 1),
-		httpResponseHandler: defaultHTTPResponseHandler,
+		cfg:               cfg,
+		errCh:             make(chan error, 1),
+		webResultAssigner: assignWebResult,
 	}
 
 	if cfg.HTTPResponseHandler != nil {
-		iter.httpResponseHandler = cfg.HTTPResponseHandler
+		iter.webResultAssigner = cfg.HTTPResponseHandler
 	}
 
 	return iter, nil
 }
 
-// sanitizeInvalidJSON will sanitize invalid JSON by convering the source bytes into a string and using the clob column
+// sanitizeJSON will sanitize invalid JSON by convering the source bytes into a string and using the clob column
 // on the request to create a valid JSON object. This function will return "false" if there is an error creating the
 // new JSON object or if the source is invalid JSON and no clob column is defined for the request.
-func sanitizeInvalidJSON(src []byte, clobColumn string) ([]byte, bool, error) {
+func sanitizeJSON(src []byte, clobColumn string) ([]byte, bool, error) {
 	// If the source is valid JSON, then we can return the source bytes.
 	if json.Valid(src) {
 		return src, true, nil
 	}
 
-	// If the source is invalid JSON and there is no clob column defined, then we cannot sanitize the JSON.
-	if clobColumn == "" {
-		return nil, false, nil
-	}
+	//// If the source is invalid JSON and there is no clob column defined, then we cannot sanitize the JSON.
+	//if clobColumn == "" {
+	//	return nil, false, nil
+	//}
 
 	// If the source is invalid JSON and there is a clob column defined, then we can create a new JSON object
 	// using the clob column.
-	obj := map[string]string{
-		clobColumn: string(src),
-	}
+	//obj := map[string]string{
+	//	clobColumn: string(src),
+	//}
 
-	newSrc, err := json.Marshal(obj)
-	if err != nil {
-		return nil, false, fmt.Errorf("error marshaling new JSON object: %w", err)
-	}
+	//fmt.Println("obj", obj)
 
-	return newSrc, true, nil
+	return nil, false, nil
+
+	//newSrc, err := json.Marshal(obj)
+	//if err != nil {
+	//	return nil, false, fmt.Errorf("error marshaling new JSON object: %w", err)
+	//}
+
+	//return newSrc, true, nil
 }
 
-// defaultHTTPResponseHandler is the default response job function that is used to process HTTP response data into
+// assignWebResult is the default response job function that is used to assign HTTP response data to
 // proto.IteratorResult objects.
-func defaultHTTPResponseHandler(ctx context.Context, rsp HTTPResponse) ([]*proto.IteratorResult, error) {
+func assignWebResult(ctx context.Context, webResult WebResult) ([]*proto.IteratorResult, error) {
+	// If the response body is nil, then we can return an empty slice of results.
+	if webResult.Body == nil {
+		return []*proto.IteratorResult{}, nil
+	}
+
 	// read the bytes from the response body.
-	src, err := io.ReadAll(rsp.Body)
+	src, err := io.ReadAll(webResult.Response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	// sanitize the bytes if they are invalid JSON.
-	src, ok, err := sanitizeInvalidJSON(src, rsp.ClobColumn)
-	if err != nil {
-		return nil, fmt.Errorf("error sanitizing invalid JSON: %w", err)
-	}
+	//src, ok, err := sanitizeJSON(src, webResult.ClobColumn)
+	//if err != nil {
+	//	return nil, fmt.Errorf("error sanitizing invalid JSON: %w", err)
+	//}
 
-	// if the bytes are invalid JSON and we cannot sanitize them, then we cannot process the response.
-	if !ok {
-		return nil, nil
-	}
+	//// if the bytes are invalid JSON and we cannot sanitize them, then we cannot process the response.
+	//if !ok {
+	//	return nil, nil
+	//}
 
-	return proto.DecodeIteratorResults(rsp.URL.String(), src)
+	return proto.DecodeIteratorResults(webResult.URL.String(), src)
 }
 
 // Close will close the iterator and release any resources.
@@ -133,15 +139,15 @@ func (iter *Iterator) Err() error {
 
 type responseWorkerConfig struct {
 	coreNum                      int
-	jobs                         <-chan HTTPResponse
+	jobs                         <-chan WebResult
 	currentIteratorResultJobChan chan<- *proto.IteratorResult
 	done                         chan<- bool
 	errCh                        chan<- error
-	handler                      HTTPResponseHandler
+	assigner                     WebResultAssigner
 }
 
 // responseWorkerResults will process the response worker job and push the results onto the current channel.
-func responseWorkerResults(ctx context.Context, cfg responseWorkerConfig, rsp HTTPResponse) error {
+func responseWorkerResults(ctx context.Context, cfg responseWorkerConfig, rsp WebResult) error {
 	defer func() {
 		cfg.done <- true
 	}()
@@ -150,7 +156,7 @@ func responseWorkerResults(ctx context.Context, cfg responseWorkerConfig, rsp HT
 		return nil
 	}
 
-	results, err := cfg.handler(context.Background(), rsp)
+	results, err := cfg.assigner(context.Background(), rsp)
 	if err != nil {
 		return err
 	}
@@ -184,7 +190,7 @@ type webWorkerJob struct {
 type webWorkerConfig struct {
 	coreNum               int
 	jobs                  <-chan webWorkerJob
-	responseWorkerJobChan chan<- HTTPResponse
+	responseWorkerJobChan chan<- WebResult
 	done                  chan<- bool
 	errCh                 chan<- error
 }
@@ -209,7 +215,7 @@ func startWebWorker(ctx context.Context, cfg webWorkerConfig) {
 			continue
 		}
 
-		cfg.responseWorkerJobChan <- HTTPResponse{
+		cfg.responseWorkerJobChan <- WebResult{
 			Response: rsp.Response,
 			URL:      fetchConfig.URL,
 		}
@@ -277,7 +283,7 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 	// reponseWorkerJobChan is responsible for decoding an HTTP response body into a slice of
 	// IteratorResults which will be pushed to the currentChan. This channel is buffered to be equal to
 	// the number of responses we expect to receive, which should be equal to the number of requests made.
-	responseWorkerJobChan := make(chan HTTPResponse, reqCount)
+	responseWorkerJobChan := make(chan WebResult, reqCount)
 
 	// webWorkerJobChan is responsible for making HTTP requests and pushing the response body onto the
 	// responseWorkerJobChan. This channel is buffered to be equal to the number of requests made.
@@ -292,7 +298,7 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 			done:                         done,
 			currentIteratorResultJobChan: iter.currentChan,
 			errCh:                        iter.errCh,
-			handler:                      iter.httpResponseHandler,
+			assigner:                     iter.webResultAssigner,
 		})
 	}
 

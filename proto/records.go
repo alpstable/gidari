@@ -10,6 +10,7 @@ package proto
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -152,34 +153,35 @@ func DecodeUpsertBinaryRequest(req *UpsertBinaryRequest) ([]*structpb.Struct, er
 	return binRecords, nil
 }
 
-// DecodeIteratorResult will attempt to transform a blob of JSON data into a slice of IteratorResult object that each
-// contain one JSON object as "data".
-func DecodeIteratorResults(uri string, jsonBytes []byte) ([]*IteratorResult, error) {
-	var data interface{}
-	if err := json.Unmarshal(jsonBytes, &data); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
-	}
+// DecodeWebResult
+func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
+	// determine which format the response is in
 
-	out, err := newSlice(data)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
-	}
+	//var data interface{}
+	//if err := json.Unmarshal(jsonBytes, &data); err != nil {
+	//	return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
+	//}
 
-	results := make([]*IteratorResult, len(out))
+	//out, err := newSlice(data)
+	//if err != nil {
+	//	return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
+	//}
 
-	for idx, r := range out {
-		record, err := json.Marshal(r)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
-		}
+	//results := make([]*IteratorResult, len(out))
 
-		results[idx] = &IteratorResult{
-			Data: record,
-			URL:  uri,
-		}
-	}
+	//for idx, r := range out {
+	//	record, err := json.Marshal(r)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
+	//	}
 
-	return results, nil
+	//	results[idx] = &IteratorResult{
+	//		Data: record,
+	//		URL:  req.URL.String(),
+	//	}
+	//}
+
+	//return results, nil
 }
 
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to
