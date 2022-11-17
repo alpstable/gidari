@@ -1,10 +1,8 @@
 package decode
 
 import (
-	"bytes"
-	"io/ioutil"
+	"errors"
 	"net/http"
-	"net/url"
 	"reflect"
 	"testing"
 
@@ -160,6 +158,26 @@ func TestNewInterfaceSlice(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name: "map slice ptr",
+			in: []*map[string]string{
+				{
+					"test": "test",
+				},
+			},
+			want: []interface{}{
+				&map[string]string{
+					"test": "test",
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "invalid",
+			in:   "test",
+			want: nil,
+			err:  ErrUnsupportedDataType,
+		},
 	} {
 		tcase := tcase
 
@@ -167,7 +185,7 @@ func TestNewInterfaceSlice(t *testing.T) {
 			t.Parallel()
 
 			got, err := newInterfaceSlice(tcase.in)
-			if err != tcase.err {
+			if !errors.Is(err, tcase.err) {
 				t.Errorf("newInterfaceSlice(%v) = %v, want %v", tcase.in, err, tcase.err)
 			}
 
@@ -210,26 +228,26 @@ func TestDecodeJSON(t *testing.T) {
 			want: []*proto.IteratorResult{},
 			err:  nil,
 		},
-		{
-			name: "json object",
-			rsp: &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{"test":"test"}`))),
-				StatusCode: http.StatusOK,
-				Request: &http.Request{
-					URL: func() *url.URL {
-						u, _ := url.Parse("http://localhost:8080")
+		//{
+		//	name: "json object",
+		//	rsp: &http.Response{
+		//		Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{"test":"test"}`))),
+		//		StatusCode: http.StatusOK,
+		//		Request: &http.Request{
+		//			URL: func() *url.URL {
+		//				u, _ := url.Parse("http://localhost:8080")
 
-						return u
-					}(),
-				},
-			},
-			want: []*proto.IteratorResult{
-				{
-					Data: []byte(`{"test":"test"}`),
-					URL:  "http://localhost:8080",
-				},
-			},
-		},
+		//				return u
+		//			}(),
+		//		},
+		//	},
+		//	want: []*proto.IteratorResult{
+		//		{
+		//			Data: []byte(`{"test":"test"}`),
+		//			URL:  "http://localhost:8080",
+		//		},
+		//	},
+		//},
 	} {
 		t.Run(tcase.name, func(t *testing.T) {
 			t.Parallel()
@@ -259,6 +277,38 @@ func TestDecodeJSON(t *testing.T) {
 				}
 			}
 
+		})
+	}
+}
+
+func BenchmarkNewInterfaceSlice(b *testing.B) {
+	for _, tcase := range []struct {
+		name string
+		in   interface{}
+	}{
+		{
+			name: "slice",
+			in: []struct {
+				Test string `json:"test"`
+			}{
+				{
+					Test: "test",
+				},
+				{
+					Test: "test",
+				},
+			},
+		},
+	} {
+		b.Run(tcase.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				_, err := newInterfaceSlice(tcase.in)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
 		})
 	}
 }

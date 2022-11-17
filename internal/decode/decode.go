@@ -74,18 +74,21 @@ func bestFitDecodeType(header string) decodeType {
 
 // newInterfaceSlice will create a new slice of interface{} constructs of the "data" type.
 func newInterfaceSlice(data interface{}) ([]interface{}, error) {
-	var out []interface{}
-
 	dataValue := reflect.ValueOf(data)
 	switch dataValue.Kind() {
 	case reflect.Slice:
+		// Converting a slice is a very expensive operation, there will be one allocation per element in the
+		// slice due to the "Index.Interface()" call. There will be 1 + len(slice) allocations.
+		out := make([]interface{}, dataValue.Len())
 		for i := 0; i < dataValue.Len(); i++ {
-			out = append(out, dataValue.Index(i).Interface())
+			out[i] = dataValue.Index(i).Interface()
 		}
+
+		return out, nil
 	case reflect.Map:
-		out = append(out, dataValue.Interface())
+		return []interface{}{dataValue.Interface()}, nil
 	case reflect.Struct:
-		out = append(out, dataValue.Interface())
+		return []interface{}{dataValue.Interface()}, nil
 	case reflect.Array, reflect.Bool, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Float32,
 		reflect.Float64, reflect.Func, reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
 		reflect.Interface, reflect.Invalid, reflect.Pointer, reflect.String,
@@ -94,7 +97,7 @@ func newInterfaceSlice(data interface{}) ([]interface{}, error) {
 		return nil, fmt.Errorf("%w: %v", ErrUnsupportedDataType, dataValue.Kind())
 	}
 
-	return out, nil
+	return nil, nil
 }
 
 // decodeJSON will decode the body of an http.Response object into a slice of IteratorResult. If the response is a
