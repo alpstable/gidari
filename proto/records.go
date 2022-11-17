@@ -182,6 +182,7 @@ func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
 	//}
 
 	//return results, nil
+	return nil, nil
 }
 
 // PartitionStructs ensures that the request structures are partitioned into size n or less-sized chunks of data, to

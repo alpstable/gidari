@@ -247,62 +247,6 @@ func TestParseAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestBestFitDecodeType(t *testing.T) {
-	t.Parallel()
-
-	for _, tcase := range []struct {
-		name   string
-		accept string
-		want   decodeType
-	}{
-		{
-			name:   "empty",
-			accept: "",
-			want:   decodeTypeJSON,
-		},
-		{
-			name:   "json",
-			accept: "application/json",
-			want:   decodeTypeJSON,
-		},
-		{
-			name:   "json+protobuf",
-			accept: "application/json, application/vnd.google.protobuf",
-			want:   decodeTypeJSON,
-		},
-		{
-			name:   "protobuf",
-			accept: "application/vnd.google.protobuf",
-			want:   decodeTypeUnknown,
-		},
-		{
-			name:   "protobuf+json",
-			accept: "application/vnd.google.protobuf, application/json",
-			want:   decodeTypeJSON,
-		},
-		{
-			name:   "protobuf+json+protobuf",
-			accept: "application/vnd.google.protobuf, application/json, application/vnd.google.protobuf",
-			want:   decodeTypeJSON,
-		},
-		{
-			name:   "protobuf+json+qualityfactor",
-			accept: "application/vnd.google.protobuf, application/json;q=0.5",
-			want:   decodeTypeJSON,
-		},
-	} {
-		tcase := tcase
-
-		t.Run(tcase.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := bestFitDecodeType(tcase.accept); got != tcase.want {
-				t.Errorf("bestFitDecodeType(%q) = %v, want %v", tcase.accept, got, tcase.want)
-			}
-		})
-	}
-}
-
 func mapsAreSimilar(t *testing.T, a, b map[string]string) bool {
 	t.Helper()
 

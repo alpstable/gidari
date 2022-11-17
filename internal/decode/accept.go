@@ -33,18 +33,6 @@ var (
 	errInvalidTypeSubtype = "accept: Invalid type '%s'."
 )
 
-// decodeType will define the type of decoder to use based on the provided Accept header. See the "bestFitDecodeType"
-// function for usage.
-type decodeType int
-
-const (
-	// decodeTypeUnknown is returned when the Accept header does not match any of the provided types.
-	decodeTypeUnknown decodeType = iota
-
-	// decodeTypeJSON will decode the request body as JSON.
-	decodeTypeJSON
-)
-
 // accept represents a parsed accept(-Charset|-Encoding|-Language) header.
 type accept struct {
 	typ, subtype  string
@@ -185,32 +173,4 @@ func parseAcceptHeader(header string) AcceptSlice {
 
 	sort.Sort(accepted)
 	return accepted
-}
-
-// bestFitDecodeType will parse the provided Accept(-Charset|-Encoding|-Language) header and return the header that
-// best fits the decoding algorithm. If the "Accept" header is not set, then this method will return a decodeTypeJSON.
-// If the "Accept" header is set, but no match is found, then this method will return a decodeTypeUnkown.
-//
-// See the "acceptSlice.Less" method for more informaiton on how the "best fit" is determined.
-func bestFitDecodeType(header string) decodeType {
-	accepted := parseAcceptHeader(header)
-
-	// If the header is empty, we default to JSON.
-	if len(accepted) == 0 {
-		return decodeTypeJSON
-	}
-
-	for _, accept := range accepted {
-		// If the type is "*" and the subtype is "*", then we default to JSON.
-		if accept.typ == "*" && accept.subtype == "*" {
-			return decodeTypeJSON
-		}
-
-		// If the type is "application" and the subtype is "json" or "*", then we use JSON.
-		if accept.typ == "application" && (accept.subtype == "json" || accept.subtype == "*") {
-			return decodeTypeJSON
-		}
-	}
-
-	return decodeTypeUnknown
 }
