@@ -10,9 +10,9 @@ package gidari
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"net/url"
-	"path"
+	"runtime"
 	"time"
 
 	"github.com/alpstable/gidari/internal/repository"
@@ -26,12 +26,12 @@ func Transport(ctx context.Context, cfg *Config) error {
 		return ErrNilConfig
 	}
 
-	upserter, err := newUpserter(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("unable to create upserter: %w", err)
-	}
+	//upserter, err := newUpserter(ctx, cfg)
+	//if err != nil {
+	//	return fmt.Errorf("unable to create upserter: %w", err)
+	//}
 
-	cfg.HTTPResponseHandler = upserter.HTTPResponseHandler
+	//cfg.HTTPResponseHandler = upserter.HTTPResponseHandler
 
 	// Create an iterator that will iterate over the requests in the configuration file.
 	iter, err := NewIterator(ctx, cfg)
@@ -41,15 +41,53 @@ func Transport(ctx context.Context, cfg *Config) error {
 
 	defer iter.Close(ctx)
 
-	for iter.Next(ctx) {
-		// TODO - do something with the response.
+	// Create a channel to send requests to the worker.
+	upsertWorkerJobCh := make(chan upsertWorkerJob)
+
+	// Start the upsert worker.
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		go startUpsertWorker(ctx, upsertWorkerConfig{
+			jobs: upsertWorkerJobCh,
+		})
 	}
 
+	for iter.Next(ctx) {
+		fmt.Println(iter.Current.Body)
+	}
+
+	// TODO: if the iterator experiences an error, we need to make sure that the upser worker does not actually
+	// TODO: persist any data. Upserts should be done as a transaction, so this is definitely possible.
 	if err := iter.Err(); err != nil {
 		return fmt.Errorf("error iterating over requests: %w", err)
 	}
 
 	return nil
+}
+
+type upsertWorkerJob struct {
+	req *http.Response
+}
+
+type upsertWorkerConfig struct {
+	//coreNum      int
+	jobs <-chan upsertWorkerJob
+	//responseChan chan<- *http.Response
+	//done         chan<- bool
+	//errCh        chan<- error
+}
+
+// startUpsertWorker will start a worker to upsert data from HTTP responses into a database.
+func startUpsertWorker(ctx context.Context, cfg upsertWorkerConfig) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case job := <-cfg.jobs:
+			// TODO - upsert the data into the database.
+			//upsert_(ctx, job.req, cfg.repo)
+			fmt.Println("request: ", job.req)
+		}
+	}
 }
 
 type genericRepository struct {
@@ -68,46 +106,46 @@ func (gen *genericRepository) Close() {
 	}
 }
 
-func newGenericRepositories(ctx context.Context, cfg *Config) ([]genericRepository, error) {
-	genericRepositories := make([]genericRepository, len(cfg.StorageOptions))
-
-	for idx, stgOpts := range cfg.StorageOptions {
-		stg := stgOpts.Storage
-
-		genRepository, err := repository.NewTx(ctx, stg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create repository: %w", err)
-		}
-
-		genericRepositories[idx] = genericRepository{
-			Generic:  genRepository,
-			database: stgOpts.Database,
-			closable: stgOpts.Close,
-		}
-	}
-
-	return genericRepositories, nil
-}
+//func newGenericRepositories(ctx context.Context, cfg *Config) ([]genericRepository, error) {
+//	genericRepositories := make([]genericRepository, len(cfg.StorageOptions))
+//
+//	for idx, stgOpts := range cfg.StorageOptions {
+//		stg := stgOpts.Storage
+//
+//		genRepository, err := repository.NewTx(ctx, stg)
+//		if err != nil {
+//			return nil, fmt.Errorf("failed to create repository: %w", err)
+//		}
+//
+//		genericRepositories[idx] = genericRepository{
+//			Generic:  genRepository,
+//			database: stgOpts.Database,
+//			closable: stgOpts.Close,
+//		}
+//	}
+//
+//	return genericRepositories, nil
+//}
 
 // newFetchConfig will construct a new HTTP request from the transport request.
-func newFetchConfig(req *Request, rurl url.URL, client *web.Client) *web.FetchConfig {
-	rurl.Path = path.Join(rurl.Path, req.Endpoint)
 
-	// Add the query params to the URL.
-	if req.Query != nil {
-		query := rurl.Query()
-		for key, value := range req.Query {
-			query.Set(key, value)
-		}
+func newFetchConfig(req *Request, client *web.Client) *web.FetchConfig {
+	///rurl.Path = path.Join(rurl.Path, req.Endpoint)
 
-		rurl.RawQuery = query.Encode()
-	}
+	///// Add the query params to the URL.
+	///if req.Query != nil {
+	///	query := rurl.Query()
+	///	for key, value := range req.Query {
+	///		query.Set(key, value)
+	///	}
+
+	///	rurl.RawQuery = query.Encode()
+	///}
 
 	return &web.FetchConfig{
-		Method:      req.Method,
-		URL:         &rurl,
 		C:           client,
 		RateLimiter: req.RateLimiter,
+		Request:     req.HttpRequest,
 	}
 }
 
@@ -124,18 +162,18 @@ type flattenedRequest struct {
 
 // flatten will compress the request information into a "web.FetchConfig" request and a "table" name for storage
 // interaction.
-func flattenRequest(req *Request, rurl url.URL, client *web.Client) *flattenedRequest {
-	fetchConfig := newFetchConfig(req, rurl, client)
+func flattenRequest(req *Request, client *web.Client) *flattenedRequest {
+	fetchConfig := newFetchConfig(req, client)
 
 	// If the table is not set on the request, then set it using the last path segment of the endpoint.
-	if req.Table == "" {
-		req.Table = path.Base(req.Endpoint)
-	}
+	//if req.Table == "" {
+	//	req.Table = path.Base(req.Endpoint)
+	//}
 
 	return &flattenedRequest{
 		fetchConfig: fetchConfig,
-		table:       req.Table,
-		clobColumn:  req.ClobColumn,
+		//table:       req.Table,
+		//clobColumn:  req.ClobColumn,
 	}
 }
 
@@ -186,47 +224,47 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 // flattenRequestTimeseries will compress the request information into a "web.FetchConfig" request and a "table" name
 // for storage interaction. This function will create a flattened request for each time series in the request. If no
 // timeseries are defined, this function will return a single flattened request.
-func flattenRequestTimeseries(req *Request, rurl url.URL, client *web.Client) ([]*flattenedRequest, error) {
-	timeseries := req.Timeseries
-	if timeseries == nil {
-		flatReq := flattenRequest(req, rurl, client)
-
-		return []*flattenedRequest{flatReq}, nil
-	}
-
-	requests := make([]*flattenedRequest, 0, len(timeseries.Chunks))
-
-	// Add the query params to the URL.
-	if req.Query != nil {
-		query := rurl.Query()
-		for key, value := range req.Query {
-			query.Set(key, value)
-		}
-
-		rurl.RawQuery = query.Encode()
-	}
-
-	if err := chunkTimeseries(timeseries, rurl); err != nil {
-		return nil, fmt.Errorf("failed to set time series chunks: %w", err)
-	}
-
-	for _, chunk := range timeseries.Chunks {
-		// copy the request and update it to reflect the partitioned timeseries
-		chunkReq := req
-		chunkReq.Query[timeseries.StartName] = chunk[0].Format(timeseries.Layout)
-		chunkReq.Query[timeseries.EndName] = chunk[1].Format(timeseries.Layout)
-
-		fetchConfig := newFetchConfig(chunkReq, rurl, client)
-
-		requests = append(requests, &flattenedRequest{
-			fetchConfig: fetchConfig,
-			table:       req.Table,
-			clobColumn:  req.ClobColumn,
-		})
-	}
-
-	return requests, nil
-}
+//func flattenRequestTimeseries(req *Request, rurl url.URL, client *web.Client) ([]*flattenedRequest, error) {
+//	timeseries := req.Timeseries
+//	if timeseries == nil {
+//		flatReq := flattenRequest(req, rurl, client)
+//
+//		return []*flattenedRequest{flatReq}, nil
+//	}
+//
+//	requests := make([]*flattenedRequest, 0, len(timeseries.Chunks))
+//
+//	// Add the query params to the URL.
+//	if req.Query != nil {
+//		query := rurl.Query()
+//		for key, value := range req.Query {
+//			query.Set(key, value)
+//		}
+//
+//		rurl.RawQuery = query.Encode()
+//	}
+//
+//	if err := chunkTimeseries(timeseries, rurl); err != nil {
+//		return nil, fmt.Errorf("failed to set time series chunks: %w", err)
+//	}
+//
+//	for _, chunk := range timeseries.Chunks {
+//		// copy the request and update it to reflect the partitioned timeseries
+//		chunkReq := req
+//		chunkReq.Query[timeseries.StartName] = chunk[0].Format(timeseries.Layout)
+//		chunkReq.Query[timeseries.EndName] = chunk[1].Format(timeseries.Layout)
+//
+//		fetchConfig := newFetchConfig(chunkReq, rurl, client)
+//
+//		requests = append(requests, &flattenedRequest{
+//			fetchConfig: fetchConfig,
+//			table:       req.Table,
+//			clobColumn:  req.ClobColumn,
+//		})
+//	}
+//
+//	return requests, nil
+//}
 
 // flattenConfigRequests will flatten the requests into a single slice for HTTP requests.
 func flattenConfigRequests(ctx context.Context, cfg *Config) ([]*flattenedRequest, error) {
@@ -238,12 +276,15 @@ func flattenConfigRequests(ctx context.Context, cfg *Config) ([]*flattenedReques
 	var flattenedRequests []*flattenedRequest
 
 	for _, req := range cfg.Requests {
-		flatReqs, err := flattenRequestTimeseries(req, *cfg.URL, client)
-		if err != nil {
-			return nil, err
-		}
+		//flatReqs, err := flattenRequestTimeseries(req, *cfg.URL, client)
+		//if err != nil {
+		//	return nil, err
+		//}
 
-		flattenedRequests = append(flattenedRequests, flatReqs...)
+		//flattenedRequests = append(flattenedRequests, flatReqs...)
+
+		flatReq := flattenRequest(req, client)
+		flattenedRequests = append(flattenedRequests, flatReq)
 	}
 
 	if len(flattenedRequests) == 0 {
@@ -268,59 +309,59 @@ func upsert_(_ context.Context, req *proto.UpsertRequest, genericRepository gene
 	return nil
 }
 
-type upserter struct {
-	// repositories is a list of repositories to upsert data into, defined by a configuration.
-	repositories []genericRepository
-
-	repositoryChan chan genericRepository
-}
-
-func newUpserter(ctx context.Context, cfg *Config) (*upserter, error) {
-	upserter := new(upserter)
-
-	var err error
-
-	upserter.repositories, err = newGenericRepositories(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return upserter, nil
-}
-
-func (upserter *upserter) HTTPResponseHandler(ctx context.Context, rsp WebResult) ([]*proto.IteratorResult, error) {
-	errChan := make(chan error, len(upserter.repositories))
-
-	// Get bytes from response body.
-	body, err := ioutil.ReadAll(rsp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	defer rsp.Body.Close()
-
-	for _, repo := range upserter.repositories {
-		go func(repo genericRepository) {
-			req := &proto.UpsertRequest{
-				Table: &proto.Table{Name: rsp.TableName, Database: repo.database},
-				Data:  body,
-			}
-
-			err := upsert_(ctx, req, repo)
-			if err != nil {
-				errChan <- err
-			}
-
-			errChan <- nil
-		}(repo)
-	}
-
-	for idx := 0; idx < len(upserter.repositories); idx++ {
-		err := <-errChan
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return nil, nil
-}
+//type upserter struct {
+//	// repositories is a list of repositories to upsert data into, defined by a configuration.
+//	repositories []genericRepository
+//
+//	repositoryChan chan genericRepository
+//}
+//
+//func newUpserter(ctx context.Context, cfg *Config) (*upserter, error) {
+//	upserter := new(upserter)
+//
+//	var err error
+//
+//	upserter.repositories, err = newGenericRepositories(ctx, cfg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return upserter, nil
+//}
+//
+//func (upserter *upserter) HTTPResponseHandler(ctx context.Context, rsp WebResult) ([]*proto.IteratorResult, error) {
+//	errChan := make(chan error, len(upserter.repositories))
+//
+//	// Get bytes from response body.
+//	body, err := ioutil.ReadAll(rsp.Body)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to read response body: %w", err)
+//	}
+//
+//	defer rsp.Body.Close()
+//
+//	for _, repo := range upserter.repositories {
+//		go func(repo genericRepository) {
+//			req := &proto.UpsertRequest{
+//				Table: &proto.Table{Name: rsp.TableName, Database: repo.database},
+//				Data:  body,
+//			}
+//
+//			err := upsert_(ctx, req, repo)
+//			if err != nil {
+//				errChan <- err
+//			}
+//
+//			errChan <- nil
+//		}(repo)
+//	}
+//
+//	for idx := 0; idx < len(upserter.repositories); idx++ {
+//		err := <-errChan
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//
+//	return nil, nil
+//}

@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/alpstable/gidari/internal/web/auth"
 	"golang.org/x/time/rate"
@@ -103,9 +102,8 @@ func validateResponse(res *http.Response) error {
 
 type FetchConfig struct {
 	C           *Client
-	Method      string
-	URL         *url.URL
 	RateLimiter *rate.Limiter
+	Request     *http.Request
 }
 
 func (cfg *FetchConfig) validate() error {
@@ -113,13 +111,13 @@ func (cfg *FetchConfig) validate() error {
 		return MissingFetchConfigFieldError("Client")
 	}
 
-	if cfg.Method == "" {
-		return MissingFetchConfigFieldError("Method")
-	}
+	//if cfg.Method == "" {
+	//	return MissingFetchConfigFieldError("Method")
+	//}
 
-	if cfg.URL == nil {
-		return MissingFetchConfigFieldError("URL")
-	}
+	//if cfg.URL == nil {
+	//	return MissingFetchConfigFieldError("URL")
+	//}
 
 	if cfg.RateLimiter == nil {
 		return MissingFetchConfigFieldError("RateLimiter")
@@ -137,7 +135,7 @@ type FetchResponse struct {
 }
 
 // Fetch will make an HTTP request using the underlying client and endpoint.
-func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
+func Fetch(ctx context.Context, cfg *FetchConfig) (*http.Response, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
@@ -147,28 +145,19 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*FetchResponse, error) {
 		return nil, fmt.Errorf("rate limiter error: %w", err)
 	}
 
-	req, err := newHTTPRequest(ctx, cfg.Method, cfg.URL)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
+	//req, err := newHTTPRequest(ctx, cfg.Method, cfg.URL)
+	//if err != nil {
+	//	return nil, fmt.Errorf("error creating request: %w", err)
+	//}
 
-	if err != nil {
-		return nil, fmt.Errorf("rate limiter timeout: %w", err)
-	}
+	//if err != nil {
+	//	return nil, fmt.Errorf("rate limiter timeout: %w", err)
+	//}
 
-	rsp, err := cfg.C.Client.Do(req)
+	rsp, err := cfg.C.Client.Do(cfg.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
-	if err := validateResponse(rsp); err != nil {
-		rsp.Body.Close()
-
-		return nil, fmt.Errorf("error validating response: %w", err)
-	}
-
-	return &FetchResponse{
-		Request:  req,
-		Response: rsp,
-	}, nil
+	return rsp, nil
 }

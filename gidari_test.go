@@ -8,15 +8,10 @@
 package gidari
 
 import (
-	"context"
 	"net/url"
-	"path"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/alpstable/gidari/internal/web"
-	"golang.org/x/time/rate"
 )
 
 func TestTimeseries(t *testing.T) {
@@ -372,171 +367,171 @@ func TestTimeseries(t *testing.T) {
 //	})
 //}
 
-func TestNewFetchConfig(t *testing.T) {
-	t.Parallel()
+//func TestNewFetchConfig(t *testing.T) {
+//	t.Parallel()
+//
+//	testURL, err := url.Parse("https://fuzz")
+//	if err != nil {
+//		t.Fatalf("error parsing url: %v", err)
+//	}
+//
+//	testClient := &web.Client{}
+//
+//	testRateLimiter := rate.NewLimiter(rate.Every(time.Second), 2)
+//
+//	for _, tcase := range []struct {
+//		req      *Request
+//		expected *web.FetchConfig
+//	}{
+//		{
+//			req: &Request{
+//				Endpoint:    "/test",
+//				Method:      "POST",
+//				RateLimiter: testRateLimiter,
+//				Query: map[string]string{
+//					"hey": "ho",
+//					"foo": "bar",
+//				},
+//			},
+//			expected: &web.FetchConfig{
+//				Method:      "POST",
+//				URL:         testURL,
+//				C:           testClient,
+//				RateLimiter: testRateLimiter,
+//			},
+//		},
+//	} {
+//		fetchConfig := newFetchConfig(tcase.req, *testURL, testClient)
+//
+//		if fetchConfig.Method != tcase.expected.Method {
+//			t.Error("unexpected fetchMethod")
+//		}
+//
+//		if fetchConfig.C != tcase.expected.C {
+//			t.Error("unexpected fetchClient")
+//		}
+//
+//		if fetchConfig.RateLimiter != tcase.expected.RateLimiter {
+//			t.Error("unexpected fetchRateLimiter")
+//		}
+//
+//		// URL Path should be concatenated with request Endpoint
+//		if fetchConfig.URL.Path != path.Join(testURL.Path, tcase.req.Endpoint) {
+//			t.Errorf("unexpected fetchURL Path: %v", fetchConfig.URL.Path)
+//		}
+//
+//		// Query parameters should be added to the URL Query
+//		for k, v := range tcase.req.Query {
+//			if fetchConfig.URL.Query().Get(k) != v {
+//				t.Errorf("unexpected fetchURL Query for %v", k)
+//			}
+//		}
+//	}
+//}
 
-	testURL, err := url.Parse("https://fuzz")
-	if err != nil {
-		t.Fatalf("error parsing url: %v", err)
-	}
-
-	testClient := &web.Client{}
-
-	testRateLimiter := rate.NewLimiter(rate.Every(time.Second), 2)
-
-	for _, tcase := range []struct {
-		req      *Request
-		expected *web.FetchConfig
-	}{
-		{
-			req: &Request{
-				Endpoint:    "/test",
-				Method:      "POST",
-				RateLimiter: testRateLimiter,
-				Query: map[string]string{
-					"hey": "ho",
-					"foo": "bar",
-				},
-			},
-			expected: &web.FetchConfig{
-				Method:      "POST",
-				URL:         testURL,
-				C:           testClient,
-				RateLimiter: testRateLimiter,
-			},
-		},
-	} {
-		fetchConfig := newFetchConfig(tcase.req, *testURL, testClient)
-
-		if fetchConfig.Method != tcase.expected.Method {
-			t.Error("unexpected fetchMethod")
-		}
-
-		if fetchConfig.C != tcase.expected.C {
-			t.Error("unexpected fetchClient")
-		}
-
-		if fetchConfig.RateLimiter != tcase.expected.RateLimiter {
-			t.Error("unexpected fetchRateLimiter")
-		}
-
-		// URL Path should be concatenated with request Endpoint
-		if fetchConfig.URL.Path != path.Join(testURL.Path, tcase.req.Endpoint) {
-			t.Errorf("unexpected fetchURL Path: %v", fetchConfig.URL.Path)
-		}
-
-		// Query parameters should be added to the URL Query
-		for k, v := range tcase.req.Query {
-			if fetchConfig.URL.Query().Get(k) != v {
-				t.Errorf("unexpected fetchURL Query for %v", k)
-			}
-		}
-	}
-}
-
-func Test_flattenConfigRequests(t *testing.T) {
-	t.Parallel()
-
-	type args struct {
-		cfg *Config
-	}
-
-	tests := []struct {
-		name     string
-		args     args
-		wantReqs []*flattenedRequest
-		wantErr  bool
-	}{
-		{
-			name: "successfully flatten arequest",
-			args: args{
-				cfg: &Config{
-					URL: &url.URL{
-						Path: "path",
-					},
-					Requests: []*Request{
-						{
-							Method:   "POST",
-							Endpoint: "endpoint",
-						},
-					},
-				},
-			},
-			wantReqs: []*flattenedRequest{
-				{
-					fetchConfig: &web.FetchConfig{
-						Method: "POST",
-						URL: &url.URL{
-							Path: "path/endpoint",
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "fail to flattenrequests when none are passed",
-			args: args{
-				cfg: &Config{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail to flatten request time series",
-			args: args{
-				cfg: &Config{
-					URL: &url.URL{},
-					Requests: []*Request{
-						{
-							Timeseries: &Timeseries{
-								StartName: "startName",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tcase := range tests {
-		tcase := tcase
-
-		t.Run(tcase.name, func(t *testing.T) {
-			t.Parallel()
-
-			gotReqs, err := flattenConfigRequests(context.Background(), tcase.args.cfg)
-			if (err != nil) != tcase.wantErr {
-				t.Errorf("flattenConfigRequests() error = %v, wantErr %v", err, tcase.wantErr)
-
-				return
-			}
-			if len(gotReqs) != len(tcase.wantReqs) {
-				t.Errorf("flattenConfigRequests() got %d requests, want %d", len(gotReqs), len(tcase.wantReqs))
-			}
-			for _, gotReq := range gotReqs {
-				for _, wantReq := range tcase.wantReqs {
-					if !compareRequests(gotReq, wantReq) {
-						t.Errorf("flattenConfigRequests() request comparison failed")
-					}
-				}
-			}
-		})
-	}
-}
-
-func compareRequests(request1, request2 *flattenedRequest) bool {
-	if request1 == nil || request2 == nil {
-		return false
-	}
-
-	if request1.fetchConfig.URL.Path != request2.fetchConfig.URL.Path {
-		return false
-	}
-
-	if request1.fetchConfig.Method != request2.fetchConfig.Method {
-		return false
-	}
-
-	return true
-}
+//func Test_flattenConfigRequests(t *testing.T) {
+//	t.Parallel()
+//
+//	type args struct {
+//		cfg *Config
+//	}
+//
+//	tests := []struct {
+//		name     string
+//		args     args
+//		wantReqs []*flattenedRequest
+//		wantErr  bool
+//	}{
+//		{
+//			name: "successfully flatten arequest",
+//			args: args{
+//				cfg: &Config{
+//					URL: &url.URL{
+//						Path: "path",
+//					},
+//					Requests: []*Request{
+//						{
+//							Method:   "POST",
+//							Endpoint: "endpoint",
+//						},
+//					},
+//				},
+//			},
+//			wantReqs: []*flattenedRequest{
+//				{
+//					fetchConfig: &web.FetchConfig{
+//						Method: "POST",
+//						URL: &url.URL{
+//							Path: "path/endpoint",
+//						},
+//					},
+//				},
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "fail to flattenrequests when none are passed",
+//			args: args{
+//				cfg: &Config{},
+//			},
+//			wantErr: true,
+//		},
+//		{
+//			name: "fail to flatten request time series",
+//			args: args{
+//				cfg: &Config{
+//					URL: &url.URL{},
+//					Requests: []*Request{
+//						{
+//							Timeseries: &Timeseries{
+//								StartName: "startName",
+//							},
+//						},
+//					},
+//				},
+//			},
+//			wantErr: true,
+//		},
+//	}
+//
+//	for _, tcase := range tests {
+//		tcase := tcase
+//
+//		t.Run(tcase.name, func(t *testing.T) {
+//			t.Parallel()
+//
+//			gotReqs, err := flattenConfigRequests(context.Background(), tcase.args.cfg)
+//			if (err != nil) != tcase.wantErr {
+//				t.Errorf("flattenConfigRequests() error = %v, wantErr %v", err, tcase.wantErr)
+//
+//				return
+//			}
+//			if len(gotReqs) != len(tcase.wantReqs) {
+//				t.Errorf("flattenConfigRequests() got %d requests, want %d", len(gotReqs), len(tcase.wantReqs))
+//			}
+//			for _, gotReq := range gotReqs {
+//				for _, wantReq := range tcase.wantReqs {
+//					if !compareRequests(gotReq, wantReq) {
+//						t.Errorf("flattenConfigRequests() request comparison failed")
+//					}
+//				}
+//			}
+//		})
+//	}
+//}
+//
+//func compareRequests(request1, request2 *flattenedRequest) bool {
+//	if request1 == nil || request2 == nil {
+//		return false
+//	}
+//
+//	if request1.fetchConfig.URL.Path != request2.fetchConfig.URL.Path {
+//		return false
+//	}
+//
+//	if request1.fetchConfig.Method != request2.fetchConfig.Method {
+//		return false
+//	}
+//
+//	return true
+//}

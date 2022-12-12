@@ -3,9 +3,9 @@ package gidari_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/alpstable/gidari"
@@ -15,55 +15,85 @@ import (
 func ExampleNewIterator() {
 	ctx := context.Background()
 
-	// For this example, we will query the "A Song of Ice and Fire" API.
-	url, err := url.Parse("https://anapioficeandfire.com")
-	if err != nil {
-		log.Fatal(err)
-	}
+	const api = "https://anapioficeandfire.com/api"
 
-	// Create a configuration for the iterator.
-	config := &gidari.Config{
-		URL: url,
+	// Create the HTTP Requests to iterate over.
+	bookReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/books", nil)
+	houseReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/houses", nil)
+	charReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/characters", nil)
+
+	// Create the iterator object.
+	iter, _ := gidari.NewIterator(ctx, &gidari.Config{
 		Requests: []*gidari.Request{
 			{
-				Endpoint:    "/api/books",
-				Method:      http.MethodGet,
+				HttpRequest: bookReq,
 				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
 			},
 			{
-				Endpoint:    "/api/characters",
-				Method:      http.MethodGet,
+				HttpRequest: houseReq,
 				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
 			},
 			{
-				Endpoint:    "/api/houses",
-				Method:      http.MethodGet,
+				HttpRequest: charReq,
 				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
 			},
 		},
-	}
-
-	// Create an iterator for the configuration.
-	iter, err := gidari.NewIterator(ctx, config)
-	if err != nil {
-		log.Fatalf("failed to create iterator: %v", err)
-	}
+	})
 
 	defer iter.Close(ctx)
 
-	// byteSize will keep track of the number of bytes for the JSON response in each request.
+	// byteSize will keep track of the sum of bytes for each HTTP Response's body.
 	var byteSize int
 
 	for iter.Next(ctx) {
-		current := iter.Current
-		byteSize += len(current.GetData())
+		// Get the byte slice from the response body.
+		body, err := io.ReadAll(iter.Current.Body)
+		if err != nil {
+			log.Fatalf("failed to read response body: %v", err)
+		}
+
+		// Add the number of bytes to the sum.
+		byteSize += len(body)
 	}
 
-	if err := iter.Err(); err != nil {
-		log.Fatalf("iterator error: %v", err)
-	}
-
-	fmt.Println("Total number of byte:", byteSize)
+	fmt.Println("Total number of bytes:", byteSize)
 	// Output:
-	// Total number of byte: 256146
+	// Total number of bytes: 256179
+}
+
+func ExampleTransport() {
+	ctx := context.Background()
+
+	const api = "https://anapioficeandfire.com/api"
+
+	// Create the HTTP Requests to iterate over.
+	bookReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/books", nil)
+	houseReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/houses", nil)
+	charReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/characters", nil)
+
+	// Initiate the transport
+	err := gidari.Transport(ctx, &gidari.Config{
+		Requests: []*gidari.Request{
+			{
+				HttpRequest: bookReq,
+				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
+			},
+			{
+				HttpRequest: houseReq,
+				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
+			},
+			{
+				HttpRequest: charReq,
+				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
+			},
+		},
+	})
+
+	if err != nil {
+		log.Fatalf("failed to transport: %v", err)
+	}
+
+	fmt.Println("Transported successfully")
+	// Output:
+	// Transported successfully
 }
