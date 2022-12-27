@@ -19,15 +19,82 @@ import (
 	"github.com/alpstable/gidari/internal/web"
 )
 
+func TestIterator(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NewIterator", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tcase := range []struct {
+			name string
+			cfg  *Config
+			err  error
+		}{
+			{
+				name: "nil",
+				err:  ErrNilConfig,
+			},
+		} {
+			t.Run(tcase.name, func(t *testing.T) {
+				t.Parallel()
+
+				_, err := NewIterator(context.Background(), tcase.cfg)
+				if tcase.err != nil && !errors.Is(err, tcase.err) {
+					t.Errorf("expected error %v, got %v", tcase.err, err)
+				}
+
+				if tcase.err == nil && err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("Next", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tcase := range []struct {
+			name     string
+			cfg      *Config
+			err      error
+			expected []*http.Response
+		}{
+			//{
+			//	name: "nil",
+			//	err:  ErrNilConfig,
+			//},
+		} {
+			t.Run(tcase.name, func(t *testing.T) {
+				t.Parallel()
+
+				itr, err := NewIterator(context.Background(), tcase.cfg)
+				if err != nil {
+					t.Fatalf("unexpected error %v", err)
+				}
+
+				ctx := context.Background()
+				for itr.Next(ctx) {
+					fmt.Println(itr.Current)
+				}
+			})
+		}
+	})
+}
+
 func TestStartWebWorker(t *testing.T) {
 	t.Parallel()
 
 	errTest := fmt.Errorf("test error")
 
 	for _, tcase := range []struct {
-		name     string
-		ctx      context.Context
-		cfg      *webWorkerConfig
+		name string
+		ctx  context.Context
+		cfg  *webWorkerConfig
+
+		// poolCount is the number of workers to start.
+		poolCount int
+
+		// jobcount is the number of jobs to send to the workers for req/rsp processing.
 		jobCount int
 
 		// idToError is a map of job IDs to throw the mapping error on. If this is nil, then no planned errors
@@ -43,8 +110,23 @@ func TestStartWebWorker(t *testing.T) {
 			expectedError: context.DeadlineExceeded,
 		},
 		{
+			name:          "empty with high pool count",
+			cfg:           &webWorkerConfig{},
+			poolCount:     100,
+			expectedError: context.DeadlineExceeded,
+		},
+		{
 			name:     "one job on a buffered channel",
 			jobCount: 1,
+			cfg: &webWorkerConfig{
+				rspCh: make(chan *http.Response, 1),
+				jobs:  make(chan webWorkerJob, 1),
+			},
+		},
+		{
+			name:      "one job on a buffered channel with high pool count",
+			jobCount:  1,
+			poolCount: 100,
 			cfg: &webWorkerConfig{
 				rspCh: make(chan *http.Response, 1),
 				jobs:  make(chan webWorkerJob, 1),
@@ -115,50 +197,57 @@ func TestStartWebWorker(t *testing.T) {
 				tcase.cfg.errCh = make(chan error, 1)
 			}
 
+			// If the pool count is not set, then set it to 1.
+			if tcase.poolCount == 0 {
+				tcase.poolCount = 1
+			}
+
 			// If the done channel is not set, then create a channel with a buffer size of the number of
 			// jobs.
 			if tcase.cfg.done == nil {
 				tcase.cfg.done = make(chan bool, tcase.jobCount)
 			}
 
-			// Add the default request handler to the configuration.
-			if tcase.cfg.reqHandler == nil {
-				tcase.cfg.reqHandler = func(_ context.Context,
-					_ *web.FetchConfig) (*http.Response, error) {
-
-					return &http.Response{}, nil
-				}
+			for w := 0; w < tcase.poolCount; w++ {
+				go startWebWorker(ctx, tcase.cfg)
 			}
-
-			// Add the artifical errors to the configuration.
-			if tcase.cfg.rspHandler == nil && tcase.idToError != nil {
-				handlerCount := 0
-				handlerCountMtx := &sync.Mutex{}
-				tcase.cfg.rspHandler = func(_ context.Context, _ *http.Response) error {
-					handlerCountMtx.Lock()
-					defer handlerCountMtx.Unlock()
-
-					handlerCount++
-
-					if err, ok := tcase.idToError[handlerCount]; ok {
-						return err
-					}
-
-					return nil
-				}
-			}
-
-			go startWebWorker(ctx, tcase.cfg)
 
 			// Send empty requests to the jobs channel.
 			for i := 0; i < tcase.jobCount; i++ {
-				tcase.cfg.jobs <- webWorkerJob{
+				job := &webWorkerJob{
 					req: &flattenedRequest{
 						fetchConfig: &web.FetchConfig{
 							Request: &http.Request{},
 						},
 					},
 				}
+
+				// Add the default request handler to the configuration.
+				job.req.reqHandler = func(_ context.Context,
+					_ *web.FetchConfig) (*http.Response, error) {
+
+					return &http.Response{}, nil
+				}
+
+				// Add the artifical errors to the configuration.
+				if tcase.idToError != nil {
+					handlerCount := 0
+					handlerCountMtx := &sync.Mutex{}
+					job.req.rspHandler = func(_ context.Context, _ *http.Response) error {
+						handlerCountMtx.Lock()
+						defer handlerCountMtx.Unlock()
+
+						handlerCount++
+
+						if err, ok := tcase.idToError[handlerCount]; ok {
+							return err
+						}
+
+						return nil
+					}
+				}
+
+				tcase.cfg.jobs <- *job
 			}
 
 			if tcase.cfg.jobs != nil {

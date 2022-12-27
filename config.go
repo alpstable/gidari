@@ -93,6 +93,10 @@ type Timeseries struct {
 type Request struct {
 	HttpRequest *http.Request
 
+	HttpResponseHandler IteratorWebResponseHandler
+
+	HttpRequestHandler IteratorWebRequestHandler
+
 	// Timeseries indicates that the underlying data should be queries as a time series. This means that the
 	//Timeseries *Timeseries `yaml:"timeseries"`
 
@@ -107,6 +111,10 @@ type Request struct {
 	// Chunks of requests should share a rate limiter, probably all of them; inheriting the rate limiter from the
 	// root configuration.
 	RateLimiter *rate.Limiter
+}
+
+func (req *Request) validate() error {
+	return nil
 }
 
 // WebResult is a wrapper for the HTTP response body returned by fetching on an endpoint defined by a Request. It
@@ -128,7 +136,9 @@ type Request struct {
 type Config struct {
 	//RawURL          string           `yaml:"url"`
 	// Authentication  Authentication   `yaml:"authentication"`
+
 	Requests []*Request `yaml:"requests"`
+
 	// RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
 	// StorageOptions  []StorageOptions `yaml:"storage"`
 
@@ -147,11 +157,17 @@ type Config struct {
 	//HTTPResponseHandler WebResultAssigner `yaml:"-"`
 }
 
-// Validate will ensure that the configuration is valid for querying the web API.
-func (cfg *Config) Validate() error {
+// validate will ensure that the configuration is valid for querying the web API.
+func (cfg *Config) validate() error {
 	//if cfg.URL == nil {
 	//	return ErrMissingURL
 	//}
+
+	for _, req := range cfg.Requests {
+		if err := req.validate(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

@@ -21,6 +21,9 @@ import (
 )
 
 // Transport will construct the transport operation using a "transport.Config" object.
+//
+// Configuration request and response handlers will be overwriten by the transport, they are used as listeners for when
+// an HTTP request has been made and when a response has been received.
 func Transport(ctx context.Context, cfg *Config) error {
 	if cfg == nil {
 		return ErrNilConfig
@@ -156,6 +159,8 @@ type flattenedRequest struct {
 	// the web worker can process concurrently without locking. Despite this, however, all of the requests should
 	// share a common rate limiter to prevent overloading the web API and gettig a 429 response.
 	fetchConfig *web.FetchConfig
+	rspHandler  IteratorWebResponseHandler
+	reqHandler  IteratorWebRequestHandler
 	table       string
 	clobColumn  string
 }
@@ -172,6 +177,8 @@ func flattenRequest(req *Request, client *web.Client) *flattenedRequest {
 
 	return &flattenedRequest{
 		fetchConfig: fetchConfig,
+		rspHandler:  req.HttpResponseHandler,
+		reqHandler:  req.HttpRequestHandler,
 		//table:       req.Table,
 		//clobColumn:  req.ClobColumn,
 	}

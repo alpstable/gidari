@@ -59,7 +59,7 @@ func NewIterator(ctx context.Context, cfg *Config) (*Iterator, error) {
 		return nil, ErrNilConfig
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
 
@@ -205,13 +205,14 @@ type webWorkerJob struct {
 }
 
 type webWorkerConfig struct {
-	id         int
-	jobs       chan webWorkerJob
-	rspCh      chan *http.Response
-	done       chan bool
-	errCh      chan error
-	reqHandler IteratorWebRequestHandler
-	rspHandler IteratorWebResponseHandler
+	// id is a unique identifier for the worker. This value MUST be set in order to start a web worker. One and
+	// only one web worker configuration MUST have an ID of 1 in order to close the response channel.
+	id int
+
+	jobs  chan webWorkerJob
+	rspCh chan *http.Response
+	done  chan bool
+	errCh chan error
 
 	hasClosed  bool
 	jobCounter int
@@ -221,28 +222,40 @@ type webWorkerConfig struct {
 // the repository channel. If the request fails, the error will be pushed onto the error channel which will
 // propagate to the iterator's Next method.
 //
+// This function should be the only function that sends to the response channel (i.e. "rspCh"). Because this function
+// is meant to be used as a worker pool, it is important that the response channel is not closed until all workers have
+// finished. Therefore, this function will close the response channel ONLY when the worker with ID 1 has finished. This
+// works because all workers will be blocked from the "defer" method until the "jobs" channel is closed.
+//
 // If an error is encountered, the worker will push the error onto the error channel and then exit. Note that only the
 // most recent error will be propagated to the "errCh" channel, per the rules of "errgroup.Group". Also, regardless of
 // errors encountered, the worker will always continue to process jobs until the jobs channel is closed.
 func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
+	// Create an "errgroup.Group" to handle errors.
 	errGroup := new(errgroup.Group)
+
 	defer func() {
+		// Wait for all goroutines for this worker to finish, then close the done channel.
 		if err := errGroup.Wait(); err != nil {
 			cfg.errCh <- err
 		} else {
 			cfg.errCh <- nil
 		}
 
-		if cfg.rspCh != nil {
+		if cfg.id == 1 {
 			close(cfg.rspCh)
+			close(cfg.done)
 		}
 	}()
 
+	// If the "jobs" channel is closed, then we must exit.
 	if cfg.jobs == nil {
 		return
 	}
 
 	for job := range cfg.jobs {
+		req := job.req
+
 		select {
 		case <-ctx.Done():
 			cfg.jobCounter++
@@ -267,20 +280,20 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 					}
 				}()
 
-				if cfg.reqHandler == nil {
+				if req.reqHandler == nil {
 					// httpRsp, err = cfg.reqHandler(ctx, job.req.fetchConfig)
-					cfg.reqHandler = web.Fetch
+					req.reqHandler = web.Fetch
 				}
 
-				httpRsp, err := cfg.reqHandler(ctx, job.req.fetchConfig)
+				httpRsp, err := req.reqHandler(ctx, job.req.fetchConfig)
 				if err != nil {
 					return err
 				}
 
 				// Check if there is a web handler set on the configuration. If there is, then send the
 				// response to the web handler.
-				if cfg.rspHandler != nil {
-					if err := cfg.rspHandler(ctx, httpRsp); err != nil {
+				if req.rspHandler != nil {
+					if err := req.rspHandler(ctx, httpRsp); err != nil {
 						return err
 					}
 				}
