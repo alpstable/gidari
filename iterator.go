@@ -10,7 +10,6 @@ package gidari
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 
@@ -18,19 +17,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type IteratorWebResponseHandler func(context.Context, *http.Response) error
+type Handler interface {
+	ResponseCallback(ctx context.Context, rsp *http.Response, cfg *flattenedRequestConfig) error
+}
 
-type IteratorWebRequestHandler func(context.Context, *web.FetchConfig) (*http.Response, error)
+type Current struct {
+	Response *http.Response
+	Table    string
+}
 
 // Iterator holds the request state of a gidari configuration and can be used to iterate over the request results.
 type Iterator struct {
 	// Current is a byte slice of the most recent request pushed onto the iterator by the "Next" method.
-	Current *http.Response
+	Current *Current
 
 	//webResultAssigner WebResultAssigner
 
 	// cfg is the configuration for the iterator.
-	cfg *Config
+	//cfg *Config
 
 	// currentChan is a channel that holds the end-result of the response worker. The iterator's "Next" method is
 	// used to push data from the currentChan onto the Current field.
@@ -39,7 +43,7 @@ type Iterator struct {
 	// number of results in an HTTP JSON response. However, the number of results is not known until the response
 	// is received and decoded by the response worker. Therefore, this channel must remain unbuffered and the
 	// closure of this channel is left to the response worker.
-	responseChan chan *http.Response
+	currentChan chan *Current
 
 	// errCh is a channel that holds any errors encountered by the iterator. It can be propagated to the user
 	// by the "Err" method.
@@ -51,6 +55,8 @@ type Iterator struct {
 	// flattenRequests is a slice of flattened requests that will be used to make HTTP requests. The number of
 	// web requests made will be equal to the length of this slice.
 	flattenedRequests []*flattenedRequest
+
+	handler Handler
 }
 
 // NewIterator returns an Iterator object for the given configuration.
@@ -64,8 +70,8 @@ func NewIterator(ctx context.Context, cfg *Config) (*Iterator, error) {
 	}
 
 	iter := &Iterator{
-		cfg:   cfg,
 		errCh: make(chan error, 1),
+		//handler: handler,
 		//webResultAssigner: assignWebResult,
 	}
 
@@ -209,13 +215,15 @@ type webWorkerConfig struct {
 	// only one web worker configuration MUST have an ID of 1 in order to close the response channel.
 	id int
 
-	jobs  chan webWorkerJob
-	rspCh chan *http.Response
-	done  chan bool
-	errCh chan error
+	jobs      chan webWorkerJob
+	currentCh chan *Current
+	done      chan bool
+	errCh     chan error
 
 	hasClosed  bool
 	jobCounter int
+
+	handler Handler
 }
 
 // startWebWorker will start a worker that will make a request to the given URL and push the response onto the
@@ -231,127 +239,73 @@ type webWorkerConfig struct {
 // most recent error will be propagated to the "errCh" channel, per the rules of "errgroup.Group". Also, regardless of
 // errors encountered, the worker will always continue to process jobs until the jobs channel is closed.
 func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
-	// Create an "errgroup.Group" to handle errors.
-	errGroup := new(errgroup.Group)
-
-	defer func() {
-		// Wait for all goroutines for this worker to finish, then close the done channel.
-		if err := errGroup.Wait(); err != nil {
-			cfg.errCh <- err
-		} else {
-			cfg.errCh <- nil
-		}
-
-		if cfg.id == 1 {
-			close(cfg.rspCh)
-			close(cfg.done)
-		}
-	}()
-
-	// If the "jobs" channel is closed, then we must exit.
-	if cfg.jobs == nil {
-		return
-	}
+	errs, ctx := errgroup.WithContext(ctx)
 
 	for job := range cfg.jobs {
-		req := job.req
+		job := job
 
-		select {
-		case <-ctx.Done():
-			cfg.jobCounter++
-			if cfg.errCh != nil {
-				cfg.errCh <- ctx.Err()
-			}
+		errs.Go(func() error {
+			select {
+			case <-ctx.Done():
+				cfg.jobCounter++
 
-			return
-		default:
-			cfg.jobCounter++
-			errGroup.Go(func() error {
+				return ctx.Err()
+			default:
+				//cfg.jobCounter++
 				var httpRsp *http.Response
 				defer func() {
-					// Alert the done channel that the job is complete, if it exists.
-					if cfg.done != nil {
-						cfg.done <- true
+					var table string
+					if cfg := job.req.cfg; cfg != nil {
+						table = cfg.table
 					}
 
 					// Push the response onto the response channel, if it exists.
-					if cfg.rspCh != nil {
-						cfg.rspCh <- httpRsp
+					cfg.currentCh <- &Current{
+						Response: httpRsp,
+						Table:    table,
 					}
+
+					// Alert the done channel that the job is complete, if it exists.
+					cfg.done <- true
 				}()
 
-				if req.reqHandler == nil {
-					// httpRsp, err = cfg.reqHandler(ctx, job.req.fetchConfig)
-					req.reqHandler = web.Fetch
-				}
-
-				httpRsp, err := req.reqHandler(ctx, job.req.fetchConfig)
+				rsp, err := web.Fetch(ctx, job.req.fetchConfig)
 				if err != nil {
 					return err
 				}
 
-				// Check if there is a web handler set on the configuration. If there is, then send the
-				// response to the web handler.
-				if req.rspHandler != nil {
-					if err := req.rspHandler(ctx, httpRsp); err != nil {
-						return err
-					}
-				}
+				httpRsp = rsp
+
+				//// Check if there is a web handler set on the configuration. If there is, then send the
+				//// response to the web handler.
+				//if cfg.handler != nil {
+				//	err := cfg.handler.ResponseCallback(ctx, httpRsp, job.req.cfg)
+				//	if err != nil {
+				//		return err
+				//	}
+				//}
 
 				return nil
-			})
-		}
-	}
-}
-
-// connect will attempt to connect to the web API client. Since there are multiple ways to build a transport given the
-// authentication data, this method will exhaust every transport option in the "Authentication" struct.
-//
-// If the a client is defined on the configuration, then connect will return the user-defined client instead of
-// instantiating one gracefully.
-func connect(ctx context.Context, cfg *Config) (*web.Client, error) {
-	//if cfg.Client != nil {
-	//	return &web.Client{
-	//		Client: *cfg.Client,
-	//	}, nil
-	//}
-
-	//if apiKey := cfg.Authentication.APIKey; apiKey != nil {
-	//	client, err := web.NewClient(ctx, auth.NewAPIKey().
-	//		SetURL(cfg.RawURL).
-	//		SetKey(apiKey.Key).
-	//		SetPassphrase(apiKey.Passphrase).
-	//		SetSecret(apiKey.Secret))
-	//	if err != nil {
-	//		return nil, fmt.Errorf("failed to create API key client: %w", err)
-	//	}
-
-	//	return client, nil
-	//}
-
-	//if apiKey := cfg.Authentication.Auth2; apiKey != nil {
-	//	client, err := web.NewClient(ctx, auth.NewAuth2().SetBearer(apiKey.Bearer).SetURL(cfg.RawURL))
-	//	if err != nil {
-	//		return nil, fmt.Errorf("failed to create client: %w", err)
-	//	}
-
-	//	return client, nil
-	//}
-
-	// In the case of no authentication, create a client without an auth transport.
-	client, err := web.NewClient(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %w", err)
+			}
+		})
 	}
 
-	return client, nil
+	if err := errs.Wait(); err != nil {
+		cfg.errCh <- err
+	}
+
+	if cfg.id == 1 {
+		close(cfg.currentCh)
+		close(cfg.done)
+		close(cfg.errCh)
+	}
 }
 
 // startWorkers will start the iterator's web workers and response workers. This method can be used to lazy load the
 // underlying buffered channels.
 func (iter *Iterator) startWorkers(ctx context.Context) {
-	iter.responseChan = make(chan *http.Response)
 	reqCount := len(iter.flattenedRequests)
+	iter.currentChan = make(chan *Current, reqCount)
 
 	// webWorkerJobChan is responsible for making HTTP requests and pushing the response body onto the
 	// responseWorkerJobChan. This channel is buffered to be equal to the number of requests made.
@@ -361,20 +315,19 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 	// Start the web workers.
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go startWebWorker(ctx, &webWorkerConfig{
-			id:    i + 1,
-			jobs:  webWorkerJobChan,
-			rspCh: iter.responseChan,
-			done:  done,
-			errCh: iter.errCh,
+			id:        i + 1,
+			jobs:      webWorkerJobChan,
+			currentCh: iter.currentChan,
+			done:      done,
+			errCh:     iter.errCh,
+			handler:   iter.handler,
 		})
 	}
 
 	go func() {
 		// Send the flattened requests to the web workers for processing.
 		for _, req := range iter.flattenedRequests {
-			webWorkerJobChan <- webWorkerJob{
-				req: req,
-			}
+			webWorkerJobChan <- webWorkerJob{req: req}
 		}
 	}()
 
@@ -396,7 +349,7 @@ func (iter *Iterator) startWorkers(ctx context.Context) {
 func (iter *Iterator) Next(ctx context.Context) bool {
 	// If the current channel is nil, then we need to start the workers. This will lazy load the web workers and
 	// the response workers, each buffered by the number of flattened requests.
-	if iter.responseChan == nil {
+	if iter.currentChan == nil {
 		iter.startWorkers(ctx)
 	}
 
@@ -411,9 +364,15 @@ func (iter *Iterator) Next(ctx context.Context) bool {
 
 				return false
 			}
-		case result, ok := <-iter.responseChan:
+		case result, ok := <-iter.currentChan:
 			if !ok {
 				return false
+			}
+
+			// If the result is "nil," then something is wrong with the response. We will skip this response
+			// and continue to encounter the underlying error.
+			if result == nil {
+				continue
 			}
 
 			iter.Current = result

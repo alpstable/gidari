@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/alpstable/gidari/internal/web/auth"
 	"golang.org/x/time/rate"
 )
 
@@ -60,14 +59,9 @@ func GettingResponseError(rsp *http.Response) error {
 }
 
 // Client is a wrapper around the http.Client that will handle authentication and rate limiting.
-type Client struct{ http.Client }
-
-// NewClient will return a new client with the given options.
-func NewClient(_ context.Context, roundtripper auth.Transport) (*Client, error) {
-	c := new(Client)
-	c.Client.Transport = roundtripper
-
-	return c, nil
+// type Client struct{ http.Client }
+type Client interface {
+	Do(*http.Request) (*http.Response, error)
 }
 
 // newHTTPRequest will return a new request.  If the options are set, this function will encode a body if possible.
@@ -101,16 +95,12 @@ func validateResponse(res *http.Response) error {
 }
 
 type FetchConfig struct {
-	C           *Client
+	Client      Client
 	RateLimiter *rate.Limiter
 	Request     *http.Request
 }
 
 func (cfg *FetchConfig) validate() error {
-	if cfg.C == nil {
-		return MissingFetchConfigFieldError("Client")
-	}
-
 	//if cfg.Method == "" {
 	//	return MissingFetchConfigFieldError("Method")
 	//}
@@ -154,7 +144,9 @@ func Fetch(ctx context.Context, cfg *FetchConfig) (*http.Response, error) {
 	//	return nil, fmt.Errorf("rate limiter timeout: %w", err)
 	//}
 
-	rsp, err := cfg.C.Client.Do(cfg.Request)
+	//fmt.Println("fetching", cfg.Request.URL.String())
+
+	rsp, err := cfg.Client.Do(cfg.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}

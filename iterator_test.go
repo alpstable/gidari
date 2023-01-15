@@ -17,7 +17,18 @@ import (
 	"time"
 
 	"github.com/alpstable/gidari/internal/web"
+	"golang.org/x/time/rate"
 )
+
+type mockClient struct{}
+
+func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
+	rsp := &http.Response{
+		Request: req,
+	}
+
+	return rsp, nil
+}
 
 func TestIterator(t *testing.T) {
 	t.Parallel()
@@ -54,31 +65,113 @@ func TestIterator(t *testing.T) {
 		t.Parallel()
 
 		for _, tcase := range []struct {
-			name     string
-			cfg      *Config
-			err      error
-			expected []*http.Response
+			name string
+
+			// requestCount are the number of requests that the iterator will make.
+			requestCount int
+
+			// setRateLimiters will set the rate limiter on the requests, if true.
+			setRateLimiters bool
+
+			// err is the error that the iterator will return.
+			err error
 		}{
-			//{
-			//	name: "nil",
-			//	err:  ErrNilConfig,
-			//},
+			{
+				name:            "many healthy requests",
+				requestCount:    5,
+				setRateLimiters: true,
+			},
 		} {
 			t.Run(tcase.name, func(t *testing.T) {
 				t.Parallel()
 
-				itr, err := NewIterator(context.Background(), tcase.cfg)
-				if err != nil {
-					t.Fatalf("unexpected error %v", err)
+				var cfg *Config
+				var itr *Iterator
+
+				// urlSet is a set of URLs that the iterator will request.
+				urlSet := make(map[string]struct{})
+
+				{
+					// Setup the configuration and the iterator.
+					cfg = &Config{
+						Client: &mockClient{},
+					}
+
+					if tcase.setRateLimiters {
+						cfg.RateLimiter = rate.NewLimiter(rate.Every(time.Second), 100)
+					}
+
+					// Add the requests to the config.
+					for i := 0; i < tcase.requestCount; i++ {
+						url := fmt.Sprintf("https://example.com/%d", i)
+						urlSet[url] = struct{}{}
+
+						httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
+						if err != nil {
+							t.Fatalf("failed to create request: %v", err)
+						}
+
+						cfg.Requests = append(cfg.Requests, &Request{
+							Request: httpRequest,
+						})
+					}
+
+					var err error
+					itr, err = NewIterator(context.Background(), cfg)
+
+					if err != nil {
+						t.Fatalf("unexpected error %v", err)
+					}
 				}
 
-				ctx := context.Background()
-				for itr.Next(ctx) {
-					fmt.Println(itr.Current)
+				{
+					// Iterate over the request responses.
+					for itr.Next(context.Background()) {
+						url := itr.Current.Response.Request.URL.String()
+						if _, ok := urlSet[url]; !ok {
+							t.Errorf("unexpected url %s", url)
+						}
+
+						delete(urlSet, url)
+					}
+
+					// Ensure that no unexpected errors occur.
+					if err := itr.Err(); err != nil {
+						t.Errorf("unexpected error %v", err)
+					}
+
+					// Ensure that all requests were made.
+					if len(urlSet) > 0 {
+						t.Errorf("expected all urls to be returned, got %d", len(urlSet))
+					}
 				}
 			})
 		}
 	})
+}
+
+type webWorkerMockClient struct {
+	mutex sync.Mutex
+
+	count    int
+	idErrors map[int]error
+}
+
+func (w *webWorkerMockClient) Do(req *http.Request) (*http.Response, error) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if w.idErrors == nil {
+		return nil, nil
+	}
+
+	w.count++
+
+	if err, ok := w.idErrors[w.count]; ok {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func TestStartWebWorker(t *testing.T) {
@@ -119,8 +212,8 @@ func TestStartWebWorker(t *testing.T) {
 			name:     "one job on a buffered channel",
 			jobCount: 1,
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 1),
-				jobs:  make(chan webWorkerJob, 1),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 1),
 			},
 		},
 		{
@@ -128,16 +221,16 @@ func TestStartWebWorker(t *testing.T) {
 			jobCount:  1,
 			poolCount: 100,
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 1),
-				jobs:  make(chan webWorkerJob, 1),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 1),
 			},
 		},
 		{
 			name:     "many jobs on a buffered channel",
 			jobCount: 10,
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 10),
-				jobs:  make(chan webWorkerJob, 10),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 10),
 			},
 		},
 		{
@@ -147,8 +240,8 @@ func TestStartWebWorker(t *testing.T) {
 				1: errTest,
 			},
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 10),
-				jobs:  make(chan webWorkerJob, 10),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 10),
 			},
 			expectedError: errTest,
 		},
@@ -156,8 +249,8 @@ func TestStartWebWorker(t *testing.T) {
 			name:     "many jobs with error in middle",
 			jobCount: 10,
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 10),
-				jobs:  make(chan webWorkerJob, 10),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 10),
 			},
 			idToError: map[int]error{
 				3: errTest,
@@ -168,8 +261,8 @@ func TestStartWebWorker(t *testing.T) {
 			name:     "many jobs with error on last",
 			jobCount: 10,
 			cfg: &webWorkerConfig{
-				rspCh: make(chan *http.Response, 10),
-				jobs:  make(chan webWorkerJob, 10),
+				currentCh: make(chan *Current, 1),
+				jobs:      make(chan webWorkerJob, 10),
 			},
 			idToError: map[int]error{
 				10: errTest,
@@ -219,33 +312,36 @@ func TestStartWebWorker(t *testing.T) {
 						fetchConfig: &web.FetchConfig{
 							Request: &http.Request{},
 						},
+						client: &webWorkerMockClient{
+							idErrors: tcase.idToError,
+						},
 					},
 				}
 
 				// Add the default request handler to the configuration.
-				job.req.reqHandler = func(_ context.Context,
-					_ *web.FetchConfig) (*http.Response, error) {
+				//job.req.reqHandler = func(_ context.Context,
+				//	_ *web.FetchConfig) (*http.Response, error) {
 
-					return &http.Response{}, nil
-				}
+				//	return &http.Response{}, nil
+				//}
 
 				// Add the artifical errors to the configuration.
-				if tcase.idToError != nil {
-					handlerCount := 0
-					handlerCountMtx := &sync.Mutex{}
-					job.req.rspHandler = func(_ context.Context, _ *http.Response) error {
-						handlerCountMtx.Lock()
-						defer handlerCountMtx.Unlock()
+				//if tcase.idToError != nil {
+				//	//handlerCount := 0
+				//	//handlerCountMtx := &sync.Mutex{}
+				//	//job.req.client.Do = func(_ *http.Response) (*http.Response, error) {
+				//	//	handlerCountMtx.Lock()
+				//	//	defer handlerCountMtx.Unlock()
 
-						handlerCount++
+				//	//	handlerCount++
 
-						if err, ok := tcase.idToError[handlerCount]; ok {
-							return err
-						}
+				//	//	if err, ok := tcase.idToError[handlerCount]; ok {
+				//	//		return err
+				//	//	}
 
-						return nil
-					}
-				}
+				//	//	return nil
+				//	//}
+				//}
 
 				tcase.cfg.jobs <- *job
 			}

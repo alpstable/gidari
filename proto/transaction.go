@@ -46,5 +46,9 @@ func (txn *Txn) Rollback() error {
 
 // Send will send a function to the transaction channel.
 func (txn *Txn) Send(fn TxnChanFn) {
+	if txn.FunctionCh == nil {
+		return
+	}
+
 	txn.FunctionCh <- fn
 }

@@ -70,9 +70,16 @@ func NewTx(ctx context.Context, stg proto.Storage) (*GenericService, error) {
 	return &GenericService{stg, tx}, nil
 }
 
-// Transact is a helper function that wraps a function in a transaction and commits or rolls back the transaction. If
-// svc is not a transaction, the function will be executed without executing.
+// Transact is a helper function that wraps a function in a transaction and
+// commits or rolls back the transaction. If svc is not a transaction, the
+// function will be executed without a transaction.
 func (svc *GenericService) Transact(fn func(ctx context.Context, repo Generic) error) {
+	if svc.Txn == nil {
+		fn(context.Background(), svc)
+
+		return
+	}
+
 	svc.Txn.Send(func(ctx context.Context, stg proto.Storage) error {
 		err := fn(ctx, svc)
 		if err != nil {

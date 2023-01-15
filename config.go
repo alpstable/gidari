@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
 )
@@ -33,7 +34,7 @@ type Authentication struct {
 	Auth2  *Auth2  `yaml:"auth2"`
 }
 
-type StorageOptions struct {
+type Storage struct {
 	Storage proto.Storage
 
 	// Database is the name of the database to run operations against. This is an optional field and will not be
@@ -90,32 +91,32 @@ type Timeseries struct {
 }
 
 // Request is the information needed to query the web API for data to transport.
-type Request struct {
-	HttpRequest *http.Request
+//type Request struct {
+//*http.Request
 
-	HttpResponseHandler IteratorWebResponseHandler
+//HttpResponseHandler IteratorWebResponseHandler
 
-	HttpRequestHandler IteratorWebRequestHandler
+//HttpRequestHandler IteratorWebRequestHandler
 
-	// Timeseries indicates that the underlying data should be queries as a time series. This means that the
-	//Timeseries *Timeseries `yaml:"timeseries"`
+// Timeseries indicates that the underlying data should be queries as a time series. This means that the
+//Timeseries *Timeseries `yaml:"timeseries"`
 
-	// Table is the name of the table/collection to insert the data fetched from the web API.
-	//Table string `yaml:"table"`
+// Table is the name of the table/collection to insert the data fetched from the web API.
+//Table string `yaml:"table"`
 
-	// Truncate before upserting on single request
-	//Truncate *bool `yaml:"truncate"`
+// Truncate before upserting on single request
+//Truncate *bool `yaml:"truncate"`
 
-	//ClobColumn string `yaml:"clobColumn"`
+//ClobColumn string `yaml:"clobColumn"`
 
-	// Chunks of requests should share a rate limiter, probably all of them; inheriting the rate limiter from the
-	// root configuration.
-	RateLimiter *rate.Limiter
-}
+// Chunks of requests should share a rate limiter, probably all of them; inheriting the rate limiter from the
+// root configuration.
+// RateLimiter *rate.Limiter
+//}
 
-func (req *Request) validate() error {
-	return nil
-}
+//func (req *Request) validate() error {
+//	return nil
+//}
 
 // WebResult is a wrapper for the HTTP response body returned by fetching on an endpoint defined by a Request. It
 // also holds other data that is requird for constructing a "proto.IteratorResult" slice for end-user consumption.
@@ -126,6 +127,12 @@ func (req *Request) validate() error {
 //	TableName  string
 //	URL        *url.URL
 //}
+
+type Request struct {
+	*http.Request
+
+	Table string `yaml:"table"`
+}
 
 // WebResultAssigner is a function that is used to process the HTTP response body into a slice of
 // proto.IteratorResult objects.
@@ -139,8 +146,14 @@ type Config struct {
 
 	Requests []*Request `yaml:"requests"`
 
+	// Client is an interface that for an HTTP client. This interface is used to make the web requests. This is
+	// an optional field and will be set to the default HTTP client if not provided.
+	Client web.Client `yaml:"-"`
+
+	RateLimiter *rate.Limiter `yaml:"-"`
+
 	// RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
-	// StorageOptions  []StorageOptions `yaml:"storage"`
+	Storage []*Storage `yaml:"storage"`
 
 	// Truncate bool `yaml:"-"`
 
@@ -163,11 +176,11 @@ func (cfg *Config) validate() error {
 	//	return ErrMissingURL
 	//}
 
-	for _, req := range cfg.Requests {
-		if err := req.validate(); err != nil {
-			return err
-		}
-	}
+	//for _, req := range cfg.Requests {
+	//	if err := req.validate(); err != nil {
+	//		return err
+	//	}
+	//}
 
 	return nil
 }
