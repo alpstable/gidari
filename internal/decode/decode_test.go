@@ -132,10 +132,8 @@ func TestMapToIR(t *testing.T) {
 					t.Errorf("mapToIR() = %v, want %v", got, tcase.want)
 				}
 			}
-
 		})
 	}
-
 }
 
 func TestSliceToIR(t *testing.T) {
@@ -258,7 +256,7 @@ func TestSliceToIR(t *testing.T) {
 	}
 }
 
-//func TestNewInterfaceSlice(t *testing.T) {
+// func TestNewInterfaceSlice(t *testing.T) {
 //	t.Parallel()
 //
 //	for _, tcase := range []struct {
@@ -440,7 +438,7 @@ func TestDecodeJSON(t *testing.T) {
 		//			URL:  "http://localhost:8080",
 		//		},
 		//	},
-		//},
+		// },
 	} {
 		t.Run(tcase.name, func(t *testing.T) {
 			t.Parallel()
@@ -469,12 +467,11 @@ func TestDecodeJSON(t *testing.T) {
 					t.Fatalf("got %v, want %v", got[i].URL, tcase.want[i].URL)
 				}
 			}
-
 		})
 	}
 }
 
-//func BenchmarkNewInterfaceSlice(b *testing.B) {
+// func BenchmarkNewInterfaceSlice(b *testing.B) {
 //	for _, tcase := range []struct {
 //		name string
 //		in   interface{}

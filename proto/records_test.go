@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-//func TestDecodeUpsertBinaryRequest(t *testing.T) {
+// func TestDecodeUpsertBinaryRequest(t *testing.T) {
 //	t.Parallel()
 //
 //	type args struct {

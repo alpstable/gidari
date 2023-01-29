@@ -29,9 +29,7 @@ import (
 	"strings"
 )
 
-var (
-	errInvalidTypeSubtype = "accept: Invalid type '%s'."
-)
+var errInvalidTypeSubtype = "accept: Invalid type '%s'."
 
 // accept represents a parsed accept(-Charset|-Encoding|-Language) header.
 type accept struct {

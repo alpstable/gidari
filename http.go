@@ -61,7 +61,6 @@ func (svc *HTTPService) RateLimiter(rate *rate.Limiter) *HTTPService {
 	svc.rlimiter = rate
 
 	return svc
-
 }
 
 // Client sets the optional client to be used by the service. If no client is
@@ -282,7 +281,7 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 
 				return ctx.Err()
 			default:
-				//cfg.jobCounter++
+
 				var httpRsp *http.Response
 				defer func() {
 					// Push the response onto the response

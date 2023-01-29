@@ -16,7 +16,7 @@ proto:
 # test runs all of the unit tests locally. Each test is run 5 times to minimize flakiness.
 .PHONY: tests
 tests:
-	$(GC) clean -testcache && go test -v -count=5 -tags=utests ./...
+	$(GC) clean -testcache && go test -v -count=5 ./...
 
 # examples runs all of the example in a Go Docker container.
 .PHONY: examples

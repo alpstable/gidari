@@ -16,6 +16,23 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Storage struct {
+	Storage proto.Storage
+
+	// Database is the name of the database to run operations against. This is an optional field and will not be
+	// needed for every storage device. It is needed for storage like MongoDB, for instance, which needs a client
+	// to make transactions. But it is not needed by PostgreSQL or a file system.
+	Database string
+
+	// Close indicates that the storage should be closed after the transport operation. It is not recommended to
+	// set this to true unless you are running a single transport operation. The primary use case for this is
+	// with CLI commands that create connections to a database given a connection string.
+	Close bool `yaml:"-"`
+
+	// Connection string is the URI to connect to the database. This is only valid using the CLI.
+	ConnectionString *string `yaml:"connectionString"`
+}
+
 type Service struct {
 	storage []*Storage
 
@@ -139,7 +156,6 @@ func startUpsertWorker(ctx context.Context, cfg upsertWorkerConfig) {
 
 					return err
 				})
-
 			}
 
 			if err := errs.Wait(); err != nil {

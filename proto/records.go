@@ -153,23 +153,23 @@ func DecodeUpsertBinaryRequest(req *UpsertBinaryRequest) ([]*structpb.Struct, er
 	return binRecords, nil
 }
 
-// DecodeWebResult
+// DecodeWebResult.
 func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
 	// determine which format the response is in
 
-	//var data interface{}
+	// var data interface{}
 	//if err := json.Unmarshal(jsonBytes, &data); err != nil {
 	//	return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 	//}
 
-	//out, err := newSlice(data)
+	// out, err := newSlice(data)
 	//if err != nil {
 	//	return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
 	//}
 
-	//results := make([]*IteratorResult, len(out))
 
-	//for idx, r := range out {
+
+	// for idx, r := range out {
 	//	record, err := json.Marshal(r)
 	//	if err != nil {
 	//		return nil, fmt.Errorf("%w: %v", ErrFailedToMarshalJSON, err)
@@ -181,7 +181,7 @@ func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
 	//	}
 	//}
 
-	//return results, nil
+
 	return nil, nil
 }
 

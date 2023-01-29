@@ -21,7 +21,6 @@ type mockServiceOptions struct {
 func newMockService(opts mockServiceOptions) *Service {
 	svc, err := NewService(context.Background(),
 		WithStorage(newMockStorage(opts.stgCount)...))
-
 	if err != nil {
 		panic(err)
 	}
