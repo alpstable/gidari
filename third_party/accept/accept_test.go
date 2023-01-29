@@ -20,7 +20,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package decode
+package accept
 
 import "testing"
 
@@ -36,10 +36,10 @@ func TestParseAcceptHeader(t *testing.T) {
 			input: "",
 			output: AcceptSlice{
 				{ // 0
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 			},
 		},
@@ -48,28 +48,28 @@ func TestParseAcceptHeader(t *testing.T) {
 			input: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 			output: AcceptSlice{
 				{ // 0
-					typ:           "text",
-					subtype:       "html",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "text",
+					Subtype:       "html",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 1
-					typ:           "application",
-					subtype:       "xhtml+xml",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "application",
+					Subtype:       "xhtml+xml",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 2
-					typ:           "application",
-					subtype:       "xml",
-					qualityFactor: 0.9,
-					extensions:    map[string]string{},
+					Typ:           "application",
+					Subtype:       "xml",
+					QualityFactor: 0.9,
+					Extensions:    map[string]string{},
 				},
 				{ // 3
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 0.8,
-					extensions:    map[string]string{},
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 0.8,
+					Extensions:    map[string]string{},
 				},
 			},
 		},
@@ -86,28 +86,28 @@ func TestParseAcceptHeader(t *testing.T) {
 					,  *  /  *  ;  q  =  0.8`,
 			output: AcceptSlice{
 				{ // 0
-					typ:           "text",
-					subtype:       "html",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "text",
+					Subtype:       "html",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 1
-					typ:           "application",
-					subtype:       "xhtml+xml",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "application",
+					Subtype:       "xhtml+xml",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 2
-					typ:           "application",
-					subtype:       "xml",
-					qualityFactor: 0.9,
-					extensions:    map[string]string{},
+					Typ:           "application",
+					Subtype:       "xml",
+					QualityFactor: 0.9,
+					Extensions:    map[string]string{},
 				},
 				{ // 3
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 0.8,
-					extensions:    map[string]string{},
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 0.8,
+					Extensions:    map[string]string{},
 				},
 			},
 		},
@@ -116,10 +116,10 @@ func TestParseAcceptHeader(t *testing.T) {
 			input: "text/html;q=1.05,application/xhtml+xml;q=-1.05,application/xml;q=1.0=0.5,*/*;q=INVALID",
 			output: AcceptSlice{
 				{ // 0
-					typ:           "text",
-					subtype:       "html",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "text",
+					Subtype:       "html",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 			},
 		},
@@ -128,96 +128,96 @@ func TestParseAcceptHeader(t *testing.T) {
 			input: "*/*,*/*;a=1,*/*;a=1;b=1,text/*,text/*;a=1,text/*;a=1;b=1,*/plain,*/plain;a=1,*/plain;a=1;b=1,text/plain,text/plain;a=1,text/plain;a=1;b=1",
 			output: AcceptSlice{
 				{ // 0
-					typ:           "text",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "text",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 						"b": "1",
 					},
 				},
 				{ // 1
-					typ:           "text",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "text",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 					},
 				},
 				{ // 2
-					typ:           "text",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "text",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 3
-					typ:           "text",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "text",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 						"b": "1",
 					},
 				},
 				{ // 4
-					typ:           "text",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "text",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 					},
 				},
 				{ // 5
-					typ:           "text",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "text",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 6
-					typ:           "*",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "*",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 						"b": "1",
 					},
 				},
 				{ // 7
-					typ:           "*",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "*",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 					},
 				},
 				{ // 8
-					typ:           "*",
-					subtype:       "plain",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "*",
+					Subtype:       "plain",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 				{ // 9
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 						"b": "1",
 					},
 				},
 				{ // 10
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions: map[string]string{
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions: map[string]string{
 						"a": "1",
 					},
 				},
 				{ // 11
-					typ:           "*",
-					subtype:       "*",
-					qualityFactor: 1,
-					extensions:    map[string]string{},
+					Typ:           "*",
+					Subtype:       "*",
+					QualityFactor: 1,
+					Extensions:    map[string]string{},
 				},
 			},
 		},
@@ -225,23 +225,23 @@ func TestParseAcceptHeader(t *testing.T) {
 
 	var accepted AcceptSlice
 	for testPos, test := range parseTests {
-		accepted = parseAcceptHeader(test.input)
+		accepted = ParseAcceptHeader(test.input)
 		if len(accepted) != len(test.output) {
 			t.Errorf("Parse (%d): expected %d elements, received %d.", testPos, len(test.output), len(accepted))
 			continue
 		}
 		for i, a := range accepted {
-			if a.typ != test.output[i].typ {
-				t.Errorf("Parse (%d.%d): expected type '%v', received '%v'.", testPos, i, test.output[i].typ, a.typ)
+			if a.Typ != test.output[i].Typ {
+				t.Errorf("Parse (%d.%d): expected type '%v', received '%v'.", testPos, i, test.output[i].Typ, a.Typ)
 			}
-			if a.subtype != test.output[i].subtype {
-				t.Errorf("Parse (%d.%d): expected subtype '%v', received '%v'.", testPos, i, test.output[i].subtype, a.subtype)
+			if a.Subtype != test.output[i].Subtype {
+				t.Errorf("Parse (%d.%d): expected subtype '%v', received '%v'.", testPos, i, test.output[i].Subtype, a.Subtype)
 			}
-			if a.qualityFactor != test.output[i].qualityFactor {
-				t.Errorf("Parse (%d.%d): expected qval '%v', received '%v'.", testPos, i, test.output[i].qualityFactor, a.qualityFactor)
+			if a.QualityFactor != test.output[i].QualityFactor {
+				t.Errorf("Parse (%d.%d): expected qval '%v', received '%v'.", testPos, i, test.output[i].QualityFactor, a.QualityFactor)
 			}
-			if !mapsAreSimilar(t, a.extensions, test.output[i].extensions) {
-				t.Errorf("Parse (%d.%d): expected extensions '%v', received '%v'.", testPos, i, test.output[i].extensions, a.extensions)
+			if !mapsAreSimilar(t, a.Extensions, test.output[i].Extensions) {
+				t.Errorf("Parse (%d.%d): expected extensions '%v', received '%v'.", testPos, i, test.output[i].Extensions, a.Extensions)
 			}
 		}
 	}
@@ -281,7 +281,7 @@ func BenchmarkParseAcceptHeader(b *testing.B) {
 			b.ReportAllocs()
 
 			for i := 0; i < b.N; i++ {
-				_ = parseAcceptHeader(tcase.header)
+				_ = ParseAcceptHeader(tcase.header)
 			}
 		})
 	}

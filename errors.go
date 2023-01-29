@@ -10,6 +10,7 @@ package gidari
 import "fmt"
 
 var (
+	ErrDeadlineExceeded         = fmt.Errorf("deadline exceeded")
 	ErrFetchingTimeseriesChunks = fmt.Errorf("failed to fetch timeseries chunks")
 	ErrInvalidRateLimit         = fmt.Errorf("invalid rate limit configuration")
 	ErrMissingConfigField       = fmt.Errorf("missing config field")
@@ -23,6 +24,10 @@ var (
 	ErrInvalidEndTimeSize       = fmt.Errorf("invalid end time size, expected 1")
 	ErrInvalidStartTimeSize     = fmt.Errorf("invalid start time size, expected 1")
 )
+
+func wrapErrDeadlineExceeded(err error) error {
+	return fmt.Errorf("%w: %v", ErrDeadlineExceeded, err)
+}
 
 // MissingConfigFieldError is returned when a configuration field is missing.
 func MissingConfigFieldError(field string) error {

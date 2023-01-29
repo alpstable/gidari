@@ -8,7 +8,7 @@ option go_package = ".;proto";
 // Create a record in the database. Optionally include an "id" field otherwise it's set automatically.
 message UpsertRequest {
 	Table table = 1;
-	int32 dataType = 3;
+	int32 dataType = 2;
 	bytes data = 4;
 }
 

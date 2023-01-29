@@ -100,8 +100,9 @@ func (svc *Service) repositories(ctx context.Context) ([]repo, error) {
 }
 
 type upsertWorkerJob struct {
-	table string
-	data  []byte
+	table    string
+	dataType proto.DecodeType
+	data     []byte
 }
 
 type upsertWorkerConfig struct {

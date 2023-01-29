@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/alpstable/gidari/proto"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
@@ -133,9 +134,17 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 			return nil, fmt.Errorf("failed to read response body: %w", err)
 		}
 
+		// Get the best fit type for decoding the response body. If the
+		// best fit is "Unknown", then return an error.
+		bestFit := proto.BestFitDecodeType(rsp.Header.Get("Accept"))
+		if bestFit == proto.DecodeTypeUnknown {
+			return nil, fmt.Errorf("unknown decode type for %q", rsp.Request.URL.String())
+		}
+
 		upsertWorkerJobs <- upsertWorkerJob{
-			table: svc.Iterator.Current.Table,
-			data:  body,
+			table:    svc.Iterator.Current.Table,
+			data:     body,
+			dataType: bestFit,
 		}
 	}
 
@@ -279,7 +288,7 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 			case <-ctx.Done():
 				cfg.jobCounter++
 
-				return ctx.Err()
+				return wrapErrDeadlineExceeded(ctx.Err())
 			default:
 
 				var httpRsp *http.Response

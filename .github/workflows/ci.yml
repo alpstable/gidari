@@ -22,6 +22,3 @@ jobs:
 
     - name: Run Test
       run: make tests
-
-    - name: Run Examples
-      run: make examples

@@ -20,7 +20,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package decode
+package accept
 
 import (
 	"fmt"
@@ -31,15 +31,15 @@ import (
 
 var errInvalidTypeSubtype = "accept: Invalid type '%s'."
 
-// accept represents a parsed accept(-Charset|-Encoding|-Language) header.
-type accept struct {
-	typ, subtype  string
-	qualityFactor float64
-	extensions    map[string]string
+// Accept represents a parsed Accept(-Charset|-Encoding|-Language) header.
+type Accept struct {
+	Typ, Subtype  string
+	QualityFactor float64
+	Extensions    map[string]string
 }
 
 // AcceptSlice is a slice of Accept.
-type AcceptSlice []accept
+type AcceptSlice []Accept
 
 // Len implements the Len() method of the Sort interface.
 func (a AcceptSlice) Len() int {
@@ -50,28 +50,28 @@ func (a AcceptSlice) Len() int {
 // sorted in order of decreasing preference.
 func (a AcceptSlice) Less(i, j int) bool {
 	// Higher qvalues come first.
-	if a[i].qualityFactor > a[j].qualityFactor {
+	if a[i].QualityFactor > a[j].QualityFactor {
 		return true
-	} else if a[i].qualityFactor < a[j].qualityFactor {
+	} else if a[i].QualityFactor < a[j].QualityFactor {
 		return false
 	}
 
 	// Specific types come before wildcard types.
-	if a[i].typ != "*" && a[j].typ == "*" {
+	if a[i].Typ != "*" && a[j].Typ == "*" {
 		return true
-	} else if a[i].typ == "*" && a[j].typ != "*" {
+	} else if a[i].Typ == "*" && a[j].Typ != "*" {
 		return false
 	}
 
 	// Specific subtypes come before wildcard subtypes.
-	if a[i].subtype != "*" && a[j].subtype == "*" {
+	if a[i].Subtype != "*" && a[j].Subtype == "*" {
 		return true
-	} else if a[i].subtype == "*" && a[j].subtype != "*" {
+	} else if a[i].Subtype == "*" && a[j].Subtype != "*" {
 		return false
 	}
 
 	// A lot of extensions comes before not a lot of extensions.
-	if len(a[i].extensions) > len(a[j].extensions) {
+	if len(a[i].Extensions) > len(a[j].Extensions) {
 		return true
 	}
 
@@ -110,14 +110,14 @@ func parseMediaRange(mediaRange string) (rangeParams, typeSubtype []string, err 
 	return
 }
 
-// parseAcceptHeader parses a HTTP Accept(-Charset|-Encoding|-Language) header and returns
+// ParseAcceptHeader parses a HTTP Accept(-Charset|-Encoding|-Language) header and returns
 // AcceptSlice, sorted in decreasing order of preference.  If the header lists
 // multiple types that have the same level of preference (same specificity of
 // type and subtype, same qvalue, and same number of extensions), the type
 // that was listed in the header first comes first in the returned value.
 //
 // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec14 for more information.
-func parseAcceptHeader(header string) AcceptSlice {
+func ParseAcceptHeader(header string) AcceptSlice {
 	mediaRanges := strings.Split(header, ",")
 	accepted := make(AcceptSlice, 0, len(mediaRanges))
 
@@ -127,11 +127,11 @@ func parseAcceptHeader(header string) AcceptSlice {
 			continue
 		}
 
-		accept := accept{
-			typ:           typeSubtype[0],
-			subtype:       typeSubtype[1],
-			qualityFactor: 1.0,
-			extensions:    make(map[string]string),
+		accept := Accept{
+			Typ:           typeSubtype[0],
+			Subtype:       typeSubtype[1],
+			QualityFactor: 1.0,
+			Extensions:    make(map[string]string),
 		}
 
 		// If there is only one rangeParams, we can stop here.
@@ -158,9 +158,9 @@ func parseAcceptHeader(header string) AcceptSlice {
 				if qval > 1.0 {
 					qval = 1.0
 				}
-				accept.qualityFactor = qval
+				accept.QualityFactor = qval
 			} else {
-				accept.extensions[name] = nameVal[1]
+				accept.Extensions[name] = nameVal[1]
 			}
 		}
 

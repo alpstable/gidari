@@ -54,20 +54,18 @@ type mockHTTPClient struct {
 }
 
 func newMockHTTPClient(reqs []*HTTPRequest) *mockHTTPClient {
-	m := &mockHTTPClient{
+	client := &mockHTTPClient{
 		responses: make(map[*http.Request]*http.Response, len(reqs)),
 	}
 
-	for i, req := range reqs {
-		m.responses[req.Request] = &http.Response{
+	for idx, req := range reqs {
+		client.responses[req.Request] = &http.Response{
 			StatusCode: http.StatusOK,
-
-			// Make the body JSON {x:1}
-			Body: io.NopCloser(bytes.NewBufferString(fmt.Sprintf(`{"x":%d}`, i))),
+			Body:       io.NopCloser(bytes.NewBufferString(fmt.Sprintf(`{"x":%d}`, idx))),
 		}
 	}
 
-	return m
+	return client
 }
 
 func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
