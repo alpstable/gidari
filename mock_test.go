@@ -7,56 +7,46 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
 )
 
-type mockConfigOptions struct {
+type mockServiceOptions struct {
 	stgCount    int
 	reqCount    int
 	rateLimiter *rate.Limiter
 }
 
-func newMockConfig(opts mockConfigOptions) *Config {
-	cfg := &Config{
-		RateLimiter: opts.rateLimiter,
+func newMockService(opts mockServiceOptions) *Service {
+	svc, err := NewService(context.Background(),
+		WithStorage(newMockStorage(opts.stgCount)...))
+
+	if err != nil {
+		panic(err)
 	}
 
-	// Default rate limit the requests to 100 per second.
-	if opts.rateLimiter == nil {
-		cfg.RateLimiter = rate.NewLimiter(rate.Limit(1*time.Second), 100)
-	}
+	reqs := newHTTPRequests(opts.reqCount)
 
-	// Create mock storages.
-	cfg.Storage = make([]*Storage, opts.stgCount)
-	for i := 0; i < opts.stgCount; i++ {
-		cfg.Storage[i] = &Storage{
-			Storage:  newMockStorage(),
-			Database: fmt.Sprintf("database%d", i),
-		}
-	}
+	svc.HTTP.
+		Client(newMockHTTPClient(reqs)).
+		RateLimiter(opts.rateLimiter).
+		Requests(reqs...)
 
-	// Create mock requests.
-	cfg.Requests = make([]*Request, opts.reqCount)
-	cfg.Client = newMockHTTPClient()
-	for i := 0; i < opts.reqCount; i++ {
+	return svc
+}
+
+func newHTTPRequests(volume int) []*HTTPRequest {
+	requests := make([]*HTTPRequest, volume)
+	for i := 0; i < volume; i++ {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("http://example%d", i), nil)
-		cfg.Requests[i] = &Request{
+		requests[i] = &HTTPRequest{
 			Request: req,
 			Table:   fmt.Sprintf("table%d", i),
 		}
-
-		// Add response to mock HTTP client.
-		cfg.Client.(*mockHTTPClient).responses[req] = &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(bytes.NewReader([]byte(`{"id": 1}`))),
-			Request:    req,
-		}
 	}
 
-	return cfg
+	return requests
 }
 
 type mockHTTPClient struct {
@@ -64,10 +54,21 @@ type mockHTTPClient struct {
 	responses map[*http.Request]*http.Response
 }
 
-func newMockHTTPClient() *mockHTTPClient {
-	return &mockHTTPClient{
-		responses: make(map[*http.Request]*http.Response),
+func newMockHTTPClient(reqs []*HTTPRequest) *mockHTTPClient {
+	m := &mockHTTPClient{
+		responses: make(map[*http.Request]*http.Response, len(reqs)),
 	}
+
+	for i, req := range reqs {
+		m.responses[req.Request] = &http.Response{
+			StatusCode: http.StatusOK,
+
+			// Make the body JSON {x:1}
+			Body: io.NopCloser(bytes.NewBufferString(fmt.Sprintf(`{"x":%d}`, i))),
+		}
+	}
+
+	return m
 }
 
 func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
@@ -116,8 +117,15 @@ type mockStorage struct {
 	pingMutex sync.Mutex
 }
 
-func newMockStorage() *mockStorage {
-	return &mockStorage{}
+func newMockStorage(volume int) []*Storage {
+	stgs := make([]*Storage, volume)
+	for i := 0; i < volume; i++ {
+		stgs[i] = &Storage{
+			Storage: &mockStorage{},
+		}
+	}
+
+	return stgs
 }
 
 func (m *mockStorage) Close() {

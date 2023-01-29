@@ -1,14 +1,9 @@
 package gidari
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/alpstable/gidari/internal/web"
-	"golang.org/x/time/rate"
 )
 
 type flattenedRequestConfig struct {
@@ -20,36 +15,17 @@ type flattenedRequestConfig struct {
 // The number of flattened requests may not be equal to the number of requests
 // on the configuration. For example, a large timeseries request will be
 // flattened into multiple requests.
-type flattenedRequest struct {
-	// fetchConfig is the configuration for the HTTP request. Each request
-	// gets it's own connection to ensure that the web worker can process
-	// concurrently without locking. Despite this, however, all of the
-	// requests should share a common rate limiter to prevent overloading
-	// the web API and gettig a 429 response.
-	fetchConfig *web.FetchConfig
-
-	client web.Client
-	cfg    *flattenedRequestConfig
-}
-
-// newFlattenedRequest will compress the request information into a "web.FetchConfig"
-// request and a "table" name for storage interaction.
-func newFlattenedRequest(req *Request, client web.Client, rateLimiter *rate.Limiter) *flattenedRequest {
-	fetchConfig := newFetchConfig(req.Request, client, rateLimiter)
-
-	// If the table is not set on the request, then set it using the last path segment of the endpoint.
-	//if req.Table == "" {
-	//	req.Table = path.Base(req.Endpoint)
-	//}
-
-	return &flattenedRequest{
-		fetchConfig: fetchConfig,
-		//rspHandler:  req.HttpResponseHandler,
-		//reqHandler:  req.HttpRequestHandler,
-		//table:       req.Table,
-		//clobColumn:  req.ClobColumn,
-	}
-}
+//type flattenedRequest struct {
+//	// fetchConfig is the configuration for the HTTP request. Each request
+//	// gets it's own connection to ensure that the web worker can process
+//	// concurrently without locking. Despite this, however, all of the
+//	// requests should share a common rate limiter to prevent overloading
+//	// the web API and gettig a 429 response.
+//	fetchConfig *web.FetchConfig
+//
+//	client web.Client
+//	cfg    *flattenedRequestConfig
+//}
 
 // chunkTimeseries will attempt to use the query string of a URL to partition the timeseries into "Chunks" of time for
 // queying a web API.
@@ -139,32 +115,3 @@ func chunkTimeseries(timeseries *Timeseries, rurl url.URL) error {
 //
 //	return requests, nil
 //}
-
-// flattenConfigRequests will flatten the requests into a single slice for HTTP requests.
-func flattenConfigRequests(ctx context.Context, cfg *Config) ([]*flattenedRequest, error) {
-	// If the client is not set on the configuration, then create a new one.
-	client := cfg.Client
-	if cfg.Client == nil {
-		client = http.DefaultClient
-	}
-
-	var flattenedRequests []*flattenedRequest
-
-	for _, req := range cfg.Requests {
-		//flatReqs, err := flattenRequestTimeseries(req, *cfg.URL, client)
-		//if err != nil {
-		//	return nil, err
-		//}
-
-		//flattenedRequests = append(flattenedRequests, flatReqs...)
-
-		flatReq := newFlattenedRequest(req, client, cfg.RateLimiter)
-		flattenedRequests = append(flattenedRequests, flatReq)
-	}
-
-	if len(flattenedRequests) == 0 {
-		return nil, ErrNoRequests
-	}
-
-	return flattenedRequests, nil
-}

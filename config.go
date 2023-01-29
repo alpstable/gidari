@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alpstable/gidari/internal/web"
 	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
 )
@@ -132,28 +131,24 @@ type Request struct {
 	*http.Request
 
 	Table string `yaml:"table"`
+
+	Storage []*Storage `yaml:"storage"`
+
+	RateLimiter *rate.Limiter `yaml:"-"`
 }
 
-// WebResultAssigner is a function that is used to process the HTTP response body into a slice of
-// proto.IteratorResult objects.
-//type WebResultAssigner func(context.Context, WebResult) ([]*proto.IteratorResult, error)
-
-// Config is the configuration used to query data from the web using HTTP requests and storing that data using
-// the repositories defined by the "ConnectionStrings" list.
 type Config struct {
 	//RawURL          string           `yaml:"url"`
 	// Authentication  Authentication   `yaml:"authentication"`
 
 	Requests []*Request `yaml:"requests"`
 
-	// Client is an interface that for an HTTP client. This interface is used to make the web requests. This is
-	// an optional field and will be set to the default HTTP client if not provided.
-	Client web.Client `yaml:"-"`
+	Client Client `yaml:"-"`
 
-	RateLimiter *rate.Limiter `yaml:"-"`
+	//RateLimiter *rate.Limiter `yaml:"-"`
 
 	// RateLimitConfig *RateLimitConfig `yaml:"rateLimit"`
-	Storage []*Storage `yaml:"storage"`
+	//Storage []*Storage `yaml:"storage"`
 
 	// Truncate bool `yaml:"-"`
 
