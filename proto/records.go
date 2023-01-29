@@ -158,16 +158,14 @@ func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
 	// determine which format the response is in
 
 	// var data interface{}
-	//if err := json.Unmarshal(jsonBytes, &data); err != nil {
+	// if err := json.Unmarshal(jsonBytes, &data); err != nil {
 	//	return nil, fmt.Errorf("%w: %v", ErrFailedToUnmarshalJSON, err)
 	//}
 
 	// out, err := newSlice(data)
-	//if err != nil {
+	// if err != nil {
 	//	return nil, fmt.Errorf("%w: %v", ErrFailedToCreateStruct, err)
 	//}
-
-
 
 	// for idx, r := range out {
 	//	record, err := json.Marshal(r)
@@ -180,7 +178,6 @@ func DecodeWebResponse(resp *http.Response) ([]*IteratorResult, error) {
 	//		URL:  req.URL.String(),
 	//	}
 	//}
-
 
 	return nil, nil
 }

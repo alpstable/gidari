@@ -19,9 +19,10 @@ tests:
 	$(GC) clean -testcache && go test -v -count=5 ./...
 
 # examples runs all of the example in a Go Docker container.
-.PHONY: examples
-examples:
-	chmod +rwx scripts/*.sh && ./scripts/run-examples.sh
+# DEPRECATED
+#.PHONY: examples
+#examples:
+#	chmod +rwx scripts/*.sh && ./scripts/run-examples.sh
 
 # fmt runs the formatter.
 .PHONY: fmt

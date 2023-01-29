@@ -67,7 +67,7 @@ import (
 //	}
 //}
 //
-//func TestDecodeIteratorResults(t *testing.T) {
+// func TestDecodeIteratorResults(t *testing.T) {
 //	t.Parallel()
 //
 //	for _, tcase := range []struct {
