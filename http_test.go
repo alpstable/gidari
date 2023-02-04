@@ -17,6 +17,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var errMissingURL = errors.New("missing URL")
+
 func TestIterator(t *testing.T) {
 	t.Parallel()
 
@@ -58,24 +60,24 @@ func TestIterator(t *testing.T) {
 				requestCount:    5,
 				setRateLimiters: true,
 				forceErrOn:      -1,
-				forceErr:        ErrMissingURL,
-				wantErr:         ErrMissingURL,
+				forceErr:        errMissingURL,
+				wantErr:         errMissingURL,
 			},
 			{
 				name:            "error on second request",
 				requestCount:    5,
 				setRateLimiters: true,
 				forceErrOn:      1,
-				forceErr:        ErrMissingURL,
-				wantErr:         ErrMissingURL,
+				forceErr:        errMissingURL,
+				wantErr:         errMissingURL,
 			},
 			{
 				name:            "error on last request",
 				requestCount:    5,
 				setRateLimiters: true,
 				forceErrOn:      4,
-				forceErr:        ErrMissingURL,
-				wantErr:         ErrMissingURL,
+				forceErr:        errMissingURL,
+				wantErr:         errMissingURL,
 			},
 		} {
 			tcase := tcase

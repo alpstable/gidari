@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/alpstable/gidari/proto"
+	"github.com/alpstable/gidari/third_party/accept"
 	"golang.org/x/time/rate"
 )
 
@@ -96,12 +97,34 @@ func (svc *HTTPService) UpsertWriters(w ...proto.UpsertWriter) *HTTPService {
 	return svc
 }
 
-/*
-svc, _ := NewService(context.Background, WithStorage("sqlite3", "test.db"))
-if _, err := httpSvc := svc.HTTP.Client(x).Requests(x).Do(); err != nil {
-	return err
+// isDecodeTypeJSON will check if the provided "accept" struct is typed for
+// decoding into JSON.
+func isDecodeTypeJSON(accept accept.Accept) bool {
+	return accept.Typ == "application" &&
+		(accept.Subtype == "json" || accept.Subtype == "*") ||
+		accept.Typ == "*" && accept.Subtype == "*"
 }
-*/
+
+// bestFitDecodeType will parse the provided Accept(-Charset|-Encoding|-Language)
+// header and return the header that best fits the decoding algorithm. If the
+// "Accept" header is not set, then this method will return a decodeTypeJSON.
+// If the "Accept" header is set, but no match is found, then this method will
+// return a decodeTypeUnkown.
+//
+// See the "acceptSlice.Less" method in the "third_party/accept" package for
+// more informaiton on how the "best fit" is determined.
+func bestFitDecodeType(header string) proto.DecodeType {
+	decodeType := proto.DecodeTypeUnknown
+	for _, accept := range accept.ParseAcceptHeader(header) {
+		if isDecodeTypeJSON(accept) {
+			decodeType = proto.DecodeTypeJSON
+
+			break
+		}
+	}
+
+	return decodeType
+}
 
 // Do will execute the requests set for the service. If no requests have been
 // set, the service will do nothing and return nil.
@@ -158,7 +181,7 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 
 		// Get the best fit type for decoding the response body. If the
 		// best fit is "Unknown", then return an error.
-		bestFit := proto.BestFitDecodeType(rsp.Header.Get("Accept"))
+		bestFit := bestFitDecodeType(rsp.Header.Get("Accept"))
 		if bestFit == proto.DecodeTypeUnknown {
 			return nil, fmt.Errorf("unknown decode type for %q", rsp.Request.URL.String())
 		}

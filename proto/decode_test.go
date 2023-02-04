@@ -56,10 +56,12 @@ func TestDecodeUpsertRequest(t *testing.T) {
 			},
 		},
 	} {
+		tcase := tcase
+
 		t.Run(tcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			// First we create the proto.UpsertRequest object.
+			// First we create the UpsertRequest object.
 			req := &UpsertRequest{
 				Data:     tcase.data,
 				DataType: int32(tcase.dataType),
@@ -98,7 +100,7 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 	}
 	data = append(data, []byte(`"foo1000": "bar1000"}`)...)
 
-	// Create the proto.UpsertRequest object.
+	// Create the UpsertRequest object.
 	req := &UpsertRequest{
 		Data:     data,
 		DataType: int32(DecodeTypeJSON),
