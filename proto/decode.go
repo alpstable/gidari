@@ -17,6 +17,11 @@ import (
 var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
 
 func decodeJSON(data []byte) (*structpb.ListValue, error) {
+	// If there is no data, return an empty list.
+	if len(data) == 0 {
+		return &structpb.ListValue{}, nil
+	}
+
 	// Check if the first byte of the json is a '{' or '['
 	if data[0] == '{' {
 		// Unmarshal the json into a structpb.Struct
