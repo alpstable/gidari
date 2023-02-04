@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 package proto
 
 import (
@@ -51,6 +51,8 @@ func DecodeUpsertRequest(req *UpsertRequest) (*structpb.ListValue, error) {
 	switch DecodeType(req.DataType) {
 	case DecodeTypeJSON:
 		return decodeJSON(req.Data)
+	case DecodeTypeUnknown:
+		fallthrough
 	default:
 		return nil, fmt.Errorf("%w: %d", ErrUnsupportedDecodeType, req.DataType)
 	}

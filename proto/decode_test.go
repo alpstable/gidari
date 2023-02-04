@@ -4,10 +4,11 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 package proto
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -76,7 +77,7 @@ func TestDecodeUpsertRequest(t *testing.T) {
 
 			// Then we call the DecodeUpsertRequest function.
 			list, err := DecodeUpsertRequest(req)
-			if err != tcase.err {
+			if !errors.Is(err, tcase.err) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -105,6 +106,7 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		data = append(data, []byte(fmt.Sprintf(`"foo%d": "bar%d",`, i, i))...)
 	}
+
 	data = append(data, []byte(`"foo1000": "bar1000"}`)...)
 
 	// Create the UpsertRequest object.

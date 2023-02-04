@@ -4,15 +4,17 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 package gidari
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/alpstable/gidari/proto"
@@ -36,10 +38,6 @@ type HTTPRequest struct {
 	Table string
 }
 
-// HTTPResponse represents a response from the client to to the storage
-// service.
-type HTTPResponse struct{}
-
 // Client is an interface that wraps the "Do" method of the "net/http" package's
 // "Client" type.
 type Client interface {
@@ -50,11 +48,11 @@ type HTTPService struct {
 	client Client
 	svc    *Service
 
-	// Iterator is a service that provides the functionality to asynchronously
-	// iterate over a set of requests, handling them with a custom handler.
-	// Each response in the request is achieved by calling the Iterator's
-	// "Next" method, returning the "http.Response" object defined by the
-	// "net/http" package.
+	// Iterator is a service that provides the functionality to
+	// asynchronously iterate over a set of requests, handling them with a
+	// custom handler. Each response in the request is achieved by calling
+	// the Iterator's "Next" method, returning the "http.Response" object
+	// defined by the "net/http" package.
 	Iterator *HTTPIteratorService
 
 	rlimiter      *rate.Limiter
@@ -122,6 +120,7 @@ func isDecodeTypeJSON(accept accept.Accept) bool {
 // more informaiton on how the "best fit" is determined.
 func bestFitDecodeType(header string) proto.DecodeType {
 	decodeType := proto.DecodeTypeUnknown
+
 	for _, accept := range accept.ParseAcceptHeader(header) {
 		if isDecodeTypeJSON(accept) {
 			decodeType = proto.DecodeTypeJSON
@@ -133,14 +132,64 @@ func bestFitDecodeType(header string) proto.DecodeType {
 	return decodeType
 }
 
-// Do will execute the requests set for the service. If no requests have been
-// set, the service will do nothing and return nil.
-func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
+func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- upsertWorkerJob, done <-chan struct{}) error {
+	for svc.Iterator.Next(ctx) {
+		rsp := svc.Iterator.Current.Response
+
+		// If there is no response, then do nothing.
+		if rsp == nil {
+			continue
+		}
+
+		// Read the response body of the request.
+		body, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		// Close the response body.
+		if err := rsp.Body.Close(); err != nil {
+			return fmt.Errorf("failed to close response body: %w", err)
+		}
+
+		// Get the best fit type for decoding the response body. If the
+		// best fit is "Unknown", then return an error.
+		bestFit := bestFitDecodeType(rsp.Header.Get("Accept"))
+		if bestFit == proto.DecodeTypeUnknown {
+			return fmt.Errorf("%w: %q", proto.ErrUnsupportedDecodeType, rsp.Request.URL.String())
+		}
+
+		jobs <- upsertWorkerJob{
+			table:    svc.Iterator.Current.Table,
+			database: svc.Iterator.Current.Database,
+			data:     body,
+			dataType: bestFit,
+		}
+	}
+
+	if err := svc.Iterator.Err(); err != nil {
+		return fmt.Errorf("error iterating over requests: %w", err)
+	}
+
+	for w := 1; w <= len(svc.requests); w++ {
+		<-done
+	}
+
+	// Close the jobs channel.
+	close(jobs)
+
+	return nil
+}
+
+// Upsert will concurrently make the requests to the client and store the data
+// from the responses in the provided storage. If no storage is provided, then
+// the data will be discarded.
+func (svc *HTTPService) Upsert(ctx context.Context) error {
 	reqCount := len(svc.requests)
 
 	// If there are no requests, do nothing.
 	if reqCount == 0 {
-		return nil, nil
+		return nil
 	}
 
 	// Reset the iterator.
@@ -167,77 +216,25 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 		})
 	}
 
-	for svc.Iterator.Next(ctx) {
-		rsp := svc.Iterator.Current.Response
-
-		// If there is no response, then return an error.
-		if rsp == nil {
-			return nil, fmt.Errorf("no response")
-		}
-
-		// Read the response body of the request.
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		// Close the response body.
-		if err := rsp.Body.Close(); err != nil {
-			return nil, fmt.Errorf("failed to close response body: %w", err)
-		}
-
-		// Get the best fit type for decoding the response body. If the
-		// best fit is "Unknown", then return an error.
-		bestFit := bestFitDecodeType(rsp.Header.Get("Accept"))
-		if bestFit == proto.DecodeTypeUnknown {
-			return nil, fmt.Errorf("unknown decode type for %q", rsp.Request.URL.String())
-		}
-
-		upsertWorkerJobs <- upsertWorkerJob{
-			table:    svc.Iterator.Current.Table,
-			database: svc.Iterator.Current.Database,
-			data:     body,
-			dataType: bestFit,
-		}
+	if err := svc.upsert(ctx, upsertWorkerJobs, done); err != nil {
+		return fmt.Errorf("failed to upsert data: %w", err)
 	}
-
-	if err := svc.Iterator.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over requests: %w", err)
-	}
-
-	for w := 1; w <= reqCount; w++ {
-		<-done
-	}
-
-	// Close the upsert worker jobs channel.
-	close(upsertWorkerJobs)
 
 	if err := <-errCh; err != nil {
-		return nil, fmt.Errorf("error in upsert worker: %w", err)
+		return fmt.Errorf("error in upsert worker: %w", err)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Current is a struct that represents the most recent response by calling the
 // "Next" method on the HTTPIteratorService.
 type Current struct {
 	Response *http.Response // HTTP response from the request.
+	Data     []byte         // Data from the response body.
 	Table    string         // Name of the table for storage.
 	Database string         // Name of the database for storage.
 }
-
-/*
-svc, _ := NewService(context.Background)
-for svc.HTTP.Iterator.Next() {
-    // Do something with iter.Current
-}
-
-// Check for errors
-if err := iter.Err(); err != nil {
-    // Handle error
-}
-*/
 
 type HTTPIteratorService struct {
 	svc *HTTPService
@@ -284,24 +281,11 @@ func (iter *HTTPIteratorService) Err() error {
 	defer iter.closemu.RUnlock()
 
 	// If the error is EOF or nil, return nil.
-	if iter.lasterr == io.EOF || iter.lasterr == nil {
+	if errors.Is(iter.lasterr, io.EOF) || iter.lasterr == nil {
 		return nil
 	}
 
 	return iter.lasterr
-}
-
-type responseWorkerConfig struct {
-	coreNum int
-
-	// jobs are a channel of HTTP Response objects sent by the web worker.
-	jobs <-chan *http.Response
-
-	// responseChan
-	responseChan chan<- *http.Response
-
-	done  chan<- bool
-	errCh chan<- error
 }
 
 type webWorkerJob struct {
@@ -321,9 +305,6 @@ type webWorkerConfig struct {
 	currentCh chan *Current
 	done      chan bool
 	errCh     chan error
-
-	hasClosed  bool
-	jobCounter int
 }
 
 func fetch(ctx context.Context, job *webWorkerJob) (<-chan *http.Response, <-chan error) {
@@ -338,6 +319,7 @@ func fetch(ctx context.Context, job *webWorkerJob) (<-chan *http.Response, <-cha
 			}
 		}
 
+		//nolint:bodyclose
 		rsp, err := job.client.Do(job.req.Request)
 		if err != nil {
 			errs <- fmt.Errorf("failed to make request: %w", err)
@@ -376,6 +358,7 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 				cfg.done <- true
 			}()
 
+			//nolint:bodyclose
 			rspCh, errCh := fetch(ctx, &job)
 
 			err := <-errCh
@@ -383,9 +366,17 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 				cfg.errCh <- err
 			}
 
+			// If there is no table name, then use the endpoint
+			// of the request's URL.
+			table := job.req.Table
+			if table == "" {
+				// Remove all "/" characters from the URL path.
+				table = strings.ReplaceAll(job.req.URL.Path, "/", "")
+			}
+
 			cfg.currentCh <- &Current{
 				Response: <-rspCh,
-				Table:    job.req.Table,
+				Table:    table,
 				Database: job.req.Database,
 			}
 		}(job)
@@ -488,9 +479,6 @@ func (iter *HTTPIteratorService) Next(ctx context.Context) bool {
 	}
 
 	iter.lasterr = iter.next(ctx)
-	if iter.lasterr != nil {
-		return false
-	}
 
-	return true
+	return iter.lasterr == nil
 }

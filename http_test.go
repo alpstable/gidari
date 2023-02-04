@@ -172,7 +172,7 @@ func TestIterator(t *testing.T) {
 		}
 	})
 
-	t.Run("Do", func(t *testing.T) {
+	t.Run("Upsert", func(t *testing.T) {
 		t.Parallel()
 
 		for _, tcase := range []struct {
@@ -247,7 +247,7 @@ func TestIterator(t *testing.T) {
 				}
 
 				for i := 0; i < count; i++ {
-					_, err := tcase.svc.HTTP.Do(context.Background())
+					err := tcase.svc.HTTP.Upsert(context.Background())
 					if tcase.err != nil && !errors.Is(err, tcase.err) {
 						t.Errorf("expected error %v, got %v", tcase.err, err)
 					}
@@ -327,7 +327,7 @@ func BenchmarkHTTPServiceDo(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Execute the service.
-		if _, err := svc.HTTP.Do(context.Background()); err != nil {
+		if err := svc.HTTP.Upsert(context.Background()); err != nil {
 			b.Fatal(err)
 		}
 	}

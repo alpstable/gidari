@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 package gidari
 
 import (
@@ -46,6 +46,7 @@ func newMockService(opts mockServiceOptions) *Service {
 
 func newHTTPRequests(volume int) []*HTTPRequest {
 	requests := make([]*HTTPRequest, volume)
+
 	for i := 0; i < volume; i++ {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("http://example%d", i), nil)
 		requests[i] = &HTTPRequest{
@@ -137,10 +138,6 @@ func withMockHTTPClientResponseError(req *HTTPRequest, err error) mockHTTPClient
 func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	if len(m.responses) == 0 {
-		return nil, nil
-	}
 
 	rsp := m.responses[req]
 
