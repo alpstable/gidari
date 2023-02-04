@@ -13,14 +13,13 @@ import (
 )
 
 type mockServiceOptions struct {
-	stgCount    int
-	reqCount    int
-	rateLimiter *rate.Limiter
+	upsertStgCount int
+	reqCount       int
+	rateLimiter    *rate.Limiter
 }
 
 func newMockService(opts mockServiceOptions) *Service {
-	svc, err := NewService(context.Background(),
-		WithStorage(newMockStorage(opts.stgCount)...))
+	svc, err := NewService(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -28,9 +27,12 @@ func newMockService(opts mockServiceOptions) *Service {
 	reqs := newHTTPRequests(opts.reqCount)
 
 	svc.HTTP.
-		Client(newMockHTTPClient(reqs)).
+		Client(newMockHTTPClient(
+			withMockHTTPClientRequests(reqs...),
+		)).
 		RateLimiter(opts.rateLimiter).
-		Requests(reqs...)
+		Requests(reqs...).
+		UpsertWriters(newMockUpsertStorage(opts.upsertStgCount)...)
 
 	return svc
 }
@@ -48,24 +50,81 @@ func newHTTPRequests(volume int) []*HTTPRequest {
 	return requests
 }
 
-type mockHTTPClient struct {
-	mutex     sync.Mutex
-	responses map[*http.Request]*http.Response
+type mockHTTPClientResponseError struct {
+	rsp *http.Response
+	err error
 }
 
-func newMockHTTPClient(reqs []*HTTPRequest) *mockHTTPClient {
-	client := &mockHTTPClient{
-		responses: make(map[*http.Request]*http.Response, len(reqs)),
+type mockHTTPClient struct {
+	mutex     sync.Mutex
+	responses map[*http.Request]*mockHTTPClientResponseError
+}
+
+type mockHTTPClientOption func(*mockHTTPClient)
+
+func newMockHTTPClient(opts ...mockHTTPClientOption) *mockHTTPClient {
+	m := &mockHTTPClient{
+		responses: make(map[*http.Request]*mockHTTPClientResponseError),
 	}
 
-	for idx, req := range reqs {
-		client.responses[req.Request] = &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(bytes.NewBufferString(fmt.Sprintf(`{"x":%d}`, idx))),
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m
+}
+
+// withMockHTTPClientRequests will set the mockHTTPClient responses to the
+// provided requests.
+func withMockHTTPClientRequests(reqs ...*HTTPRequest) mockHTTPClientOption {
+	return func(m *mockHTTPClient) {
+		for _, req := range reqs {
+			body := io.NopCloser(bytes.NewBufferString(""))
+			code := http.StatusOK
+
+			rsp := &http.Response{
+				Body:       body,
+				StatusCode: code,
+				Request:    req.Request,
+			}
+
+			rspErr := &mockHTTPClientResponseError{rsp: rsp}
+
+			// If the request has already been set, then just
+			// update the response.
+			if _, ok := m.responses[req.Request]; ok {
+				m.responses[req.Request].rsp = rspErr.rsp
+
+				continue
+			}
+
+			m.responses[req.Request] = rspErr
 		}
 	}
+}
 
-	return client
+func withMockHTTPClientResponseError(req *HTTPRequest, err error) mockHTTPClientOption {
+	return func(m *mockHTTPClient) {
+		if req == nil {
+			return
+		}
+
+		if err == nil {
+			return
+		}
+
+		// If the request has already been set, then just
+		// update the error.
+		if _, ok := m.responses[req.Request]; ok {
+			m.responses[req.Request].err = err
+
+			return
+		}
+
+		m.responses[req.Request] = &mockHTTPClientResponseError{
+			err: err,
+		}
+	}
 }
 
 func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
@@ -77,138 +136,34 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	rsp := m.responses[req]
-	delete(m.responses, req)
 
-	return rsp, nil
-}
-
-type mockStorage struct {
-	closeCount int
-	closeMutex sync.Mutex
-
-	listPrimaryKeysCount int
-	listPrimaryKeysMutex sync.Mutex
-
-	listTablesCount int
-	listTablesMutex sync.Mutex
-
-	isNoSQLCount int
-	isNoSQLMutex sync.Mutex
-
-	startTxCount int
-	startTxMutex sync.Mutex
-
-	truncateCount int
-	truncateMutex sync.Mutex
-
-	typeCount int
-	typeMutex sync.Mutex
-
-	upsertCount int
-	upsertMutex sync.Mutex
-
-	upsertBinaryCount int
-	upsertBinaryMutex sync.Mutex
-
-	pingCount int
-	pingMutex sync.Mutex
-}
-
-func newMockStorage(volume int) []*Storage {
-	stgs := make([]*Storage, volume)
-	for i := 0; i < volume; i++ {
-		stgs[i] = &Storage{
-			Storage: &mockStorage{},
-		}
+	// If the response has an error, return it.
+	if rsp.err != nil {
+		return nil, rsp.err
 	}
 
-	return stgs
+	return rsp.rsp, nil
 }
 
-func (m *mockStorage) Close() {
-	m.closeMutex.Lock()
-	defer m.closeMutex.Unlock()
-
-	m.closeCount++
+type mockUpsertWriter struct {
+	count   int
+	countMu sync.Mutex
 }
 
-func (m *mockStorage) ListPrimaryKeys(ctx context.Context) (*proto.ListPrimaryKeysResponse, error) {
-	m.listPrimaryKeysMutex.Lock()
-	defer m.listPrimaryKeysMutex.Unlock()
+func newMockUpsertStorage(volume int) []proto.UpsertWriter {
+	stg := make([]proto.UpsertWriter, volume)
+	for i := 0; i < volume; i++ {
+		stg[i] = &mockUpsertWriter{}
+	}
 
-	m.listPrimaryKeysCount++
-
-	return nil, nil
+	return stg
 }
 
-func (m *mockStorage) ListTables(ctx context.Context) (*proto.ListTablesResponse, error) {
-	m.listTablesMutex.Lock()
-	defer m.listTablesMutex.Unlock()
+func (m *mockUpsertWriter) Write(context.Context, *proto.UpsertRequest) error {
+	m.countMu.Lock()
+	defer m.countMu.Unlock()
 
-	m.listTablesCount++
-
-	return nil, nil
-}
-
-func (m *mockStorage) IsNoSQL() bool {
-	m.isNoSQLMutex.Lock()
-	defer m.isNoSQLMutex.Unlock()
-
-	m.isNoSQLCount++
-
-	return true
-}
-
-func (m *mockStorage) StartTx(context.Context) (*proto.Txn, error) {
-	m.startTxMutex.Lock()
-	defer m.startTxMutex.Unlock()
-
-	m.startTxCount++
-
-	return nil, nil
-}
-
-func (m *mockStorage) Truncate(context.Context, *proto.TruncateRequest) (*proto.TruncateResponse, error) {
-	m.truncateMutex.Lock()
-	defer m.truncateMutex.Unlock()
-
-	m.truncateCount++
-
-	return nil, nil
-}
-
-func (m *mockStorage) Type() uint8 {
-	m.typeMutex.Lock()
-	defer m.typeMutex.Unlock()
-
-	m.typeCount++
-
-	return 0
-}
-
-func (m *mockStorage) Upsert(context.Context, *proto.UpsertRequest) (*proto.UpsertResponse, error) {
-	m.upsertMutex.Lock()
-	defer m.upsertMutex.Unlock()
-
-	m.upsertCount++
-
-	return nil, nil
-}
-
-func (m *mockStorage) UpsertBinary(context.Context, *proto.UpsertBinaryRequest) (*proto.UpsertBinaryResponse, error) {
-	m.upsertBinaryMutex.Lock()
-	defer m.upsertBinaryMutex.Unlock()
-
-	m.upsertBinaryCount++
-
-	return nil, nil
-}
-
-func (m *mockStorage) Ping() error {
-	m.pingMutex.Lock()
-	defer m.pingMutex.Unlock()
-
-	m.pingCount++
+	m.count++
 
 	return nil
 }

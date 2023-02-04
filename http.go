@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"sync"
 
 	"github.com/alpstable/gidari/proto"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
 
@@ -16,6 +16,11 @@ import (
 // This object wraps the "net/http" package request object.
 type HTTPRequest struct {
 	*http.Request
+
+	// Database is an optional database name to be used by the service to
+	// store the data from the request. The default value for the table
+	// will be the authority of the request URL.
+	Database string
 
 	// Table is an optional field nd the table name to be used for the
 	// storage of data from this request. The default value for the table
@@ -44,8 +49,9 @@ type HTTPService struct {
 	// "net/http" package.
 	Iterator *HTTPIteratorService
 
-	rlimiter *rate.Limiter
-	requests []*HTTPRequest
+	rlimiter      *rate.Limiter
+	requests      []*HTTPRequest
+	upsertWriters []proto.UpsertWriter
 }
 
 func NewHTTPService(svc *Service) *HTTPService {
@@ -82,6 +88,14 @@ func (svc *HTTPService) Requests(reqs ...*HTTPRequest) *HTTPService {
 	return svc
 }
 
+// UpsertWriters sets the optional storage to be used by the HTTP service to
+// store the data from the requests.
+func (svc *HTTPService) UpsertWriters(w ...proto.UpsertWriter) *HTTPService {
+	svc.upsertWriters = append(svc.upsertWriters, w...)
+
+	return svc
+}
+
 /*
 svc, _ := NewService(context.Background, WithStorage("sqlite3", "test.db"))
 if _, err := httpSvc := svc.HTTP.Client(x).Requests(x).Do(); err != nil {
@@ -99,24 +113,27 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 		return nil, nil
 	}
 
+	// Reset the iterator.
+	svc.Iterator = NewHTTPIteratorService(svc)
+	defer svc.Iterator.Close()
+
 	// Create a channel to send requests to the worker.
 	upsertWorkerJobs := make(chan upsertWorkerJob, reqCount)
 
 	// done is a channel that will be closed when the worker is done.
 	done := make(chan struct{}, reqCount)
 
-	// Create repositories
-	repositories, err := svc.svc.repositories(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// errCh is a channel that will receive any errors from the worker.
+	errCh := make(chan error, 1)
 
 	// Start the upsert worker.
 	for i := 1; i <= runtime.NumCPU(); i++ {
 		go startUpsertWorker(ctx, upsertWorkerConfig{
-			jobs:         upsertWorkerJobs,
-			repositories: repositories,
-			done:         done,
+			id:      i,
+			jobs:    upsertWorkerJobs,
+			done:    done,
+			writers: svc.upsertWriters,
+			errCh:   errCh,
 		})
 	}
 
@@ -134,6 +151,11 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 			return nil, fmt.Errorf("failed to read response body: %w", err)
 		}
 
+		// Close the response body.
+		if err := rsp.Body.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close response body: %w", err)
+		}
+
 		// Get the best fit type for decoding the response body. If the
 		// best fit is "Unknown", then return an error.
 		bestFit := proto.BestFitDecodeType(rsp.Header.Get("Accept"))
@@ -143,6 +165,7 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 
 		upsertWorkerJobs <- upsertWorkerJob{
 			table:    svc.Iterator.Current.Table,
+			database: svc.Iterator.Current.Database,
 			data:     body,
 			dataType: bestFit,
 		}
@@ -156,6 +179,13 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 		<-done
 	}
 
+	// Close the upsert worker jobs channel.
+	close(upsertWorkerJobs)
+
+	if err := <-errCh; err != nil {
+		return nil, fmt.Errorf("error in upsert worker: %w", err)
+	}
+
 	return nil, nil
 }
 
@@ -164,6 +194,7 @@ func (svc *HTTPService) Do(ctx context.Context) (*HTTPResponse, error) {
 type Current struct {
 	Response *http.Response // HTTP response from the request.
 	Table    string         // Name of the table for storage.
+	Database string         // Name of the database for storage.
 }
 
 /*
@@ -185,27 +216,49 @@ type HTTPIteratorService struct {
 
 	currentChan chan *Current
 
-	// errCh is a channel that holds any errors encountered by the iterator.
-	// It can be propagated to the user by the "Err" method.
 	errCh chan error
 
-	// err is the error that was encountered by the iterator and is
-	// propagated to the user with the "Err" method.
-	err error
+	// closemu prevents the iterator from closing while there is an active
+	// streaming  result. It is held for read during non-close operations
+	// and exclusively during close.
+	//
+	// closemu guards lasterr and closed.
+	closemu sync.RWMutex
+	closed  bool
+	lasterr error
 }
 
 func NewHTTPIteratorService(svc *HTTPService) *HTTPIteratorService {
-	iter := &HTTPIteratorService{
-		svc:   svc,
-		errCh: make(chan error, 1),
-	}
+	iter := &HTTPIteratorService{svc: svc, errCh: make(chan error, 1)}
 
 	return iter
 }
 
+// Close closes the iterator.
+func (iter *HTTPIteratorService) Close() error {
+	iter.closemu.Lock()
+	defer iter.closemu.Unlock()
+
+	if iter.closed {
+		return nil
+	}
+
+	iter.closed = true
+
+	return nil
+}
+
 // Err returns any error encountered by the iterator.
 func (iter *HTTPIteratorService) Err() error {
-	return iter.err
+	iter.closemu.RLock()
+	defer iter.closemu.RUnlock()
+
+	// If the error is EOF or nil, return nil.
+	if iter.lasterr == io.EOF || iter.lasterr == nil {
+		return nil
+	}
+
+	return iter.lasterr
 }
 
 type responseWorkerConfig struct {
@@ -243,21 +296,30 @@ type webWorkerConfig struct {
 	jobCounter int
 }
 
-// fetch will make an HTTP request using the underlying client and endpoint.
-func fetch(ctx context.Context, job *webWorkerJob) (*http.Response, error) {
-	// If the rate limiter is not set, set it with defaults.
-	if rlimiter := job.rlimiter; rlimiter != nil {
-		if err := job.rlimiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("rate limiter error: %w", err)
+func fetch(ctx context.Context, job *webWorkerJob) (<-chan *http.Response, <-chan error) {
+	out := make(chan *http.Response, 1)
+	errs := make(chan error, 1)
+
+	go func() {
+		// If the rate limiter is not set, set it with defaults.
+		if rlimiter := job.rlimiter; rlimiter != nil {
+			if err := job.rlimiter.Wait(ctx); err != nil {
+				errs <- fmt.Errorf("rate limiter error: %w", err)
+			}
 		}
-	}
 
-	rsp, err := job.client.Do(job.req.Request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
-	}
+		rsp, err := job.client.Do(job.req.Request)
+		if err != nil {
+			errs <- fmt.Errorf("failed to make request: %w", err)
+		}
 
-	return rsp, nil
+		out <- rsp
+
+		close(out)
+		close(errs)
+	}()
+
+	return out, errs
 }
 
 // startWebWorker will start a worker upto the given specifications of the
@@ -278,47 +340,25 @@ func fetch(ctx context.Context, job *webWorkerJob) (*http.Response, error) {
 // regardless of errors encountered, the worker will always continue to process
 // jobs until the jobs channel is closed.
 func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
-	errs, ctx := errgroup.WithContext(ctx)
-
 	for job := range cfg.jobs {
-		job := job
+		go func(job webWorkerJob) {
+			defer func() {
+				cfg.done <- true
+			}()
 
-		errs.Go(func() error {
-			select {
-			case <-ctx.Done():
-				cfg.jobCounter++
+			rspCh, errCh := fetch(ctx, &job)
 
-				return wrapErrDeadlineExceeded(ctx.Err())
-			default:
-
-				var httpRsp *http.Response
-				defer func() {
-					// Push the response onto the response
-					// channel, if it exists.
-					cfg.currentCh <- &Current{
-						Response: httpRsp,
-						Table:    job.req.Table,
-					}
-
-					// Alert the done channel that the job
-					// is complete, if it exists.
-					cfg.done <- true
-				}()
-
-				rsp, err := fetch(ctx, &job)
-				if err != nil {
-					return err
-				}
-
-				httpRsp = rsp
-
-				return nil
+			err := <-errCh
+			if err != nil {
+				cfg.errCh <- err
 			}
-		})
-	}
 
-	if err := errs.Wait(); err != nil {
-		cfg.errCh <- err
+			cfg.currentCh <- &Current{
+				Response: <-rspCh,
+				Table:    job.req.Table,
+				Database: job.req.Database,
+			}
+		}(job)
 	}
 
 	if cfg.id == 1 {
@@ -372,6 +412,34 @@ func (iter *HTTPIteratorService) startWorkers(ctx context.Context) {
 	}()
 }
 
+func (iter *HTTPIteratorService) next(ctx context.Context) error {
+	for {
+		select {
+		// If the context has timed out or been canceled, then we return
+		// false.
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled: %w", ctx.Err())
+		case result, ok := <-iter.currentChan:
+			if !ok || result.Response == nil {
+				// If we don't get a response, then we know
+				// something is wrong and we need to wait for
+				// the error channel to be closed.
+				if err := <-iter.errCh; err != nil {
+					return err
+				}
+
+				// Return an EOF error to indicate that we have
+				// reached the end of the iterator.
+				return io.EOF
+			}
+
+			iter.Current = result
+
+			return nil
+		}
+	}
+}
+
 // Next will push the next response as a byte slice onto the Iterator. If there
 // are no more responses, the returned boolean will be false. The user is
 // responsible for decoding the response.
@@ -379,40 +447,20 @@ func (iter *HTTPIteratorService) startWorkers(ctx context.Context) {
 // The HTTP requests used to define the configuration will be fetched
 // concurrently once the "Next" method is called for the first time.
 func (iter *HTTPIteratorService) Next(ctx context.Context) bool {
+	iter.closemu.RLock()
+	defer iter.closemu.RUnlock()
+
 	// If the current channel is nil, then we need to start the workers.
 	// This will lazy load the web workers and the response workers, each
-	// buffered by the number of flattened requests.
+	// buffered by the number of requests.
 	if iter.currentChan == nil {
 		iter.startWorkers(ctx)
 	}
 
-	for {
-		select {
-		// If the context has timed out or been canceled, then we return
-		// false.
-		case <-ctx.Done():
-			return false
-		case err := <-iter.errCh:
-			if err != nil {
-				iter.err = err
-
-				return false
-			}
-		case result, ok := <-iter.currentChan:
-			if !ok {
-				return false
-			}
-
-			// If the result is "nil," then something is wrong with
-			// the response. We will skip this response and continue
-			// to encounter the underlying error.
-			if result == nil {
-				continue
-			}
-
-			iter.Current = result
-
-			return true
-		}
+	iter.lasterr = iter.next(ctx)
+	if iter.lasterr != nil {
+		return false
 	}
+
+	return true
 }

@@ -21,7 +21,7 @@ func ExampleHTTPService_Iterator() {
 	// requests to the API.
 	svc, err := gidari.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to create service: %v", err)
 	}
 
 	// Create some requests and add them to the service.
@@ -61,48 +61,10 @@ func ExampleHTTPService_Iterator() {
 
 	// Check to see if an error occurred.
 	if err := svc.HTTP.Iterator.Err(); err != nil {
-		panic(err)
+		log.Fatalf("failed to iterate over HTTP responses: %v", err)
 	}
 
 	fmt.Println("Total number of bytes:", byteSize)
 	// Output:
 	// Total number of bytes: 256179
 }
-
-//
-// func ExampleTransport() {
-//	ctx := context.Background()
-//
-//	const api = "https://anapioficeandfire.com/api"
-//
-//	// Create the HTTP Requests to iterate over.
-//	bookReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/books", nil)
-//	houseReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/houses", nil)
-//	charReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/characters", nil)
-//
-//	// Initiate the transport
-//	err := gidari.Transport(ctx, &gidari.Config{
-//		Requests: []*gidari.Request{
-//			{
-//				HttpRequest: bookReq,
-//				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
-//			},
-//			{
-//				HttpRequest: houseReq,
-//				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
-//			},
-//			{
-//				HttpRequest: charReq,
-//				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 5),
-//			},
-//		},
-//	})
-//
-//	if err != nil {
-//		log.Fatalf("failed to transport: %v", err)
-//	}
-//
-//	fmt.Println("Transported successfully")
-//	// Output:
-//	// Transported successfully
-//}
