@@ -14,12 +14,18 @@ import (
 	"github.com/alpstable/gidari/proto"
 )
 
+// Service is the main service for Gidari. It is responsible for providing the
+// services for transporting and processing data.
 type Service struct {
+	// HTTP is used for transporting and processing HTTP requests and
+	// responses.
 	HTTP *HTTPService
 }
 
+// ServiceOption is a function for configuring a Service.
 type ServiceOption func(*Service)
 
+// NewService will create a new Service.
 func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 	svc := &Service{}
 	for _, opt := range opts {

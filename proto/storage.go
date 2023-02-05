@@ -11,13 +11,6 @@ import (
 	"context"
 )
 
-type DecodeType int32
-
-const (
-	DecodeTypeUnknown DecodeType = iota
-	DecodeTypeJSON
-)
-
 type UpsertWriter interface {
 	// Upsert will use an UpsertRequest to upsert a new or existing
 	// object into the storage backend.
