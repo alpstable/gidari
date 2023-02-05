@@ -29,95 +29,24 @@ For information on using the CLI, see [here](https://github.com/alpstable/gidari
 
 ## Usage
 
-There are two ways to use this library:
+At the moment, Gidari only supports an HTTP service. There are two ways to use the HTTP service:
 
-1. Create a cursor that will buffer HTTP responses to iterate over
-2. Use an adapter library to transport data from an HTTP endpoint to a storage device.
+1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Requests`](https://pkg.go.dev/net/http#Request).
+2. Use any number of "proto.UpsertWriter" to concurrently "write" response data for pre-defined `http.Requests`.
 
-See [examples](examples/) for common use cases. To setup and environment to test locally, run `make containers`.
+See the Go Docs for more information on these use-cases and examples of how to apply them.
 
-### Cursor
+### Storage Adapter Library
 
-TODO
-
-### Adapter Library
-
-```go
-package main
-
-import (
-	"context"
-
-	"github.com/alpstable/gidari"
-	"github.com/alpstable/gidari/config"
-	"github.com/alpstable/gmongo"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-func main() {
-	ctx := context.TODO()
-
-	// Create a MongoDB client using the official MongoDB Go Driver.
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, _ := mongo.Connect(ctx, clientOptions)
-
-	// Plug the client into a Gidari MongoDB Storage adapater.
-	mdbStorage, _ := gmongo.New(ctx, client)
-
-	// Include the adapter in the storage slice of the transport configuration.
-	// This particular transport will make a request to "api.zippopotam.us" for
-	// zip code data in Seatle. Once the request is completed, the resulting
-	// data will be persisted in the "zip_codes" database on the "seatle" table.
-	err := gidari.Transport(ctx, &gidari.Config{
-		URL: func() *url.URL {
-			url, _ := url.Parse("http://api.zippopotam.us")
-
-			return url
-		}(),
-		Requests: []*gidari.Request{
-			{
-				Endpoint:    "/us/98121",
-				Method:      http.MethodGet,
-				Table:       "seatle",
-				RateLimiter: rate.NewLimiter(rate.Every(time.Second), 1),
-			},
-		},
-		StorageOptions: []gidari.StorageOptions{
-			{
-				Storage:  storage,
-				Database: "zip_codes",
-			},
-		},
-	})
-
-	if err != nil {
-		panic(err)
-	}
-}
-```
-
-## SQL
-
-Supported SQL options
+Here is a list of storage adapter libraries for response body data from a list of http.Requests:
 
 - [Postgres](https://github.com/alpstable/gpostgres) (WIP)
-
-## NoSQL
-
-Supported NoSQL options
-
 - [CSV](https://github.com/alpstable/gcsv) (WIP)
 - [MongoDB](https://github.com/alpstable/gmongo)
 
 ## Contributing
 
 Follow [this guide](docs/CONTRIBUTING.md) for information on contributing.
-
-## Releases
-
-See [here](docs/release_process.md) for the release process.
 
 ## Resources
 

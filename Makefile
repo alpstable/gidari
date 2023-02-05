@@ -3,11 +3,6 @@ GC = go
 
 export GO111MODULE=on
 
-# containers build the docker containers for performing integration tests.
-.PHONY: containers
-containers:
-	scripts/build-storage.sh
-
 # proto is a phony target that will generate the protobuf files.
 .PHONY: proto
 proto:
@@ -17,12 +12,6 @@ proto:
 .PHONY: tests
 tests:
 	$(GC) clean -testcache && go test -v -count=100 -failfast ./...
-
-# examples runs all of the example in a Go Docker container.
-# DEPRECATED
-#.PHONY: examples
-#examples:
-#	chmod +rwx scripts/*.sh && ./scripts/run-examples.sh
 
 # fmt runs the formatter.
 .PHONY: fmt
