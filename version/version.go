@@ -7,5 +7,5 @@
 //	http://www.apache.org/licenses/LICENSE-2.0
 package version
 
-// Gidari is the version of the Gidari library.
-const Gidari = "pre-alpha"
+// Version is the version of the Gidari library.
+const Version = "0.1.0"
