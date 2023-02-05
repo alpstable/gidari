@@ -3,9 +3,6 @@
 - [Dependencies](#dependencies)
 - [Build](#build)
 - [Testing](#testing)
-- [Integration Testing](#integration-testing)
-  - [Network Updates](#network-updates)
-  - [Running Integration Tests](#running-integration-tests)
 - [Testing with the CLI](#testing-with-the-cli)
 
 Thank you for your interest in contributing to Gidari! Please make sure to fork this repository before working through issues.
