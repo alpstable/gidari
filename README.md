@@ -12,11 +12,8 @@ Gidari is a "web-to-storage" tool for querying web APIs and persisting the resul
 ##
 
 * [Installation](#installation)
-* [Configurations](#configurations)
-* [SQL](#sql)
-* [No SQL](#nosql)
+* [Usage](#usage)
 * [Contributing](#contributing)
-* [Releases](#releases)
 * [Resources](#resources)
 
 ## Installation
