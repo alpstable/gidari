@@ -2,38 +2,64 @@
 
 Releases will use [semantic versioning](https://semver.org/).
 
-Releasing is a process that will require adaptation to the use case, the rules here are not set in stone.
-
 ## Patch Release
 
-Assume the patch release is `X.Y.Z`
+Patch releases are for backwards compatible bug fixes.
 
-1. Cherry-pick the issues with label `x.y.z` in the patch from `main` into `release/X.Y`.
-2. Create a PR to update
-	1. the `release/X.Y` branch's `version/version.go` to `vX.Y.Z`
-	2. the install instructions in README.md on `releaze/X.Y` to `@X.Y.Z`
-3. Create a PR to update the install instructions in README.md on the `main` branch to `@vX.Y.Z`
-4. Draft a new release [here](https://github.com/alpstable/gidari/releases/new)
-	- Create a new tag `vX.Y.Z`
-	- Target should be `release/X.Y`
-	- Describe the release, include the the name of the label and link to the issues with that label filtered.
-5. Publish the release
+1. Create a draft release from the [release template](#release-template) but do not release it yet. The title should be "Gidari X.Y.Z".
+2. Put the release notes on the discord server for review: https://discord.com/invite/3jGYQz74s7
+3. Cherry-pick the issues with label `x.y.z` in the patch from `main` into `release/x.y`.
+4. Change the version on `release/X.Y` to `x.y.z` and commit the change with the message "updating release version x.y.z"
+5. Create and push the tag using `git tag -a x.y.z -m "x.y.z"; git push --tags`
+6. Tag the the draft release with the `x.y.z` tag.
+7. Publish the release.
+8. Change the version on `release/x.y` to `x.y.z+1-prerelease` and commit the change with the message "updating release version x.y.z+1-prerelease".
+9. Put the release notes on the discord server: https://discord.com/invite/3jGYQz74s7
 
 All issues with label `x.y.z` will be included in the patch release.
 
 ## Minor Release
 
-Assume the minor release is `X.Y.0`
+Minor releases are for adding functionality in a backwards compatible manner.
 
-1. Create a PR updating 
-	1. the install instructions in README.md of the `main` branch to `@vX.Y.0`
-	2. the `main` branch's `version/version.go` to `vX.(Y+1).0-prerelease`
-3. Create a new branch from `main` called `release/X.Y` and create a PR updating 
-	1. the `release/X.Y` branch's `version/version.go` to `vX.Y.0`
-5. Draft a new release [here](https://github.com/alpstable/gidari/releases/new)
-	- Create a new tag `vX.Y.0`
-	- Target should be `release/X.Y`
-	- Describe the release, including the name of the label and link to the issues with that label filtered
-6. Publish the release
+1. Create a draft release from the [release template](#release-template) but do not release it yet. The title should be "Gidari X.Y.0".
+2. Put the release notes on the discord server for review: https://discord.com/invite/3jGYQz74s7
+3. Change the version on `main` to `x.y.0` and commit the change with the message "updating release version x.y.0"
+4. Create a new branch from `main` called `release/x.y`
+6. On `release/x.y`, create and push the tag using `git tag -a x.y.0 -m "x.y.0"; git push --tags`
+7. Tag the the draft release with the `x.y.0` tag.
+8. Change the version on `release/x.y` to `x.y.1-prerelease` and commit the change with the message "updating version x.y.1-prelease"
+9. Publish the release.
+10. Change the version on `main` to `x.y+1.0-prerelease` and commit the change with the message "updating release version x.y+1.0-prerelease"
 
-All issues with label `x.y` wil be included in the minor release.
+All issues with label `x.y.0` wil be included in the minor release.
+
+## Release Template
+
+```
+{Description of the release}
+
+### Migration Steps
+* [ACTION REQUIRED]
+*
+
+### Breaking Changes
+*
+*
+
+### New Features
+*
+*
+
+### Bug Fixes
+*
+*
+
+### Performance Improvements
+*
+*
+
+### Other Changes
+*
+*
+```
