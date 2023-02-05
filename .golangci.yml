@@ -53,8 +53,16 @@ issues:
     - path: proto/*
       linters:
         - goimports
+        - revive
+  exclude-use-default: false
 
 linters-settings:
   varnamelen:
     ignore-names:
       - wg # wg is a standard variable name for "sync.WaitGroup"
+  revive:
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: exported
+        arguments: [ "checkPrivateReceivers", "sayRepetitiveInsteadOfStutters" ]
