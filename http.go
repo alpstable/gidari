@@ -244,13 +244,13 @@ type Current struct {
 	Database string         // Name of the database for storage.
 }
 
-// HTTPIteratorService is a service that will iterate over the requests defiend
+// HTTPIteratorService is a service that will iterate over the requests defined
 // for the HTTPService and return the response from each request.
 type HTTPIteratorService struct {
 	svc *HTTPService
 
-	// Current is the most recent response from the iterator. This is
-	// blocked by the "Next" method.
+	// Current is the most recent response from the iterator. This value is
+	// set and blocked by the "Next" method, updating with each iteration.
 	Current *Current
 
 	currentChan chan *Current
