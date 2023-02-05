@@ -28,7 +28,7 @@ type UpsertRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Table    *Table `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
-	DataType int32  `protobuf:"varint,3,opt,name=dataType,proto3" json:"dataType,omitempty"`
+	DataType int32  `protobuf:"varint,2,opt,name=dataType,proto3" json:"dataType,omitempty"`
 	Data     []byte `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
 }
 
@@ -772,6 +772,72 @@ func (x *TruncateResponse) GetDeletedCount() int32 {
 	return 0
 }
 
+type IteratorResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// URL is the URI that was used to get the data for the IteratorResult.
+	URL string `protobuf:"bytes,1,opt,name=URL,proto3" json:"URL,omitempty"`
+	// Data is the response data from the endpoint.
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	// Done is true if there are no more results, i.e. this is the final result.
+	Done bool `protobuf:"varint,3,opt,name=done,proto3" json:"done,omitempty"`
+}
+
+func (x *IteratorResult) Reset() {
+	*x = IteratorResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_db_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *IteratorResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IteratorResult) ProtoMessage() {}
+
+func (x *IteratorResult) ProtoReflect() protoreflect.Message {
+	mi := &file_db_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IteratorResult.ProtoReflect.Descriptor instead.
+func (*IteratorResult) Descriptor() ([]byte, []int) {
+	return file_db_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *IteratorResult) GetURL() string {
+	if x != nil {
+		return x.URL
+	}
+	return ""
+}
+
+func (x *IteratorResult) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *IteratorResult) GetDone() bool {
+	if x != nil {
+		return x.Done
+	}
+	return false
+}
+
 var File_db_proto protoreflect.FileDescriptor
 
 var file_db_proto_rawDesc = []byte{
@@ -782,7 +848,7 @@ var file_db_proto_rawDesc = []byte{
 	0x12, 0x22, 0x0a, 0x05, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x0c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x54, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x05, 0x74,
 	0x61, 0x62, 0x6c, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x64, 0x61, 0x74, 0x61, 0x54, 0x79, 0x70, 0x65,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x64, 0x61, 0x74, 0x61, 0x54, 0x79, 0x70, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x64, 0x61, 0x74, 0x61, 0x54, 0x79, 0x70, 0x65,
 	0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04,
 	0x64, 0x61, 0x74, 0x61, 0x22, 0x5a, 0x0a, 0x0e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x24, 0x0a, 0x0d, 0x75, 0x70, 0x73, 0x65, 0x72, 0x74,
@@ -871,8 +937,13 @@ var file_db_proto_rawDesc = []byte{
 	0x61, 0x62, 0x6c, 0x65, 0x73, 0x22, 0x36, 0x0a, 0x10, 0x54, 0x72, 0x75, 0x6e, 0x63, 0x61, 0x74,
 	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x22, 0x0a, 0x0c, 0x64, 0x65, 0x6c,
 	0x65, 0x74, 0x65, 0x64, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
-	0x0c, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x42, 0x09, 0x5a,
-	0x07, 0x2e, 0x3b, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x0c, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x22, 0x4a, 0x0a,
+	0x0e, 0x49, 0x74, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12,
+	0x10, 0x0a, 0x03, 0x55, 0x52, 0x4c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x55, 0x52,
+	0x4c, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x6f, 0x6e, 0x65, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x04, 0x64, 0x6f, 0x6e, 0x65, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x3b, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -887,7 +958,7 @@ func file_db_proto_rawDescGZIP() []byte {
 	return file_db_proto_rawDescData
 }
 
-var file_db_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_db_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_db_proto_goTypes = []interface{}{
 	(*UpsertRequest)(nil),           // 0: proto.UpsertRequest
 	(*UpsertResponse)(nil),          // 1: proto.UpsertResponse
@@ -903,23 +974,24 @@ var file_db_proto_goTypes = []interface{}{
 	(*ReadResponse)(nil),            // 11: proto.ReadResponse
 	(*TruncateRequest)(nil),         // 12: proto.TruncateRequest
 	(*TruncateResponse)(nil),        // 13: proto.TruncateResponse
-	nil,                             // 14: proto.UpsertBinaryRequest.PrimaryKeyMapEntry
-	nil,                             // 15: proto.ListColumnsResponse.ColSetEntry
-	nil,                             // 16: proto.ListPrimaryKeysResponse.PKSetEntry
-	nil,                             // 17: proto.ListTablesResponse.TableSetEntry
-	(*structpb.Struct)(nil),         // 18: google.protobuf.Struct
+	(*IteratorResult)(nil),          // 14: proto.IteratorResult
+	nil,                             // 15: proto.UpsertBinaryRequest.PrimaryKeyMapEntry
+	nil,                             // 16: proto.ListColumnsResponse.ColSetEntry
+	nil,                             // 17: proto.ListPrimaryKeysResponse.PKSetEntry
+	nil,                             // 18: proto.ListTablesResponse.TableSetEntry
+	(*structpb.Struct)(nil),         // 19: google.protobuf.Struct
 }
 var file_db_proto_depIdxs = []int32{
 	8,  // 0: proto.UpsertRequest.table:type_name -> proto.Table
 	8,  // 1: proto.UpsertBinaryRequest.table:type_name -> proto.Table
-	14, // 2: proto.UpsertBinaryRequest.primaryKeyMap:type_name -> proto.UpsertBinaryRequest.PrimaryKeyMapEntry
-	15, // 3: proto.ListColumnsResponse.colSet:type_name -> proto.ListColumnsResponse.ColSetEntry
-	16, // 4: proto.ListPrimaryKeysResponse.PKSet:type_name -> proto.ListPrimaryKeysResponse.PKSetEntry
-	17, // 5: proto.ListTablesResponse.tableSet:type_name -> proto.ListTablesResponse.TableSetEntry
-	18, // 6: proto.ReadRequest.required:type_name -> google.protobuf.Struct
-	18, // 7: proto.ReadRequest.options:type_name -> google.protobuf.Struct
+	15, // 2: proto.UpsertBinaryRequest.primaryKeyMap:type_name -> proto.UpsertBinaryRequest.PrimaryKeyMapEntry
+	16, // 3: proto.ListColumnsResponse.colSet:type_name -> proto.ListColumnsResponse.ColSetEntry
+	17, // 4: proto.ListPrimaryKeysResponse.PKSet:type_name -> proto.ListPrimaryKeysResponse.PKSetEntry
+	18, // 5: proto.ListTablesResponse.tableSet:type_name -> proto.ListTablesResponse.TableSetEntry
+	19, // 6: proto.ReadRequest.required:type_name -> google.protobuf.Struct
+	19, // 7: proto.ReadRequest.options:type_name -> google.protobuf.Struct
 	8,  // 8: proto.ReadRequest.table:type_name -> proto.Table
-	18, // 9: proto.ReadResponse.records:type_name -> google.protobuf.Struct
+	19, // 9: proto.ReadResponse.records:type_name -> google.protobuf.Struct
 	8,  // 10: proto.TruncateRequest.tables:type_name -> proto.Table
 	4,  // 11: proto.ListColumnsResponse.ColSetEntry.value:type_name -> proto.Columns
 	6,  // 12: proto.ListPrimaryKeysResponse.PKSetEntry.value:type_name -> proto.PrimaryKeys
@@ -1105,6 +1177,18 @@ func file_db_proto_init() {
 				return nil
 			}
 		}
+		file_db_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*IteratorResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1112,7 +1196,7 @@ func file_db_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_db_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

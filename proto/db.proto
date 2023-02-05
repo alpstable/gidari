@@ -8,7 +8,7 @@ option go_package = ".;proto";
 // Create a record in the database. Optionally include an "id" field otherwise it's set automatically.
 message UpsertRequest {
 	Table table = 1;
-	int32 dataType = 3;
+	int32 dataType = 2;
 	bytes data = 4;
 }
 
@@ -87,5 +87,16 @@ message TruncateRequest {
 message TruncateResponse {
 	// DeletedCount of records deleted
 	int32 deletedCount = 1;
+}
+
+message IteratorResult {
+	// URL is the URI that was used to get the data for the IteratorResult.
+	string URL = 1;
+
+	// Data is the response data from the endpoint.
+	bytes data = 2;
+
+	// Done is true if there are no more results, i.e. this is the final result.
+	bool done = 3;
 }
 

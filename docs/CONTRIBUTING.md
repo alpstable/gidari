@@ -22,11 +22,10 @@ All pull requests are subject to the GitHub workflow CI defined in the Actions s
 
 ## Dependencies
 
-To develop locally you need to install the following dependencies:
+To develop locally you will need to install the following dependencies:
 
-1. Docker: https://docs.docker.com/get-docker/
-2. Go: https://go.dev/doc/install
-3. Google protobuf compiler (protoc):
+1. Go: https://go.dev/doc/install
+2. Google protobuf compiler (protoc):
 
 > ### Mac OS and Linux
 >
@@ -38,34 +37,17 @@ To develop locally you need to install the following dependencies:
 >
 > - Add to PATH by extracting to "C:\protoc-XX.X-winXX" (Be sure to replace 'X' with your appropriate release and system type)
 
-4. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
+3. protoc-gen-go: https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers
+4. `gofumpt`: https://github.com/mvdan/gofumpt
+5. `golangcli-lint`: https://github.com/golangci/golangci-lint#install-golangci-lint
 
 ## Testing
 
-To test run 
+To test run
 
 ```
 make tests
 ```
-
-## Integration Testing
-
-Gidari is a web-to-storage data transport, which means that integration tests are inevitable. This is an imperfect practice and any constructive feedback on improving the workflow is much appreciated.
-
-### Network Updates
-
-You will also need to sync your /etc/hosts file with the docker containers:
-
-```
-# Alpine Hodler Containers
-127.0.0.1 mongo1
-127.0.0.1 mongo2
-127.0.0.1 mongo3
-```
-
-### Running Integration Tests
-
-To test locally first build the containers for integration tests using `make containers`. Then run `make e2e`.
 
 ## Testing with the CLI
 
