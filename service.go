@@ -53,22 +53,22 @@ type upsertWorkerConfig struct {
 	jobs    <-chan upsertWorkerJob
 	done    chan<- struct{}
 	errCh   chan<- error
-	writers []proto.UpsertWriter
+	writers []proto.ListWriter
 }
 
-func upsert(ctx context.Context, stg proto.UpsertWriter, job *upsertWorkerJob) <-chan error {
+func upsert(ctx context.Context, stg proto.ListWriter, job *upsertWorkerJob) <-chan error {
 	errs := make(chan error, 1)
 
 	go func() {
-		req := &proto.UpsertRequest{
-			Table: &proto.Table{
-				Name:     job.table,
-				Database: job.database,
-			},
-			Data: job.data,
+		// Decode the data into a structpb.ListValue.
+		list, err := proto.Decode(job.dataType, job.data)
+		if err != nil {
+			errs <- err
+
+			return
 		}
 
-		if err := stg.Write(ctx, req); err != nil {
+		if err := stg.Write(ctx, list); err != nil {
 			errs <- err
 		}
 
@@ -86,7 +86,7 @@ func startUpsertWorker(ctx context.Context, cfg upsertWorkerConfig) {
 		wg.Add(len(cfg.writers))
 
 		for _, stg := range cfg.writers {
-			go func(stg proto.UpsertWriter, job upsertWorkerJob) {
+			go func(stg proto.ListWriter, job upsertWorkerJob) {
 				defer wg.Done()
 
 				errs := upsert(ctx, stg, &job)

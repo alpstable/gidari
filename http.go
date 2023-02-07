@@ -58,9 +58,9 @@ type HTTPService struct {
 	// defined by the "net/http" package.
 	Iterator *HTTPIteratorService
 
-	rlimiter      *rate.Limiter
-	requests      []*HTTPRequest
-	upsertWriters []proto.UpsertWriter
+	rlimiter    *rate.Limiter
+	requests    []*HTTPRequest
+	listWriters []proto.ListWriter
 }
 
 // NewHTTPService will create a new HTTPService.
@@ -98,10 +98,10 @@ func (svc *HTTPService) Requests(reqs ...*HTTPRequest) *HTTPService {
 	return svc
 }
 
-// UpsertWriters sets the optional storage to be used by the HTTP service to
+// ListWriters sets the optional storage to be used by the HTTP service to
 // store the data from the requests.
-func (svc *HTTPService) UpsertWriters(w ...proto.UpsertWriter) *HTTPService {
-	svc.upsertWriters = append(svc.upsertWriters, w...)
+func (svc *HTTPService) ListWriters(w ...proto.ListWriter) *HTTPService {
+	svc.listWriters = append(svc.listWriters, w...)
 
 	return svc
 }
@@ -214,7 +214,7 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 			id:      i,
 			jobs:    upsertWorkerJobs,
 			done:    done,
-			writers: svc.upsertWriters,
+			writers: svc.listWriters,
 			errCh:   errCh,
 		})
 	}

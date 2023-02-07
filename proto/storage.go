@@ -9,10 +9,10 @@ package proto
 
 import (
 	"context"
+
+	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
-type UpsertWriter interface {
-	// Upsert will use an UpsertRequest to upsert a new or existing
-	// object into the storage backend.
-	Write(context.Context, *UpsertRequest) error
+type ListWriter interface {
+	Write(cxt context.Context, list *structpb.ListValue) error
 }

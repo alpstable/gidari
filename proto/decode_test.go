@@ -69,14 +69,8 @@ func TestDecodeUpsertRequest(t *testing.T) {
 		t.Run(tcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			// First we create the UpsertRequest object.
-			req := &UpsertRequest{
-				Data:     tcase.data,
-				DataType: int32(tcase.dataType),
-			}
-
 			// Then we call the DecodeUpsertRequest function.
-			list, err := DecodeUpsertRequest(req)
+			list, err := Decode(tcase.dataType, tcase.data)
 			if !errors.Is(err, tcase.err) {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -109,18 +103,12 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 
 	data = append(data, []byte(`"foo1000": "bar1000"}`)...)
 
-	// Create the UpsertRequest object.
-	req := &UpsertRequest{
-		Data:     data,
-		DataType: int32(DecodeTypeJSON),
-	}
-
 	// Run the benchmark.
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, err := DecodeUpsertRequest(req)
+		_, err := Decode(DecodeTypeJSON, data)
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
