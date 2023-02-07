@@ -16,6 +16,13 @@ import (
 
 var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
 
+type DecodeType int32
+
+const (
+	DecodeTypeUnknown DecodeType = iota
+	DecodeTypeJSON
+)
+
 func decodeJSON(data []byte) (*structpb.ListValue, error) {
 	// If there is no data, return an empty list.
 	if len(data) == 0 {

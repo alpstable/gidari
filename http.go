@@ -44,6 +44,9 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
+// HTTPService is used process response data from requests sent to an HTTP
+// client. "Processing" includes upserting data into a database, or concurrently
+// iterating over the response data using a "Next" pattern.
 type HTTPService struct {
 	client Client
 	svc    *Service
@@ -60,6 +63,7 @@ type HTTPService struct {
 	listWriters []proto.ListWriter
 }
 
+// NewHTTPService will create a new HTTPService.
 func NewHTTPService(svc *Service) *HTTPService {
 	httpSvc := &HTTPService{svc: svc}
 	httpSvc.Iterator = NewHTTPIteratorService(httpSvc)
@@ -70,8 +74,8 @@ func NewHTTPService(svc *Service) *HTTPService {
 
 // RateLimiter sets the optional rate limiter for the service. A rate limiter
 // will limit the request to a set of bursts per period, avoiding 429 errors.
-func (svc *HTTPService) RateLimiter(rate *rate.Limiter) *HTTPService {
-	svc.rlimiter = rate
+func (svc *HTTPService) RateLimiter(rlimiter *rate.Limiter) *HTTPService {
+	svc.rlimiter = rlimiter
 
 	return svc
 }
@@ -104,10 +108,10 @@ func (svc *HTTPService) UpsertWriters(w ...proto.ListWriter) *HTTPService {
 
 // isDecodeTypeJSON will check if the provided "accept" struct is typed for
 // decoding into JSON.
-func isDecodeTypeJSON(accept accept.Accept) bool {
-	return accept.Typ == "application" &&
-		(accept.Subtype == "json" || accept.Subtype == "*") ||
-		accept.Typ == "*" && accept.Subtype == "*"
+func isDecodeTypeJSON(acceptHeader accept.Accept) bool {
+	return acceptHeader.Typ == "application" &&
+		(acceptHeader.Subtype == "json" || acceptHeader.Subtype == "*") ||
+		acceptHeader.Typ == "*" && acceptHeader.Subtype == "*"
 }
 
 // bestFitDecodeType will parse the provided Accept(-Charset|-Encoding|-Language)
@@ -121,8 +125,8 @@ func isDecodeTypeJSON(accept accept.Accept) bool {
 func bestFitDecodeType(header string) proto.DecodeType {
 	decodeType := proto.DecodeTypeUnknown
 
-	for _, accept := range accept.ParseAcceptHeader(header) {
-		if isDecodeTypeJSON(accept) {
+	for _, acceptHeader := range accept.ParseAcceptHeader(header) {
+		if isDecodeTypeJSON(acceptHeader) {
 			decodeType = proto.DecodeTypeJSON
 
 			break
@@ -194,7 +198,6 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 
 	// Reset the iterator.
 	svc.Iterator = NewHTTPIteratorService(svc)
-	defer svc.Iterator.Close()
 
 	// Create a channel to send requests to the worker.
 	upsertWorkerJobs := make(chan upsertWorkerJob, reqCount)
@@ -224,6 +227,11 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 		return fmt.Errorf("error in upsert worker: %w", err)
 	}
 
+	// Close the iterator.
+	if err := svc.Iterator.Close(); err != nil {
+		return fmt.Errorf("failed to close iterator: %w", err)
+	}
+
 	return nil
 }
 
@@ -236,14 +244,17 @@ type Current struct {
 	Database string         // Name of the database for storage.
 }
 
+// HTTPIteratorService is a service that will iterate over the requests defined
+// for the HTTPService and return the response from each request.
 type HTTPIteratorService struct {
 	svc *HTTPService
 
+	// Current is the most recent response from the iterator. This value is
+	// set and blocked by the "Next" method, updating with each iteration.
 	Current *Current
 
 	currentChan chan *Current
-
-	errCh chan error
+	errCh       chan error
 
 	// closemu prevents the iterator from closing while there is an active
 	// streaming  result. It is held for read during non-close operations
@@ -255,6 +266,7 @@ type HTTPIteratorService struct {
 	lasterr error
 }
 
+// NewHTTPIteratorService will return a new HTTPIteratorService.
 func NewHTTPIteratorService(svc *HTTPService) *HTTPIteratorService {
 	iter := &HTTPIteratorService{svc: svc, errCh: make(chan error, 1)}
 

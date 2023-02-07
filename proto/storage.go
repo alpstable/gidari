@@ -13,13 +13,6 @@ import (
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
-type DecodeType int32
-
-const (
-	DecodeTypeUnknown DecodeType = iota
-	DecodeTypeJSON
-)
-
 type ListWriter interface {
 	Write(cxt context.Context, list *structpb.ListValue) error
 }
