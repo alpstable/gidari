@@ -40,7 +40,7 @@ func newMockService(opts mockServiceOptions) *Service {
 		)).
 		RateLimiter(opts.rateLimiter).
 		Requests(reqs...).
-		UpsertWriters(newMockUpsertStorage(opts.upsertStgCount)...)
+		ListWriters(newMockUpsertStorage(opts.upsertStgCount)...)
 
 	return svc
 }

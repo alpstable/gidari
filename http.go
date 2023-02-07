@@ -98,9 +98,9 @@ func (svc *HTTPService) Requests(reqs ...*HTTPRequest) *HTTPService {
 	return svc
 }
 
-// UpsertWriters sets the optional storage to be used by the HTTP service to
+// ListWriters sets the optional storage to be used by the HTTP service to
 // store the data from the requests.
-func (svc *HTTPService) UpsertWriters(w ...proto.ListWriter) *HTTPService {
+func (svc *HTTPService) ListWriters(w ...proto.ListWriter) *HTTPService {
 	svc.listWriters = append(svc.listWriters, w...)
 
 	return svc

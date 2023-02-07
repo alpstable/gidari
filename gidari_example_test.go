@@ -117,7 +117,7 @@ func ExampleHTTPService_Upsert() {
 	// Add a writer to the service. This will be used to write the
 	// responses to a database.
 	writer := &ExampleWriter{}
-	svc.HTTP.UpsertWriters(writer)
+	svc.HTTP.ListWriters(writer)
 
 	// Upsert the responses to the database.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
