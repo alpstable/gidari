@@ -264,7 +264,7 @@ func TestIterator(t *testing.T) {
 
 				// We need to validate various operation for
 				// the upsert storage.
-				for _, stg := range tcase.svc.HTTP.upsertWriters {
+				for _, stg := range tcase.svc.HTTP.listWriters {
 					mockStorage, ok := stg.(*mockUpsertWriter)
 					if !ok {
 						t.Errorf("expected mock storage, got %T", stg)

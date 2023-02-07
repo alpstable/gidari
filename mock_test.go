@@ -17,6 +17,7 @@ import (
 
 	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type mockServiceOptions struct {
@@ -154,8 +155,8 @@ type mockUpsertWriter struct {
 	countMu sync.Mutex
 }
 
-func newMockUpsertStorage(volume int) []proto.UpsertWriter {
-	stg := make([]proto.UpsertWriter, volume)
+func newMockUpsertStorage(volume int) []proto.ListWriter {
+	stg := make([]proto.ListWriter, volume)
 	for i := 0; i < volume; i++ {
 		stg[i] = &mockUpsertWriter{}
 	}
@@ -163,7 +164,7 @@ func newMockUpsertStorage(volume int) []proto.UpsertWriter {
 	return stg
 }
 
-func (m *mockUpsertWriter) Write(context.Context, *proto.UpsertRequest) error {
+func (m *mockUpsertWriter) Write(context.Context, *structpb.ListValue) error {
 	m.countMu.Lock()
 	defer m.countMu.Unlock()
 

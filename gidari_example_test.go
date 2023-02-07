@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/alpstable/gidari"
-	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func ExampleHTTPService_Iterator() {
@@ -79,11 +79,11 @@ func ExampleHTTPService_Iterator() {
 }
 
 type ExampleWriter struct {
-	req []*proto.UpsertRequest
+	lists []*structpb.ListValue
 }
 
-func (w *ExampleWriter) Write(ctx context.Context, req *proto.UpsertRequest) error {
-	w.req = append(w.req, req)
+func (w *ExampleWriter) Write(ctx context.Context, list *structpb.ListValue) error {
+	w.lists = append(w.lists, list)
 
 	return nil
 }
@@ -125,12 +125,12 @@ func ExampleHTTPService_Upsert() {
 	}
 
 	// Print the result of the mock writer.
-	for _, req := range writer.req {
-		fmt.Printf("Writing %d number of bytes to %q\n", len(req.Data), req.GetTable().GetName())
+	for _, list := range writer.lists {
+		fmt.Println("list size: ", len(list.Values))
 	}
 
-	// Unordered Output:
-	// Writing 245724 number of bytes to "books"
-	// Writing 3628 number of bytes to "apicharacters"
-	// Writing 6827 number of bytes to "apihouses"
+	// Output:
+	// list size:  10
+	// list size:  10
+	// list size:  10
 }

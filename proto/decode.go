@@ -49,16 +49,16 @@ func decodeJSON(data []byte) (*structpb.ListValue, error) {
 	return records, nil
 }
 
-// DecodeUpsertRequest will a UpsertRequest into a structpb.ListValue for
+// Decode will a UpsertRequest into a structpb.ListValue for
 // ease-of-use. This method will return an error if the provided "decodeType" is
 // not supported.
-func DecodeUpsertRequest(req *UpsertRequest) (*structpb.ListValue, error) {
-	switch DecodeType(req.DataType) {
+func Decode(dtype DecodeType, data []byte) (*structpb.ListValue, error) {
+	switch dtype {
 	case DecodeTypeJSON:
-		return decodeJSON(req.Data)
+		return decodeJSON(data)
 	case DecodeTypeUnknown:
 		fallthrough
 	default:
-		return nil, fmt.Errorf("%w: %d", ErrUnsupportedDecodeType, req.DataType)
+		return nil, fmt.Errorf("%w: %d", ErrUnsupportedDecodeType, dtype)
 	}
 }
