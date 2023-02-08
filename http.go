@@ -17,7 +17,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alpstable/gidari/proto"
 	"github.com/alpstable/gidari/third_party/accept"
 	"golang.org/x/time/rate"
 )
@@ -36,6 +35,8 @@ type HTTPRequest struct {
 	// storage of data from this request. The default value for the table
 	// will be the endpoint of the request URL.
 	Table string
+
+	Writer ListWriter
 }
 
 // Client is an interface that wraps the "Do" method of the "net/http" package's
@@ -58,9 +59,8 @@ type HTTPService struct {
 	// defined by the "net/http" package.
 	Iterator *HTTPIteratorService
 
-	rlimiter    *rate.Limiter
-	requests    []*HTTPRequest
-	listWriters []proto.ListWriter
+	rlimiter *rate.Limiter
+	requests []*HTTPRequest
 }
 
 // NewHTTPService will create a new HTTPService.
@@ -98,14 +98,6 @@ func (svc *HTTPService) Requests(reqs ...*HTTPRequest) *HTTPService {
 	return svc
 }
 
-// ListWriters sets the optional storage to be used by the HTTP service to
-// store the data from the requests.
-func (svc *HTTPService) ListWriters(w ...proto.ListWriter) *HTTPService {
-	svc.listWriters = append(svc.listWriters, w...)
-
-	return svc
-}
-
 // isDecodeTypeJSON will check if the provided "accept" struct is typed for
 // decoding into JSON.
 func isDecodeTypeJSON(acceptHeader accept.Accept) bool {
@@ -122,12 +114,12 @@ func isDecodeTypeJSON(acceptHeader accept.Accept) bool {
 //
 // See the "acceptSlice.Less" method in the "third_party/accept" package for
 // more informaiton on how the "best fit" is determined.
-func bestFitDecodeType(header string) proto.DecodeType {
-	decodeType := proto.DecodeTypeUnknown
+func bestFitDecodeType(header string) DecodeType {
+	decodeType := DecodeTypeUnknown
 
 	for _, acceptHeader := range accept.ParseAcceptHeader(header) {
 		if isDecodeTypeJSON(acceptHeader) {
-			decodeType = proto.DecodeTypeJSON
+			decodeType = DecodeTypeJSON
 
 			break
 		}
@@ -136,7 +128,7 @@ func bestFitDecodeType(header string) proto.DecodeType {
 	return decodeType
 }
 
-func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- upsertWorkerJob, done <-chan struct{}) error {
+func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, done <-chan struct{}) error {
 	for svc.Iterator.Next(ctx) {
 		rsp := svc.Iterator.Current.Response
 
@@ -159,15 +151,16 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- upsertWorkerJob,
 		// Get the best fit type for decoding the response body. If the
 		// best fit is "Unknown", then return an error.
 		bestFit := bestFitDecodeType(rsp.Header.Get("Accept"))
-		if bestFit == proto.DecodeTypeUnknown {
-			return fmt.Errorf("%w: %q", proto.ErrUnsupportedDecodeType, rsp.Request.URL.String())
+		if bestFit == DecodeTypeUnknown {
+			return fmt.Errorf("%w: %q", ErrUnsupportedDecodeType, rsp.Request.URL.String())
 		}
 
-		jobs <- upsertWorkerJob{
+		jobs <- listWriterJob{
 			table:    svc.Iterator.Current.Table,
 			database: svc.Iterator.Current.Database,
 			data:     body,
 			dataType: bestFit,
+			writer:   svc.Iterator.Current.Writer,
 		}
 	}
 
@@ -200,7 +193,7 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 	svc.Iterator = NewHTTPIteratorService(svc)
 
 	// Create a channel to send requests to the worker.
-	upsertWorkerJobs := make(chan upsertWorkerJob, reqCount)
+	upsertWorkerJobs := make(chan listWriterJob, reqCount)
 
 	// done is a channel that will be closed when the worker is done.
 	done := make(chan struct{}, reqCount)
@@ -210,12 +203,11 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 
 	// Start the upsert worker.
 	for i := 1; i <= runtime.NumCPU(); i++ {
-		go startUpsertWorker(ctx, upsertWorkerConfig{
-			id:      i,
-			jobs:    upsertWorkerJobs,
-			done:    done,
-			writers: svc.listWriters,
-			errCh:   errCh,
+		go startListWriter(ctx, listWriterConfig{
+			id:    i,
+			jobs:  upsertWorkerJobs,
+			done:  done,
+			errCh: errCh,
 		})
 	}
 
@@ -242,6 +234,7 @@ type Current struct {
 	Data     []byte         // Data from the response body.
 	Table    string         // Name of the table for storage.
 	Database string         // Name of the database for storage.
+	Writer   ListWriter     // Writer for storage.
 }
 
 // HTTPIteratorService is a service that will iterate over the requests defined
@@ -390,6 +383,7 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 				Response: <-rspCh,
 				Table:    table,
 				Database: job.req.Database,
+				Writer:   job.req.Writer,
 			}
 		}(job)
 	}

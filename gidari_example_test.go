@@ -105,19 +105,16 @@ func ExampleHTTPService_Upsert() {
 	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters", nil)
 	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses", nil)
 
+	w := &ExampleWriter{}
+
 	svc.HTTP.
-		Requests(&gidari.HTTPRequest{Request: bookReq, Table: "books"}).
-		Requests(&gidari.HTTPRequest{Request: charReq}).
-		Requests(&gidari.HTTPRequest{Request: housReq})
+		Requests(&gidari.HTTPRequest{Request: bookReq, Writer: w}).
+		Requests(&gidari.HTTPRequest{Request: charReq, Writer: w}).
+		Requests(&gidari.HTTPRequest{Request: housReq, Writer: w})
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5))
-
-	// Add a writer to the service. This will be used to write the
-	// responses to a database.
-	writer := &ExampleWriter{}
-	svc.HTTP.ListWriters(writer)
 
 	// Upsert the responses to the database.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
@@ -125,7 +122,7 @@ func ExampleHTTPService_Upsert() {
 	}
 
 	// Print the result of the mock writer.
-	for _, list := range writer.lists {
+	for _, list := range w.lists {
 		fmt.Println("list size: ", len(list.Values))
 	}
 
