@@ -9,9 +9,8 @@ package gidari
 
 import (
 	"context"
-	"sync"
 
-	"github.com/alpstable/gidari/proto"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 // Service is the main service for Gidari. It is responsible for providing the
@@ -37,38 +36,44 @@ func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 	return svc, nil
 }
 
-type upsertWorkerJob struct {
-	table    string
-	database string
-	dataType proto.DecodeType
-	data     []byte
+// ListWriter is use to write data to io, storage, whatever, from a list of
+// structpb.Values.
+type ListWriter interface {
+	Write(cxt context.Context, list *structpb.ListValue) error
 }
 
-type upsertWorkerConfig struct {
+type listWriterJob struct {
+	table    string
+	database string
+	dataType DecodeType
+	data     []byte
+	writer   ListWriter
+}
+
+type listWriterConfig struct {
 	// id is a unique identifier for the worker. This value MUST be set in
 	// order to start a web worker. One and only one web worker
 	// configuration MUST have an ID of 1 in order to close the response
 	// channel.
-	id      int
-	jobs    <-chan upsertWorkerJob
-	done    chan<- struct{}
-	errCh   chan<- error
-	writers []proto.ListWriter
+	id    int
+	jobs  <-chan listWriterJob
+	done  chan<- struct{}
+	errCh chan<- error
 }
 
-func upsert(ctx context.Context, stg proto.ListWriter, job *upsertWorkerJob) <-chan error {
+func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 	errs := make(chan error, 1)
 
 	go func() {
 		// Decode the data into a structpb.ListValue.
-		list, err := proto.Decode(job.dataType, job.data)
+		list, err := Decode(job.dataType, job.data)
 		if err != nil {
 			errs <- err
 
 			return
 		}
 
-		if err := stg.Write(ctx, list); err != nil {
+		if err := job.writer.Write(ctx, list); err != nil {
 			errs <- err
 		}
 
@@ -78,25 +83,15 @@ func upsert(ctx context.Context, stg proto.ListWriter, job *upsertWorkerJob) <-c
 	return errs
 }
 
-// startUpsertWorker will start a worker to upsert data from HTTP responses into
+// startListWriter will start a worker to upsert data from HTTP responses into
 // a database.
-func startUpsertWorker(ctx context.Context, cfg upsertWorkerConfig) {
+func startListWriter(ctx context.Context, cfg listWriterConfig) {
 	for job := range cfg.jobs {
-		wg := sync.WaitGroup{}
-		wg.Add(len(cfg.writers))
-
-		for _, stg := range cfg.writers {
-			go func(stg proto.ListWriter, job upsertWorkerJob) {
-				defer wg.Done()
-
-				errs := upsert(ctx, stg, &job)
-				if err := <-errs; err != nil {
-					cfg.errCh <- err
-				}
-			}(stg, job)
+		errs := writeList(ctx, &job)
+		if err := <-errs; err != nil {
+			cfg.errCh <- err
 		}
 
-		wg.Wait()
 		cfg.done <- struct{}{}
 	}
 

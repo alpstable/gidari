@@ -61,7 +61,9 @@ issues:
 linters-settings:
   varnamelen:
     ignore-names:
-      - wg # wg is a standard variable name for "sync.WaitGroup"
+      - wg # for wait groups
+      - i # for indexing
+      - w # for writers
   revive:
     severity: warning
     rules:

@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/alpstable/gidari/proto"
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -39,8 +38,7 @@ func newMockService(opts mockServiceOptions) *Service {
 			withMockHTTPClientRequests(reqs...),
 		)).
 		RateLimiter(opts.rateLimiter).
-		Requests(reqs...).
-		ListWriters(newMockUpsertStorage(opts.upsertStgCount)...)
+		Requests(reqs...)
 
 	return svc
 }
@@ -48,11 +46,14 @@ func newMockService(opts mockServiceOptions) *Service {
 func newHTTPRequests(volume int) []*HTTPRequest {
 	requests := make([]*HTTPRequest, volume)
 
+	writer := newMockUpsertStorage()
+
 	for i := 0; i < volume; i++ {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("http://example%d", i), nil)
 		requests[i] = &HTTPRequest{
 			Request: req,
 			Table:   fmt.Sprintf("table%d", i),
+			Writer:  writer,
 		}
 	}
 
@@ -155,13 +156,8 @@ type mockUpsertWriter struct {
 	countMu sync.Mutex
 }
 
-func newMockUpsertStorage(volume int) []proto.ListWriter {
-	stg := make([]proto.ListWriter, volume)
-	for i := 0; i < volume; i++ {
-		stg[i] = &mockUpsertWriter{}
-	}
-
-	return stg
+func newMockUpsertStorage() *mockUpsertWriter {
+	return &mockUpsertWriter{}
 }
 
 func (m *mockUpsertWriter) Write(context.Context, *structpb.ListValue) error {

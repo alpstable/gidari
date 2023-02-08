@@ -1,11 +1,4 @@
-// Copyright 2022 The Gidari Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//	http://www.apache.org/licenses/LICENSE-2.0
-package proto
+package gidari
 
 import (
 	"encoding/json"
@@ -14,12 +7,18 @@ import (
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
+// ErrUnsupportedDecodeType is returned when the provided decode type is not
+// supported.
 var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
 
+// DecodeType is an enum that represents the type of data that is being decoded.
 type DecodeType int32
 
 const (
+	// DecodeTypeUnknown is the default value for the DecodeType enum.
 	DecodeTypeUnknown DecodeType = iota
+
+	// DecodeTypeJSON is used to decode JSON data.
 	DecodeTypeJSON
 )
 
