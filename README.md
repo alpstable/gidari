@@ -37,9 +37,7 @@ See the Go Docs for more information on these use-cases and examples of how to a
 
 Here is a list of storage adapter libraries for response body data from a list of http.Requests:
 
-- [Postgres](https://github.com/alpstable/gpostgres) (WIP)
-- [CSV](https://github.com/alpstable/gcsv) (WIP)
-- [MongoDB](https://github.com/alpstable/gmongo)
+- [CSV](https://github.com/alpstable/csvpb)
 
 ## Contributing
 
