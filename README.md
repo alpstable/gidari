@@ -7,7 +7,7 @@
 
 <p align="center"><img src="https://raw.githubusercontent.com/alpstable/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
-Gidari is a "web-to-storage" tool for querying web APIs and persisting the resulting data onto local storage.
+Gidari is a "web-to-storage" tool for batch querying web APIs and persisting the resulting data onto local storage.
 
 ##
 
