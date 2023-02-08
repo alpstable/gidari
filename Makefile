@@ -3,11 +3,6 @@ GC = go
 
 export GO111MODULE=on
 
-# proto is a phony target that will generate the protobuf files.
-.PHONY: proto
-proto:
-	protoc --proto_path=proto --go_out=proto proto/db.proto
-
 # test runs all of the unit tests locally. Each test is run 5 times to minimize flakiness.
 .PHONY: tests
 tests:
