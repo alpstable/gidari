@@ -23,6 +23,10 @@ func (w *ExampleWriter) Write(cxt context.Context, list *structpb.ListValue) err
 	return nil
 }
 
+/**
+	Using the Gidari and CSVPB library to write HTTP response data to stdout as CSV
+**/
+
 func main() {
 	ctx := context.Background()
 	const api = "https://anapioficeandfire.com/api"
@@ -50,7 +54,7 @@ func main() {
 	// help avoid "429" errors.
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5))
 
-	// Upsert the responses to the database.
+	// Use Upsert to make requests and in our case gain access to the response data.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
 	}
