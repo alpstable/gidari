@@ -41,9 +41,9 @@ func main() {
 	w := &ExampleWriter{}
 
 	// Create some requests and add them to the service.
-	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books/1", nil)        //A Game of Thrones
-	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters/583", nil) //Jon Snow
-	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses/10", nil)      //House Baelish
+	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books/1", nil)        // A Game of Thrones
+	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters/583", nil) // Jon Snow
+	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses/10", nil)      // House Baelish
 
 	svc.HTTP.
 		Requests(&gidari.HTTPRequest{Request: bookReq, Writer: w}).
