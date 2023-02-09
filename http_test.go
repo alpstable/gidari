@@ -264,10 +264,10 @@ func TestIterator(t *testing.T) {
 
 				// We need to validate various operation for
 				// the upsert storage.
-				for _, stg := range tcase.svc.HTTP.listWriters {
-					mockStorage, ok := stg.(*mockUpsertWriter)
+				for _, req := range tcase.svc.HTTP.requests {
+					mockStorage, ok := req.Writer.(*mockUpsertWriter)
 					if !ok {
-						t.Errorf("expected mock storage, got %T", stg)
+						t.Errorf("expected mock storage, got %T", req.Writer)
 					}
 
 					// The number of upserts should be equal to the
