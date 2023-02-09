@@ -14,12 +14,13 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type ExampleWriter struct {
+type exampleWriter struct {
 	lists []*structpb.ListValue
 }
 
-func (w *ExampleWriter) Write(cxt context.Context, list *structpb.ListValue) error {
+func (w *exampleWriter) Write(cxt context.Context, list *structpb.ListValue) error {
 	w.lists = append(w.lists, list)
+
 	return nil
 }
 
@@ -29,6 +30,7 @@ func (w *ExampleWriter) Write(cxt context.Context, list *structpb.ListValue) err
 
 func main() {
 	ctx := context.Background()
+
 	const api = "https://anapioficeandfire.com/api"
 
 	// First we create a service that can be used to make bulk HTTP
@@ -38,7 +40,7 @@ func main() {
 		log.Fatalf("failed to create service: %v", err)
 	}
 
-	w := &ExampleWriter{}
+	w := &exampleWriter{}
 
 	// Create some requests and add them to the service.
 	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books/1", nil)        // A Game of Thrones
@@ -52,7 +54,8 @@ func main() {
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
-	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5))
+	requestPerSecond := 5
+	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), requestPerSecond))
 
 	// Use Upsert to make requests and in our case gain access to the response data.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
