@@ -11,18 +11,7 @@ import (
 	"github.com/alpstable/csvpb"
 	"github.com/alpstable/gidari"
 	"golang.org/x/time/rate"
-	"google.golang.org/protobuf/types/known/structpb"
 )
-
-type exampleWriter struct {
-	lists []*structpb.ListValue
-}
-
-func (w *exampleWriter) Write(cxt context.Context, list *structpb.ListValue) error {
-	w.lists = append(w.lists, list)
-
-	return nil
-}
 
 /**
 	Using the Gidari and CSVPB library to write HTTP response data to stdout as CSV
@@ -40,7 +29,10 @@ func main() {
 		log.Fatalf("failed to create service: %v", err)
 	}
 
-	w := &exampleWriter{}
+	// Create a writer object with 'encoding/csv' package,
+	// then use csvpb library to create list writer.
+	writer := csv.NewWriter(os.Stdout)
+	listWriter := csvpb.NewListWriter(writer, csvpb.WithAlphabetizeHeaders())
 
 	// Create some requests and add them to the service.
 	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books/1", nil)        // A Game of Thrones
@@ -48,31 +40,18 @@ func main() {
 	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses/10", nil)      // House Baelish
 
 	svc.HTTP.
-		Requests(&gidari.HTTPRequest{Request: bookReq, Writer: w}).
-		Requests(&gidari.HTTPRequest{Request: charReq, Writer: w}).
-		Requests(&gidari.HTTPRequest{Request: housReq, Writer: w})
+		Requests(&gidari.HTTPRequest{Request: bookReq, Writer: listWriter}).
+		Requests(&gidari.HTTPRequest{Request: charReq, Writer: listWriter}).
+		Requests(&gidari.HTTPRequest{Request: housReq, Writer: listWriter})
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
 	requestPerSecond := 5
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), requestPerSecond))
 
-	// Use Upsert to make requests and in our case gain access to the response data.
+	// Use Upsert to make requests and in our case write response data to stdout in CSV format.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
-	}
-
-	// Create a writer object with 'encoding/csv' package,
-	// then use csvpb library to create list writer.
-	writer := csv.NewWriter(os.Stdout)
-	listWriter := csvpb.NewListWriter(writer, csvpb.WithAlphabetizeHeaders())
-
-	// Range slice of structpb.ListValues and write them to the list writer,
-	// writing the response data to stdout as CSV
-	for _, list := range w.lists {
-		if err := listWriter.Write(context.TODO(), list); err != nil {
-			log.Fatalf("failed to write list: %v", err)
-		}
 	}
 
 	// Flush the writer.
