@@ -33,11 +33,6 @@ for file in $(find . -name "*.go" -type f); do
 		continue
     	fi
 
-    	# skip files that already have the LICENSE_TEMPLATE
-#    	if grep -q "Copyright $YEAR The Gidari Authors." "${file}"; then
-#		continue
-#    	fi
-
       # If the file starts with "// Copied from" then we don't want to prepend
       # the license.
       if grep -q "^// Copied from" "${file}"; then
