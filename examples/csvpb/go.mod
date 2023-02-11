@@ -2,6 +2,9 @@ module github.com/alpstable/gidari/examples/csvpb
 
 go 1.19
 
+replace github.com/alpstable/gidari => ../../
+
+
 require (
 	github.com/alpstable/csvpb v0.1.0
 	github.com/alpstable/gidari v0.1.0
