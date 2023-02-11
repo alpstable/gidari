@@ -3,8 +3,8 @@ module github.com/alpstable/gidari
 go 1.19
 
 require (
-	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
+	golang.org/x/time v0.3.0
 	google.golang.org/protobuf v1.28.1
 )
 
-require golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+require golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
