@@ -6,9 +6,11 @@ declare -a EXCLUDE_LIST=(
     "./proto/db.pb.go"
 )
 
+YEAR=$(date +%Y)
+
 # LICENSE_TEMPLATE is the license notice to prepend to files.
 LICENSE_TEMPLATE=$(cat <<EOF
-// Copyright 2022 The Gidari Authors.
+// Copyright $YEAR The Gidari Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +28,18 @@ for file in $(find . -name "*.go" -type f); do
     	fi
 
     	# skip files that already have the LICENSE_TEMPLATE
-    	if grep -q "Copyright 2022 The Gidari Authors." "${file}"; then
+    	if grep -q "Copyright $YEAR The Gidari Authors." "${file}"; then
 		continue
     	fi
+
+	# If the file starts with "// Copied from" then we don't want to prepend
+	# the license.
+	if grep -q "^// Copied from" "${file}"; then
+		continue
+	fi
+
+    	# prepend the LICENSE_TEMPLATE to the file
+    	echo "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
 
 	echo "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
 done
