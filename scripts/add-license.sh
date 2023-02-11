@@ -16,13 +16,7 @@ LICENSE_TEMPLATE=$(cat <<EOF
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
-EOF
-)
-
-# NEWLINE is added in all files except doc.go.
-NEWLINE=$(cat <<EOF
-//
+//	http://www.apache.org/licenses/LICENSE-2.0
 EOF
 )
 
@@ -30,7 +24,7 @@ EOF
 for file in $(find . -name "*.go" -type f); do
     	# skip files in the EXCLUDE_LIST
     	if [[ " ${EXCLUDE_LIST[@]} " =~ " ${file} " ]]; then
-		continue
+		    continue
     	fi
 
       # If the file starts with "// Copied from" then we don't want to prepend
@@ -45,7 +39,8 @@ for file in $(find . -name "*.go" -type f); do
     	if [[ "${file}" == ./doc.go ]]; then
           printf "%s\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out
         else
-          printf "%s\n%s\n" "${LICENSE_TEMPLATE}" "${NEWLINE}" | cat - "${file}" > /tmp/out
+          # Adding newline for other files
+          printf "%s\n\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out
       fi
     	mv /tmp/out "${file}"
 
