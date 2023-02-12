@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func ExampleHTTPService_Iterator() {
+func ExampleHTTPIteratorService_Next() {
 	ctx := context.Background()
 
 	const api = "https://anapioficeandfire.com/api"
