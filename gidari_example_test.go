@@ -20,7 +20,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func ExampleHTTPService_Iterator() {
+func ExampleHTTPIteratorService_Next() {
 	ctx := context.Background()
 
 	const api = "https://anapioficeandfire.com/api"
