@@ -16,7 +16,7 @@ LICENSE_TEMPLATE=$(cat <<EOF
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 EOF
 )
 
@@ -24,26 +24,22 @@ EOF
 for file in $(find . -name "*.go" -type f); do
     	# skip files in the EXCLUDE_LIST
     	if [[ " ${EXCLUDE_LIST[@]} " =~ " ${file} " ]]; then
-		    continue
+		continue
     	fi
 
-      # If the file starts with "// Copied from" then we don't want to prepend
-      # the license.
-      if grep -q "^// Copied from" "${file}"; then
-        continue
-      fi
+    	# skip files that already have the LICENSE_TEMPLATE
+    	if grep -q "Copyright $YEAR The Gidari Authors." "${file}"; then
+		continue
+    	fi
 
-      sed -i '/^package/,$!d' "${file}"
+	# If the file starts with "// Copied from" then we don't want to prepend
+	# the license.
+	if grep -q "^// Copied from" "${file}"; then
+		continue
+	fi
 
     	# prepend the LICENSE_TEMPLATE to the file
-    	if [[ "${file}" == ./doc.go ]]; then
-          printf "%s\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out
-        else
-          # Adding newline for other files
-          printf "%s\n\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out
-      fi
-    	mv /tmp/out "${file}"
-
+    	printf "%s\n\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
 done
 
 
