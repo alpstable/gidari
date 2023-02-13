@@ -24,7 +24,7 @@ At the moment, Gidari only supports HTTP services. There are two ways to use an 
 1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Requests`](https://pkg.go.dev/net/http#Request).
 2. Define a writer to concurrently "write" response data for pre-defined `http.Requests`.
 
-See the Go Docs or (Web-to-Storage Examples)[#web-to-storage-examples] for more examples.
+See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) for more examples.
 
 ### Web-to-Storage Examples
 
