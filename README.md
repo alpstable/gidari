@@ -7,7 +7,7 @@
 
 <p align="center"><img src="https://raw.githubusercontent.com/alpstable/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
-Gidari is a "web-to-storage" tool for batch querying web APIs and persisting the resulting data onto local storage.
+Gidari is a library for batch querying data and persisting the results local storage.
 
 ## Installation
 
@@ -19,20 +19,18 @@ For information on using the CLI, see [here](https://github.com/alpstable/gidari
 
 ## Usage
 
-At the moment, Gidari only supports an HTTP service. There are two ways to use the HTTP service:
+At the moment, Gidari only supports HTTP services. There are two ways to use an HTTP service:
 
 1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Requests`](https://pkg.go.dev/net/http#Request).
-2. Use any number of "proto.UpsertWriter" to concurrently "write" response data for pre-defined `http.Requests`.
+2. Define a writer to concurrently "write" response data for pre-defined `http.Requests`.
 
-See the Go Docs for more information on these use-cases and examples of how to apply them.
+See the Go Docs or [#web-to-storage-examples] for more examples.
 
-### List Writers
+### Web-To-Storage Examples
 
-A "list writer" is a library for writing lists of data (such an HTTP Response) to storage. Here is a list of examples for different "list writers"
-
-| Library                                     | Example                             | Example Description                              |
-|---------------------------------------------|-------------------------------------|--------------------------------------------------|
-| [csvpb](https://github.com/alpstable/csvpb) | [examples/csvpb](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
+| Data Type | Writer                                      | Example                                 | Example Description                              |
+|-----------|---------------------------------------------|-----------------------------------------|--------------------------------------------------|
+| csv       | [csvpb](https://github.com/alpstable/csvpb) | [examples/csvp](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
 
 ## Contributing
 
