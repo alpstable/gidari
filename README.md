@@ -26,15 +26,13 @@ At the moment, Gidari only supports an HTTP service. There are two ways to use t
 
 See the Go Docs for more information on these use-cases and examples of how to apply them.
 
-### Storage Adapter Library
+### List Writers
 
-#### [CSVPB](https://github.com/alpstable/csvpb)
+A "list writer" is a library for writing lists of data (such an HTTP Response) to storage. Here is a list of examples for different "list writers"
 
-This is the project's CSV-supported storage adapter library. The "PB" is for protobuf, which is the request mechanism used by CSVPB.
-
-| Link                                | Description                                      |
-|-------------------------------------|--------------------------------------------------|
-| [example 1](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
+| Library                                     | Example                             | Example Description                              |
+|---------------------------------------------|-------------------------------------|--------------------------------------------------|
+| [csvpb](https://github.com/alpstable/csvpb) | [examples/csvpb](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
 
 ## Contributing
 
