@@ -9,13 +9,6 @@
 
 Gidari is a "web-to-storage" tool for batch querying web APIs and persisting the resulting data onto local storage.
 
-##
-
-* [Installation](#installation)
-* [Usage](#usage)
-* [Contributing](#contributing)
-* [Resources](#resources)
-
 ## Installation
 
 ```sh
