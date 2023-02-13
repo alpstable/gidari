@@ -7,7 +7,7 @@
 
 <p align="center"><img src="https://raw.githubusercontent.com/alpstable/gidari/main/etc/assets/gidari-gopher.png" width="300"></p>
 
-Gidari is a library for batch querying data and persisting the results local storage.
+Gidari is a library for batch querying data and persisting the results to local storage.
 
 ## Installation
 
