@@ -35,9 +35,13 @@ See the Go Docs for more information on these use-cases and examples of how to a
 
 ### Storage Adapter Library
 
-Here is a list of storage adapter libraries for response body data from a list of http.Requests:
+#### [CSVPB](https://github.com/alpstable/csvpb)
 
-- [CSV](https://github.com/alpstable/csvpb)
+This is the project's CSV-supported storage adapter library. The "PB" is for protobuf, which is the request mechanism used by CSVPB.
+
+| Link                                | Description                                      |
+|-------------------------------------|--------------------------------------------------|
+| [example 1](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
 
 ## Contributing
 
