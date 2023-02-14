@@ -6,7 +6,6 @@
 //
 //	http://www.apache.org/licenses/LICENSE-2.0
 
-package version
-
-// Version is the version of the Gidari library.
-const Version = "0.2.0-prelease"
+// Package gidari provides a "web-to-storage" API for batch querying
+// web APIs and persisting the resulting data.
+package gidari

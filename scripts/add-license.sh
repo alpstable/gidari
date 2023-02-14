@@ -39,9 +39,7 @@ for file in $(find . -name "*.go" -type f); do
 	fi
 
     	# prepend the LICENSE_TEMPLATE to the file
-    	echo "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
-
-	echo "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
+    	printf "%s\n\n" "${LICENSE_TEMPLATE}" | cat - "${file}" > /tmp/out && mv /tmp/out "${file}"
 done
 
 
