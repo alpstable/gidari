@@ -6,7 +6,7 @@
 //
 //	http://www.apache.org/licenses/LICENSE-2.0
 
-package version
+package gidari
 
 // Version is the version of the Gidari library.
 const Version = "0.2.0-prelease"
