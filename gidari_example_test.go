@@ -145,11 +145,6 @@ func ExampleWithAuth() {
 	secret := os.Getenv("COINBASE_API_SECRET")
 	passphrase := os.Getenv("COINBASE_API_PASSPHRASE")
 
-	// If these environment variables are not set, then skip the example.
-	if key == "" || secret == "" || passphrase == "" {
-		return
-	}
-
 	// First we create a service that can be used to make bulk HTTP
 	// requests to the API.
 	svc, err := gidari.NewService(ctx)
@@ -183,8 +178,4 @@ func ExampleWithAuth() {
 
 		fmt.Println("status code:", rsp.Request.URL.Path, rsp.StatusCode)
 	}
-
-	// Unordered Output:
-	// status code: /accounts 200
-	// status code: /currencies 200
 }
