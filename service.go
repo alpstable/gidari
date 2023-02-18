@@ -43,8 +43,6 @@ type ListWriter interface {
 }
 
 type listWriterJob struct {
-	table    string
-	database string
 	dataType DecodeType
 	data     []byte
 	writer   ListWriter

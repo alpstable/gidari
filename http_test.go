@@ -114,7 +114,7 @@ func TestIterator(t *testing.T) {
 					// If the forceErrOn is set, then set
 					// the error on the nth request.
 
-					var errReq *HTTPRequest
+					var errReq *Request
 					if tcase.forceErrOn >= 0 {
 						errReq = reqs[tcase.forceErrOn]
 					}
@@ -125,15 +125,14 @@ func TestIterator(t *testing.T) {
 						errReq = reqs[0]
 					}
 
-					client := newMockHTTPClient(
+					httpSvc := svc.HTTP.RateLimiter(rlimiter).Requests(reqs...)
+					httpSvc.client = newMockHTTPClient(
 						withMockHTTPClientResponseError(errReq, tcase.forceErr),
 						withMockHTTPClientRequests(reqs...))
 
-					httpSvc := svc.HTTP.RateLimiter(rlimiter).Client(client).Requests(reqs...)
-
 					// Set the urlSet using the requests.
 					for _, req := range reqs {
-						urlSet[req.URL.String()] = struct{}{}
+						urlSet[req.http.URL.String()] = struct{}{}
 					}
 
 					itr = httpSvc.Iterator
@@ -265,9 +264,9 @@ func TestIterator(t *testing.T) {
 				// We need to validate various operation for
 				// the upsert storage.
 				for _, req := range tcase.svc.HTTP.requests {
-					mockStorage, ok := req.Writer.(*mockUpsertWriter)
+					mockStorage, ok := req.writer.(*mockUpsertWriter)
 					if !ok {
-						t.Errorf("expected mock storage, got %T", req.Writer)
+						t.Errorf("expected mock storage, got %T", req.writer)
 					}
 
 					// The number of upserts should be equal to the

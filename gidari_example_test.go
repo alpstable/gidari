@@ -13,15 +13,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/alpstable/gidari"
+	"github.com/alpstable/gidari/auth"
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func ExampleHTTPIteratorService_Next() {
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	const api = "https://anapioficeandfire.com/api"
 
@@ -33,14 +35,15 @@ func ExampleHTTPIteratorService_Next() {
 	}
 
 	// Create some requests and add them to the service.
-	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books", nil)
-	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters", nil)
-	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses", nil)
+	charReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/characters", nil)
+	housReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/houses", nil)
 
-	svc.HTTP.
-		Requests(&gidari.HTTPRequest{Request: bookReq}).
-		Requests(&gidari.HTTPRequest{Request: charReq}).
-		Requests(&gidari.HTTPRequest{Request: housReq})
+	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
+	charReqWrapper := gidari.NewHTTPRequest(charReq)
+	housReqWrapper := gidari.NewHTTPRequest(housReq)
+
+	// Add the wrapped HTTP requests to the HTTP Service.
+	svc.HTTP.Requests(charReqWrapper, housReqWrapper)
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
@@ -75,7 +78,7 @@ func ExampleHTTPIteratorService_Next() {
 
 	fmt.Println("Total number of bytes:", byteSize)
 	// Output:
-	// Total number of bytes: 256179
+	// Total number of bytes: 10455
 }
 
 type ExampleWriter struct {
@@ -89,7 +92,7 @@ func (w *ExampleWriter) Write(ctx context.Context, list *structpb.ListValue) err
 }
 
 func ExampleHTTPService_Upsert() {
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	const api = "https://anapioficeandfire.com/api"
 
@@ -100,17 +103,19 @@ func ExampleHTTPService_Upsert() {
 		log.Fatalf("failed to create service: %v", err)
 	}
 
-	// Create some requests and add them to the service.
-	bookReq, _ := http.NewRequest(http.MethodGet, api+"/books", nil)
-	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters", nil)
-	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses", nil)
+	// Create some HTTP Requests.
+	charReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/characters", nil)
+	housReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/houses", nil)
 
+	// Create a writer to write the data.
 	w := &ExampleWriter{}
 
-	svc.HTTP.
-		Requests(&gidari.HTTPRequest{Request: bookReq, Writer: w}).
-		Requests(&gidari.HTTPRequest{Request: charReq, Writer: w}).
-		Requests(&gidari.HTTPRequest{Request: housReq, Writer: w})
+	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
+	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(w))
+	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(w))
+
+	// Add the wrapped HTTP requests to the HTTP Service.
+	svc.HTTP.Requests(charReqWrapper, housReqWrapper)
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
@@ -129,5 +134,57 @@ func ExampleHTTPService_Upsert() {
 	// Output:
 	// list size:  10
 	// list size:  10
-	// list size:  10
+}
+
+func ExampleWithAuth() {
+	ctx := context.TODO()
+
+	const api = "https://api-public.sandbox.exchange.coinbase.com"
+
+	key := os.Getenv("COINBASE_API_KEY")
+	secret := os.Getenv("COINBASE_API_SECRET")
+	passphrase := os.Getenv("COINBASE_API_PASSPHRASE")
+
+	// If these environment variables are not set, then skip the example.
+	if key == "" || secret == "" || passphrase == "" {
+		return
+	}
+
+	// First we create a service that can be used to make bulk HTTP
+	// requests to the API.
+	svc, err := gidari.NewService(ctx)
+	if err != nil {
+		log.Fatalf("failed to create service: %v", err)
+	}
+
+	// Set a round tripper that will sign the requests.
+	roundTripper := auth.NewCoinbaseRoundTrip(key, secret, passphrase)
+	withAuth := gidari.WithAuth(roundTripper)
+
+	// Create some requests and add them to the service.
+	accounts, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/accounts", nil)
+	currencies, _ := http.NewRequestWithContext(ctx, http.MethodGet, api+"/currencies", nil)
+
+	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
+	accountsW := gidari.NewHTTPRequest(accounts, withAuth)
+	currenciesW := gidari.NewHTTPRequest(currencies, withAuth)
+
+	// Add the wrapped HTTP requests to the HTTP Service.
+	svc.HTTP.Requests(accountsW, currenciesW)
+
+	// Get the status code for the responses.
+	for svc.HTTP.Iterator.Next(ctx) {
+		current := svc.HTTP.Iterator.Current
+
+		rsp := current.Response
+		if rsp == nil {
+			break
+		}
+
+		fmt.Println("status code:", rsp.Request.URL.Path, rsp.StatusCode)
+	}
+
+	// Unordered Output:
+	// status code: /accounts 200
+	// status code: /currencies 200
 }
