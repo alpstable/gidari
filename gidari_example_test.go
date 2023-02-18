@@ -136,6 +136,7 @@ func ExampleHTTPService_Upsert() {
 	// list size:  10
 }
 
+//nolint:testableexamples
 func ExampleWithAuth() {
 	ctx := context.TODO()
 
