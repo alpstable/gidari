@@ -10,12 +10,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
 
-    - name: Run Test
-      run: make tests
+      - name: Run Test
+        env:
+          COINBASE_API_KEY:  ${{ secrets.COINBASE_API_KEY }}
+          COINBASE_API_PASSPHRASE: ${{ secrets.COINBASE_API_PASSPHRASE }}
+          COINBASE_API_SECRET: ${{ secrets.COINBASE_API_SECRET }}
+        run: make tests
