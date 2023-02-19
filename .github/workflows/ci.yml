@@ -22,4 +22,9 @@ jobs:
           COINBASE_API_KEY:  '${{ secrets.COINBASE_API_KEY }}'
           COINBASE_API_PASSPHRASE: '${{ secrets.COINBASE_API_PASSPHRASE }}'
           COINBASE_API_SECRET: '${{ secrets.COINBASE_API_SECRET }}'
-        run: make tests
+        run: |
+          COINBASE_API_KEY=$COINBASE_API_KEY
+          COINBASE_API_PASSPHRASE=$COINBASE_API_PASSPHRASE
+          COINBASE_API_SECRET=$COINBASE_API_SECRET
+
+          make tests
