@@ -26,6 +26,22 @@ import (
 // auth requirements to HTTP requests.
 type RoundTrip func(*http.Request) (*http.Response, error)
 
+// NewBasicAuthRoundTrip will return a "RoundTrip" function that can be used as
+// a "RoundTrip" function in an "http.RoundTripper" interface to authenticate
+// requests that require basic authentication.
+func NewBasicAuthRoundTrip(username, password string) RoundTrip {
+	return func(req *http.Request) (*http.Response, error) {
+		req.SetBasicAuth(username, password)
+
+		rsp, err := http.DefaultTransport.RoundTrip(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request: %w", err)
+		}
+
+		return rsp, nil
+	}
+}
+
 // NewCoinbaseRoundTrip will return a "RoundTrip" function that can be used as
 // a "RoundTrip" function in an "http.RoundTripper" interface to authenticate
 // requests to the Coinbase Cloud API.
