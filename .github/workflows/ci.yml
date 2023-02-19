@@ -18,11 +18,6 @@ jobs:
           go-version: 1.19
 
       - name: Run Test
-        env:
-          COINBASE_API_KEY:  ${{ secrets.COINBASE_API_KEY }}
-          COINBASE_API_PASSPHRASE: ${{ secrets.COINBASE_API_PASSPHRASE }}
-          COINBASE_API_SECRET: ${{ secrets.COINBASE_API_SECRET }}
-          TEST: ${{ env.TEST }}
         run: |
           echo "test: $TEST"
           echo "key: $COINBASE_API_KEY"
