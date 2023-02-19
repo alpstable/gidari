@@ -35,26 +35,24 @@ func newMockService(opts mockServiceOptions) *Service {
 	reqs := newHTTPRequests(opts.reqCount)
 
 	svc.HTTP.
-		Client(newMockHTTPClient(
-			withMockHTTPClientRequests(reqs...),
-		)).
 		RateLimiter(opts.rateLimiter).
 		Requests(reqs...)
+
+	svc.HTTP.client = newMockHTTPClient(withMockHTTPClientRequests(reqs...))
 
 	return svc
 }
 
-func newHTTPRequests(volume int) []*HTTPRequest {
-	requests := make([]*HTTPRequest, volume)
+func newHTTPRequests(volume int) []*Request {
+	requests := make([]*Request, volume)
 
 	writer := newMockUpsertStorage()
 
 	for i := 0; i < volume; i++ {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("http://example%d", i), nil)
-		requests[i] = &HTTPRequest{
-			Request: req,
-			Table:   fmt.Sprintf("table%d", i),
-			Writer:  writer,
+		requests[i] = &Request{
+			http:   req,
+			writer: writer,
 		}
 	}
 
@@ -87,7 +85,7 @@ func newMockHTTPClient(opts ...mockHTTPClientOption) *mockHTTPClient {
 
 // withMockHTTPClientRequests will set the mockHTTPClient responses to the
 // provided requests.
-func withMockHTTPClientRequests(reqs ...*HTTPRequest) mockHTTPClientOption {
+func withMockHTTPClientRequests(reqs ...*Request) mockHTTPClientOption {
 	return func(client *mockHTTPClient) {
 		for _, req := range reqs {
 			body := io.NopCloser(bytes.NewBufferString(""))
@@ -96,25 +94,25 @@ func withMockHTTPClientRequests(reqs ...*HTTPRequest) mockHTTPClientOption {
 			rsp := &http.Response{
 				Body:       body,
 				StatusCode: code,
-				Request:    req.Request,
+				Request:    req.http,
 			}
 
 			rspErr := &mockHTTPClientResponseError{rsp: rsp}
 
 			// If the request has already been set, then just
 			// update the response.
-			if _, ok := client.responses[req.Request]; ok {
-				client.responses[req.Request].rsp = rspErr.rsp
+			if _, ok := client.responses[req.http]; ok {
+				client.responses[req.http].rsp = rspErr.rsp
 
 				continue
 			}
 
-			client.responses[req.Request] = rspErr
+			client.responses[req.http] = rspErr
 		}
 	}
 }
 
-func withMockHTTPClientResponseError(req *HTTPRequest, err error) mockHTTPClientOption {
+func withMockHTTPClientResponseError(req *Request, err error) mockHTTPClientOption {
 	return func(client *mockHTTPClient) {
 		if req == nil {
 			return
@@ -126,13 +124,13 @@ func withMockHTTPClientResponseError(req *HTTPRequest, err error) mockHTTPClient
 
 		// If the request has already been set, then just
 		// update the error.
-		if _, ok := client.responses[req.Request]; ok {
-			client.responses[req.Request].err = err
+		if _, ok := client.responses[req.http]; ok {
+			client.responses[req.http].err = err
 
 			return
 		}
 
-		client.responses[req.Request] = &mockHTTPClientResponseError{
+		client.responses[req.http] = &mockHTTPClientResponseError{
 			err: err,
 		}
 	}

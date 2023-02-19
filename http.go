@@ -15,33 +15,53 @@ import (
 	"io"
 	"net/http"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/alpstable/gidari/third_party/accept"
 	"golang.org/x/time/rate"
 )
 
-// HTTPRequest represents a request to be made by the service to the client.
+// Request represents a request to be made by the service to the client.
 // This object wraps the "net/http" package request object.
-type HTTPRequest struct {
-	*http.Request
+type Request struct {
+	http *http.Request
 
-	// Database is an optional database name to be used by the service to
-	// store the data from the request. The default value for the table
-	// will be the authority of the request URL.
-	Database string
+	auth   func(*http.Request) (*http.Response, error) // round tripper
+	writer ListWriter
+}
 
-	// Table is an optional field nd the table name to be used for the
-	// storage of data from this request. The default value for the table
-	// will be the endpoint of the request URL.
-	Table string
+// RequestOption is used to set an option on a request.
+type RequestOption func(*Request)
 
-	Writer ListWriter
+// NewHTTPRequest will create a new HTTP request.
+func NewHTTPRequest(req *http.Request, opts ...RequestOption) *Request {
+	hreq := &Request{http: req}
+
+	for _, opt := range opts {
+		opt(hreq)
+	}
+
+	return hreq
+}
+
+// WithAuth will set a round tripper to be used by the service to authenticate
+// the request during the http transport.
+func WithAuth(auth func(*http.Request) (*http.Response, error)) RequestOption {
+	return func(req *Request) {
+		req.auth = auth
+	}
+}
+
+// WithWriter sets the optional writer to be used by the HTTP Service upsert
+// method to write the data from the response.
+func WithWriter(w ListWriter) RequestOption {
+	return func(req *Request) {
+		req.writer = w
+	}
 }
 
 // Client is an interface that wraps the "Do" method of the "net/http" package's
-// "Client" type.
+// "client" type.
 type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
@@ -61,14 +81,13 @@ type HTTPService struct {
 	Iterator *HTTPIteratorService
 
 	rlimiter *rate.Limiter
-	requests []*HTTPRequest
+	requests []*Request
 }
 
 // NewHTTPService will create a new HTTPService.
 func NewHTTPService(svc *Service) *HTTPService {
-	httpSvc := &HTTPService{svc: svc}
+	httpSvc := &HTTPService{svc: svc, client: http.DefaultClient}
 	httpSvc.Iterator = NewHTTPIteratorService(httpSvc)
-	httpSvc.client = http.DefaultClient
 
 	return httpSvc
 }
@@ -93,7 +112,7 @@ func (svc *HTTPService) Client(client Client) *HTTPService {
 // Requests sets the option requests to be made by the service to the client.
 // If no client has been set for the service, the default "http.DefaultClient"
 // defined by the "net/http" package will be used.
-func (svc *HTTPService) Requests(reqs ...*HTTPRequest) *HTTPService {
+func (svc *HTTPService) Requests(reqs ...*Request) *HTTPService {
 	svc.requests = append(svc.requests, reqs...)
 
 	return svc
@@ -157,8 +176,6 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, d
 		}
 
 		jobs <- listWriterJob{
-			table:    svc.Iterator.Current.Table,
-			database: svc.Iterator.Current.Database,
 			data:     body,
 			dataType: bestFit,
 			writer:   svc.Iterator.Current.Writer,
@@ -175,6 +192,10 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, d
 
 	// Close the jobs channel.
 	close(jobs)
+
+	if err := svc.Iterator.Close(); err != nil {
+		return fmt.Errorf("failed to close iterator: %w", err)
+	}
 
 	return nil
 }
@@ -220,11 +241,6 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 		return fmt.Errorf("error in upsert worker: %w", err)
 	}
 
-	// Close the iterator.
-	if err := svc.Iterator.Close(); err != nil {
-		return fmt.Errorf("failed to close iterator: %w", err)
-	}
-
 	return nil
 }
 
@@ -233,8 +249,6 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 type Current struct {
 	Response *http.Response // HTTP response from the request.
 	Data     []byte         // Data from the response body.
-	Table    string         // Name of the table for storage.
-	Database string         // Name of the database for storage.
 	Writer   ListWriter     // Writer for storage.
 }
 
@@ -295,7 +309,7 @@ func (iter *HTTPIteratorService) Err() error {
 }
 
 type webWorkerJob struct {
-	req      *HTTPRequest
+	req      *Request
 	client   Client
 	rlimiter *rate.Limiter
 }
@@ -313,6 +327,15 @@ type webWorkerConfig struct {
 	errCh     chan error
 }
 
+type authRoundTripper struct {
+	rt func(*http.Request) (*http.Response, error)
+}
+
+// RoundTrip will execute the request and return the response.
+func (a *authRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return a.rt(req)
+}
+
 func fetch(ctx context.Context, job *webWorkerJob) (<-chan *http.Response, <-chan error) {
 	out := make(chan *http.Response, 1)
 	errs := make(chan error, 1)
@@ -325,8 +348,17 @@ func fetch(ctx context.Context, job *webWorkerJob) (<-chan *http.Response, <-cha
 			}
 		}
 
+		// Copy the client in case it is modified.
+		client := job.client
+
+		// If the client is an *http.Client, then set the auth
+		// round-tripper.
+		if client, ok := client.(*http.Client); ok && job.req.auth != nil {
+			client.Transport = &authRoundTripper{rt: job.req.auth}
+		}
+
 		//nolint:bodyclose
-		rsp, err := job.client.Do(job.req.Request)
+		rsp, err := client.Do(job.req.http)
 		if err != nil {
 			errs <- fmt.Errorf("failed to make request: %w", err)
 		}
@@ -372,19 +404,9 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 				cfg.errCh <- err
 			}
 
-			// If there is no table name, then use the endpoint
-			// of the request's URL.
-			table := job.req.Table
-			if table == "" {
-				// Remove all "/" characters from the URL path.
-				table = strings.ReplaceAll(job.req.URL.Path, "/", "")
-			}
-
 			cfg.currentCh <- &Current{
 				Response: <-rspCh,
-				Table:    table,
-				Database: job.req.Database,
-				Writer:   job.req.Writer,
+				Writer:   job.req.writer,
 			}
 		}(job)
 	}
