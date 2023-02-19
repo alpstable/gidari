@@ -23,6 +23,9 @@ jobs:
           COINBASE_API_PASSPHRASE: '${{ secrets.COINBASE_API_PASSPHRASE }}'
           COINBASE_API_SECRET: '${{ secrets.COINBASE_API_SECRET }}'
         run: |
+          echo "test"
+          echo "key: $COINBASE_API_KEY"
+
           COINBASE_API_KEY=$COINBASE_API_KEY
           COINBASE_API_PASSPHRASE=$COINBASE_API_PASSPHRASE
           COINBASE_API_SECRET=$COINBASE_API_SECRET
