@@ -26,7 +26,7 @@ At the moment, Gidari only supports HTTP services. There are two ways to use an 
 
 See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) for more examples.
 
-### Authenicating HTTP Requests
+### Authenticating HTTP Requests
 
 | Protocol                                                                                   | Parameters                                                                    | Description                                                                                                                                                                                                       |
 |--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
