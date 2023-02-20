@@ -46,9 +46,11 @@ func main() {
 	charReq, _ := http.NewRequest(http.MethodGet, api+"/characters/583", nil) // Jon Snow
 	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses/10", nil)      // House Baelish
 
-	svc.HTTP.
-		Requests(&gidari.HTTPRequest{Request: charReq, Writer: listWriter}).
-		Requests(&gidari.HTTPRequest{Request: housReq, Writer: listWriter})
+	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
+	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(listWriter))
+	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(listWriter))
+
+	svc.HTTP.Requests(charReqWrapper, housReqWrapper)
 
 	// Add a rate limiter to the service, 5 requests per second. This can
 	// help avoid "429" errors.
