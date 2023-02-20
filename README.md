@@ -28,9 +28,11 @@ See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) for more 
 
 ### Web-to-Storage Examples
 
-| Data Type | Writer                                      | Example                                 | Example Description                              |
-|-----------|---------------------------------------------|-----------------------------------------|--------------------------------------------------|
-| csv       | [csvpb](https://github.com/alpstable/csvpb) | [examples/csvp](examples/csvpb/main.go) | Use the HTTPService to write CSV data to stdout  |
+
+| Data Type | Writer                                          | Example                                      | Example Description                                               |
+|-----------|-------------------------------------------------|----------------------------------------------|-------------------------------------------------------------------|
+| csv       | [csvpb](https://github.com/alpstable/csvpb)     | [examples/csvp](examples/csvpb/main.go)      | Use the HTTPService to write web API data to stdout as CSV        |
+| mongopb   | [mongopb](https://github.com/alpstable/mongopb) | [exmaples/mongopb](examples/mongopb/main.go) | Use the HTTPService to write web API data to a MongoDB Collection |
 
 ## Contributing
 
