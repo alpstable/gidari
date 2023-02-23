@@ -97,16 +97,6 @@ func NewHTTPService(svc *Service, opts ...HTTPServiceOption) *HTTPService {
 	return httpSvc
 }
 
-/* NewHTTPService will create a new HTTPService.
-func NewHTTPService(svc *Service) *HTTPService {
-	httpSvc := &HTTPService{svc: svc, client: http.DefaultClient}
-	httpSvc.Iterator = NewHTTPIteratorService(httpSvc)
-
-	return httpSvc
-}*/
-
-//TODO: refactor the following methods to support the change to functional options
-
 // RateLimiter sets the optional rate limiter for the service. A rate limiter
 // will limit the request to a set of bursts per period, avoiding 429 errors.
 func WithRateLimiter(rateLimiter *rate.Limiter) HTTPServiceOption {

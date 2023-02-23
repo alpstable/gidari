@@ -125,10 +125,23 @@ func TestIterator(t *testing.T) {
 						errReq = reqs[0]
 					}
 
-					httpSvc := svc.HTTP.RateLimiter(rlimiter).Requests(reqs...)
-					httpSvc.client = newMockHTTPClient(
+					// Create mock client to pass into HTTP Service
+					mockClient := newMockHTTPClient(
 						withMockHTTPClientResponseError(errReq, tcase.forceErr),
 						withMockHTTPClientRequests(reqs...))
+
+					// Create HTTP Service with requests, rate limiter, and client
+					httpSvc := NewHTTPService(
+						svc,
+						WithRequests(reqs...),
+						WithRateLimiter(rlimiter),
+						WithClient(mockClient),
+					)
+
+					/*httpSvc := svc.HTTP.RateLimiter(rlimiter).Requests(reqs...)
+					httpSvc.client = newMockHTTPClient(
+						withMockHTTPClientResponseError(errReq, tcase.forceErr),
+						withMockHTTPClientRequests(reqs...))*/
 
 					// Set the urlSet using the requests.
 					for _, req := range reqs {

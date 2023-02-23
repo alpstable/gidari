@@ -34,11 +34,12 @@ func newMockService(opts mockServiceOptions) *Service {
 
 	reqs := newHTTPRequests(opts.reqCount)
 
-	svc.HTTP.
-		RateLimiter(opts.rateLimiter).
-		Requests(reqs...)
-
-	svc.HTTP.client = newMockHTTPClient(withMockHTTPClientRequests(reqs...))
+	svc.HTTP = NewHTTPService(
+		svc,
+		WithRateLimiter(opts.rateLimiter),
+		WithRequests(reqs...),
+		WithClient(newMockHTTPClient(withMockHTTPClientRequests(reqs...))),
+	)
 
 	return svc
 }

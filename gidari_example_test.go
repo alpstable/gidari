@@ -42,7 +42,8 @@ func ExampleHTTPIteratorService_Next() {
 	charReqWrapper := gidari.NewHTTPRequest(charReq)
 	housReqWrapper := gidari.NewHTTPRequest(housReq)
 
-	// Add wrapped HTTP requests and rate limited to the HTTP Service.
+	// Add wrapped HTTP requests and rate limiter to the HTTP Service,
+	// at 5 requests per second. This can help avoid "429" errors.
 	svc.HTTP = gidari.NewHTTPService(
 		svc,
 		gidari.WithRequests(charReqWrapper, housReqWrapper),
@@ -114,18 +115,13 @@ func ExampleHTTPService_Upsert() {
 	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(w))
 	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(w))
 
+	// Add wrapped HTTP requests and rate limiter to the HTTP Service,
+	// at 5 requests per second. This can help avoid "429" errors.
 	svc.HTTP = gidari.NewHTTPService(
 		svc,
 		gidari.WithRequests(charReqWrapper, housReqWrapper),
 		gidari.WithRateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5)),
 	)
-
-	// Add the wrapped HTTP requests to the HTTP Service.
-	//svc.HTTP.Requests(charReqWrapper, housReqWrapper)
-
-	// Add a rate limiter to the service, 5 requests per second. This can
-	// help avoid "429" errors.
-	//svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5))
 
 	// Upsert the responses to the database.
 	if err := svc.HTTP.Upsert(ctx); err != nil {
