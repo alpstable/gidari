@@ -84,13 +84,28 @@ type HTTPService struct {
 	requests []*Request
 }
 
+// HTTPService is used to set an option on an HTTPService.
+type HTTPServiceOption func(*HTTPService)
+
 // NewHTTPService will create a new HTTPService.
+func NewHTTPService(svc *Service, opts ...HTTPServiceOption) *HTTPService {
+	httpSvc := &HTTPService{svc: svc}
+	for _, opt := range opts {
+		opt(httpSvc)
+	}
+
+	return httpSvc
+}
+
+/* NewHTTPService will create a new HTTPService.
 func NewHTTPService(svc *Service) *HTTPService {
 	httpSvc := &HTTPService{svc: svc, client: http.DefaultClient}
 	httpSvc.Iterator = NewHTTPIteratorService(httpSvc)
 
 	return httpSvc
-}
+}*/
+
+//TODO: refactor the following methods to support the change to functional options
 
 // RateLimiter sets the optional rate limiter for the service. A rate limiter
 // will limit the request to a set of bursts per period, avoiding 429 errors.
