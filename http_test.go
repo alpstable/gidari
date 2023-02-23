@@ -138,11 +138,6 @@ func TestIterator(t *testing.T) {
 						WithClient(mockClient),
 					)
 
-					/*httpSvc := svc.HTTP.RateLimiter(rlimiter).Requests(reqs...)
-					httpSvc.client = newMockHTTPClient(
-						withMockHTTPClientResponseError(errReq, tcase.forceErr),
-						withMockHTTPClientRequests(reqs...))*/
-
 					// Set the urlSet using the requests.
 					for _, req := range reqs {
 						urlSet[req.http.URL.String()] = struct{}{}

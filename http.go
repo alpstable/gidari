@@ -84,7 +84,7 @@ type HTTPService struct {
 	requests []*Request
 }
 
-// HTTPService is used to set an option on an HTTPService.
+// HTTPServiceOption is used to set an option on an HTTPService.
 type HTTPServiceOption func(*HTTPService)
 
 // NewHTTPService will create a new HTTPService.
@@ -97,7 +97,7 @@ func NewHTTPService(svc *Service, opts ...HTTPServiceOption) *HTTPService {
 	return httpSvc
 }
 
-// RateLimiter sets the optional rate limiter for the service. A rate limiter
+// WithRateLimiter sets the optional rate limiter for the service. A rate limiter
 // will limit the request to a set of bursts per period, avoiding 429 errors.
 func WithRateLimiter(rateLimiter *rate.Limiter) HTTPServiceOption {
 	return func(httpSvc *HTTPService) {
@@ -105,7 +105,7 @@ func WithRateLimiter(rateLimiter *rate.Limiter) HTTPServiceOption {
 	}
 }
 
-// Client sets the optional client to be used by the service. If no client is
+// WithClient sets the optional client to be used by the service. If no client is
 // set, the default "http.DefaultClient" defined by the "net/http" package
 // will be used.
 func WithClient(client Client) HTTPServiceOption {
@@ -114,7 +114,7 @@ func WithClient(client Client) HTTPServiceOption {
 	}
 }
 
-// Requests sets the option requests to be made by the service to the client.
+// WithRequests sets the option requests to be made by the service to the client.
 // If no client has been set for the service, the default "http.DefaultClient"
 // defined by the "net/http" package will be used.
 func WithRequests(reqs ...*Request) HTTPServiceOption {
