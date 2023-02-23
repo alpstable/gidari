@@ -109,28 +109,28 @@ func NewHTTPService(svc *Service) *HTTPService {
 
 // RateLimiter sets the optional rate limiter for the service. A rate limiter
 // will limit the request to a set of bursts per period, avoiding 429 errors.
-func (svc *HTTPService) RateLimiter(rlimiter *rate.Limiter) *HTTPService {
-	svc.rlimiter = rlimiter
-
-	return svc
+func WithRateLimiter(rateLimiter *rate.Limiter) HTTPServiceOption {
+	return func(httpSvc *HTTPService) {
+		httpSvc.rlimiter = rateLimiter
+	}
 }
 
 // Client sets the optional client to be used by the service. If no client is
 // set, the default "http.DefaultClient" defined by the "net/http" package
 // will be used.
-func (svc *HTTPService) Client(client Client) *HTTPService {
-	svc.client = client
-
-	return svc
+func WithClient(client Client) HTTPServiceOption {
+	return func(httpSvc *HTTPService) {
+		httpSvc.client = client
+	}
 }
 
 // Requests sets the option requests to be made by the service to the client.
 // If no client has been set for the service, the default "http.DefaultClient"
 // defined by the "net/http" package will be used.
-func (svc *HTTPService) Requests(reqs ...*Request) *HTTPService {
-	svc.requests = append(svc.requests, reqs...)
-
-	return svc
+func WithRequests(reqs ...*Request) HTTPServiceOption {
+	return func(httpSvc *HTTPService) {
+		httpSvc.requests = append(httpSvc.requests, reqs...)
+	}
 }
 
 // isDecodeTypeJSON will check if the provided "accept" struct is typed for
