@@ -44,18 +44,17 @@ func ExampleHTTPIteratorService_Next() {
 
 	// Add wrapped HTTP requests and rate limiter to the HTTP Service,
 	// at 5 requests per second. This can help avoid "429" errors.
-	svc.HTTP = gidari.NewHTTPService(
+	httpSvc := gidari.NewHTTPService(
 		svc,
 		gidari.WithRequests(charReqWrapper, housReqWrapper),
-		gidari.WithRateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5)),
-	)
+		gidari.WithRateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5)))
 
 	// byteSize will keep track of the sum of bytes for each HTTP Response's
 	// body.
 	var byteSize int
 
-	for svc.HTTP.Iterator.Next(ctx) {
-		current := svc.HTTP.Iterator.Current
+	for httpSvc.Iterator.Next(ctx) {
+		current := httpSvc.Iterator.Current
 
 		rsp := current.Response
 		if rsp == nil {
@@ -117,14 +116,14 @@ func ExampleHTTPService_Upsert() {
 
 	// Add wrapped HTTP requests and rate limiter to the HTTP Service,
 	// at 5 requests per second. This can help avoid "429" errors.
-	svc.HTTP = gidari.NewHTTPService(
+	httpSvc := gidari.NewHTTPService(
 		svc,
 		gidari.WithRequests(charReqWrapper, housReqWrapper),
 		gidari.WithRateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5)),
 	)
 
 	// Upsert the responses to the database.
-	if err := svc.HTTP.Upsert(ctx); err != nil {
+	if err := httpSvc.Upsert(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
 	}
 
@@ -168,10 +167,10 @@ func ExampleWithAuth() {
 	currenciesW := gidari.NewHTTPRequest(currencies, withAuth)
 
 	// Add the wrapped HTTP requests to the HTTP Service.
-	svc.HTTP = gidari.NewHTTPService(svc, gidari.WithRequests(accountsW, currenciesW))
+	httpSvc := gidari.NewHTTPService(svc, gidari.WithRequests(accountsW, currenciesW))
 
 	// Get the status code for the responses.
-	for svc.HTTP.Iterator.Next(ctx) {
+	for httpSvc.Iterator.Next(ctx) {
 		current := svc.HTTP.Iterator.Current
 
 		rsp := current.Response
