@@ -89,7 +89,8 @@ type HTTPServiceOption func(*HTTPService)
 
 // NewHTTPService will create a new HTTPService.
 func NewHTTPService(svc *Service, opts ...HTTPServiceOption) *HTTPService {
-	httpSvc := &HTTPService{svc: svc}
+	httpSvc := &HTTPService{svc: svc, client: http.DefaultClient}
+	httpSvc.Iterator = NewHTTPIteratorService(httpSvc)
 	for _, opt := range opts {
 		opt(httpSvc)
 	}
