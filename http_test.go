@@ -127,7 +127,7 @@ func TestIterator(t *testing.T) {
 
 					httpSvc := NewHTTPService(
 						svc,
-						//options
+						// options
 						WithRateLimiter(rlimiter),
 						WithRequests(reqs...),
 						WithClient(newMockHTTPClient(
