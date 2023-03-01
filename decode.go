@@ -11,6 +11,7 @@ package gidari
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
@@ -18,6 +19,10 @@ import (
 // ErrUnsupportedDecodeType is returned when the provided decode type is not
 // supported.
 var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
+
+// ErrUnsupportedProtoType is returned when the provided proto type is not
+// supported.
+var ErrUnsupportedProtoType = fmt.Errorf("unsupported proto type")
 
 // DecodeType is an enum that represents the type of data that is being decoded.
 type DecodeType int32
@@ -30,49 +35,51 @@ const (
 	DecodeTypeJSON
 )
 
-func decodeJSON(data []byte) (*structpb.ListValue, error) {
-	// If there is no data, return an empty list.
-	if len(data) == 0 {
-		return &structpb.ListValue{}, nil
+func addValue(list *structpb.ListValue, val *structpb.Value) error {
+	switch val.Kind.(type) {
+	case *structpb.Value_StructValue:
+		list.Values = append(list.Values, val)
+	case *structpb.Value_ListValue:
+		list.Values = append(list.Values, val.GetListValue().Values...)
+	default:
+		return fmt.Errorf("%w: %T", ErrUnsupportedProtoType, val.Kind)
 	}
 
-	// Check if the first byte of the json is a '{' or '['
-	if data[0] == '{' {
-		// Unmarshal the json into a structpb.Struct
-		record := &structpb.Struct{}
-		if err := json.Unmarshal(data, record); err != nil {
-			panic(err)
-		}
-
-		return &structpb.ListValue{
-			Values: []*structpb.Value{
-				{
-					Kind: &structpb.Value_StructValue{
-						StructValue: record,
-					},
-				},
-			},
-		}, nil
-	}
-
-	records := &structpb.ListValue{}
-	if err := json.Unmarshal(data, records); err != nil {
-		panic(err)
-	}
-
-	return records, nil
+	return nil
 }
 
-// Decode will a UpsertRequest into a structpb.ListValue for
-// ease-of-use. This method will return an error if the provided "decodeType" is
-// not supported.
-func Decode(dtype DecodeType, data []byte) (*structpb.ListValue, error) {
-	switch dtype {
-	case DecodeTypeJSON:
-		return decodeJSON(data)
-	case DecodeTypeUnknown:
-		fallthrough
-	default:
-		return nil, fmt.Errorf("%w: %d", ErrUnsupportedDecodeType, dtype)
+// DecodeFunc is a function that will decode the results of a request into a
+// the target.
+type DecodeFunc func(list *structpb.ListValue) error
+
+func decodeFuncJSON(rsp *http.Response) DecodeFunc {
+	return func(list *structpb.ListValue) error {
+		defer func() {
+			if err := rsp.Body.Close(); err != nil {
+				panic(err)
+			}
+		}()
+
+		// Check to see if the response is empty. If it is, then we can
+		// just return nil.
+		if rsp.ContentLength == 0 {
+			return nil
+		}
+
+		// Decode the response into a list of values.
+		dec := json.NewDecoder(rsp.Body)
+
+		for dec.More() {
+			val := &structpb.Value{}
+			if err := dec.Decode(val); err != nil {
+				return fmt.Errorf("failed to decode json: %w", err)
+			}
+
+			if err := addValue(list, val); err != nil {
+				return fmt.Errorf("failed to add value to list: %w", err)
+			}
+		}
+
+		return nil
 	}
 }

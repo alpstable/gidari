@@ -157,29 +157,18 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, d
 			continue
 		}
 
-		// Read the response body of the request.
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		// Close the response body.
-		if err := rsp.Body.Close(); err != nil {
-			return fmt.Errorf("failed to close response body: %w", err)
-		}
+		job := &listWriterJob{writer: svc.Iterator.Current.Writer}
 
 		// Get the best fit type for decoding the response body. If the
 		// best fit is "Unknown", then return an error.
-		bestFit := bestFitDecodeType(rsp.Header.Get("Accept"))
-		if bestFit == DecodeTypeUnknown {
+		switch bestFitDecodeType(rsp.Header.Get("Accept")) {
+		case DecodeTypeJSON:
+			job.decFunc = decodeFuncJSON(rsp)
+		case DecodeTypeUnknown:
 			return fmt.Errorf("%w: %q", ErrUnsupportedDecodeType, rsp.Request.URL.String())
 		}
 
-		jobs <- listWriterJob{
-			data:     body,
-			dataType: bestFit,
-			writer:   svc.Iterator.Current.Writer,
-		}
+		jobs <- *job
 	}
 
 	if err := svc.Iterator.Err(); err != nil {

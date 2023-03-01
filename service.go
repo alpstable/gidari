@@ -44,9 +44,8 @@ type ListWriter interface {
 }
 
 type listWriterJob struct {
-	dataType DecodeType
-	data     []byte
-	writer   ListWriter
+	decFunc DecodeFunc
+	writer  ListWriter
 }
 
 type listWriterConfig struct {
@@ -64,9 +63,8 @@ func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 	errs := make(chan error, 1)
 
 	go func() {
-		// Decode the data into a structpb.ListValue.
-		list, err := Decode(job.dataType, job.data)
-		if err != nil {
+		list := &structpb.ListValue{}
+		if err := job.decFunc(list); err != nil {
 			errs <- err
 
 			return
