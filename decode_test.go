@@ -117,20 +117,18 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 
 	data = append(data, []byte(`"foo1000": "bar1000"}`)...)
 
-	httpResponse := func() *http.Response {
-		return &http.Response{
-			Body:          io.NopCloser(bytes.NewReader(data)),
-			ContentLength: int64(len(data)),
-		}
-	}
-
 	// Run the benchmark.
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			err := decodeFuncJSON(httpResponse())(&structpb.ListValue{})
+			httpResp := &http.Response{
+				Body:          io.NopCloser(bytes.NewReader(data)),
+				ContentLength: int64(len(data)),
+			}
+
+			err := decodeFuncJSON(httpResp)(&structpb.ListValue{})
 			if err != nil {
 				b.Fatalf("unexpected error: %v", err)
 			}
