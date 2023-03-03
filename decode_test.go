@@ -9,8 +9,11 @@
 package gidari
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"testing"
 
 	"google.golang.org/protobuf/proto"
@@ -70,15 +73,25 @@ func TestDecode(t *testing.T) {
 		t.Run(tcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Then we call the DecodeUpsertRequest function.
-			list, err := Decode(tcase.dataType, tcase.data)
-			if !errors.Is(err, tcase.err) {
-				t.Fatalf("unexpected error: %v", err)
+			var decFunc DecodeFunc
+
+			switch tcase.dataType {
+			case DecodeTypeJSON:
+				decFunc = decodeFuncJSON(&http.Response{
+					Body:          io.NopCloser(bytes.NewReader(tcase.data)),
+					ContentLength: int64(len(tcase.data)),
+				})
+			case DecodeTypeUnknown:
+				fallthrough
+			default:
+				t.Fatalf("unsupported decode type: %v", tcase.dataType)
 			}
 
-			// Then we check the result.
-			if list == nil {
-				t.Fatalf("unexpected nil list")
+			// Then we call the DecodeUpsertRequest function.
+			list := &structpb.ListValue{}
+			err := decFunc(list)
+			if !errors.Is(err, tcase.err) {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
 			// Convert the expected result into a list.
@@ -108,10 +121,17 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
-		_, err := Decode(DecodeTypeJSON, data)
-		if err != nil {
-			b.Fatalf("unexpected error: %v", err)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			httpResp := &http.Response{
+				Body:          io.NopCloser(bytes.NewReader(data)),
+				ContentLength: int64(len(data)),
+			}
+
+			err := decodeFuncJSON(httpResp)(&structpb.ListValue{})
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
 		}
-	}
+	})
 }
