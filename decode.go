@@ -20,9 +20,9 @@ import (
 // supported.
 var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
 
-// ErrUnsupportedProtoType is returned when the provided proto type is not
+// ErrUnsupportedProtobufType is returned when the provided proto type is not
 // supported.
-var ErrUnsupportedProtoType = fmt.Errorf("unsupported proto type")
+var ErrUnsupportedProtobufType = fmt.Errorf("unsupported proto type")
 
 // DecodeType is an enum that represents the type of data that is being decoded.
 type DecodeType int32
@@ -42,7 +42,7 @@ func addValue(list *structpb.ListValue, val *structpb.Value) error {
 	case *structpb.Value_ListValue:
 		list.Values = append(list.Values, val.GetListValue().Values...)
 	default:
-		return fmt.Errorf("%w: %T", ErrUnsupportedProtoType, val.Kind)
+		return fmt.Errorf("%w: %T", ErrUnsupportedProtobufType, val.Kind)
 	}
 
 	return nil
