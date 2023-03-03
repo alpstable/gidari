@@ -128,10 +128,12 @@ func BenchmarkDecodeUpsertRequest(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
-		err := decodeFuncJSON(httpResponse())(&structpb.ListValue{})
-		if err != nil {
-			b.Fatalf("unexpected error: %v", err)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			err := decodeFuncJSON(httpResponse())(&structpb.ListValue{})
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
 		}
-	}
+	})
 }
