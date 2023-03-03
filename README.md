@@ -21,7 +21,7 @@ For information on using the CLI, see [here](https://github.com/alpstable/gidari
 
 At the moment, Gidari only supports HTTP services. There are two ways to use an HTTP service:
 
-1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Requests`](https://pkg.go.dev/net/http#Request).
+1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Request`](https://pkg.go.dev/net/http#Request)s.
 2. Define a writer to concurrently "write" response data for pre-defined `http.Requests`.
 
 See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) for more examples.
