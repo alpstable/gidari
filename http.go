@@ -38,6 +38,10 @@ func NewHTTPRequest(req *http.Request, opts ...RequestOption) *Request {
 	hreq := &Request{http: req}
 
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+
 		opt(hreq)
 	}
 
