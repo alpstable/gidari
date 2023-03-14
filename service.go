@@ -63,6 +63,8 @@ func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 	errs := make(chan error, 1)
 
 	go func() {
+		defer close(errs)
+
 		list := &structpb.ListValue{}
 		if err := job.decFunc(list); err != nil {
 			errs <- err
@@ -73,8 +75,6 @@ func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 		if err := job.writer.Write(ctx, list); err != nil {
 			errs <- err
 		}
-
-		close(errs)
 	}()
 
 	return errs
