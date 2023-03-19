@@ -10,6 +10,7 @@ package gidari
 
 import (
 	"context"
+	"sync"
 
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
@@ -45,7 +46,7 @@ type ListWriter interface {
 
 type listWriterJob struct {
 	decFunc DecodeFunc
-	writer  ListWriter
+	writers []ListWriter
 }
 
 type listWriterConfig struct {
@@ -72,9 +73,22 @@ func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 			return
 		}
 
-		if err := job.writer.Write(ctx, list); err != nil {
-			errs <- err
+		wg := &sync.WaitGroup{}
+		wg.Add(len(job.writers))
+
+		for _, writer := range job.writers {
+			writer := writer
+
+			go func(writer ListWriter) {
+				defer wg.Done()
+
+				if err := writer.Write(ctx, list); err != nil {
+					errs <- err
+				}
+			}(writer)
 		}
+
+		wg.Wait()
 	}()
 
 	return errs

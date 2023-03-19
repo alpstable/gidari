@@ -51,8 +51,8 @@ func newHTTPRequests(volume int) []*Request {
 	for i := 0; i < volume; i++ {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("http://example%d", i), nil)
 		requests[i] = &Request{
-			http:   req,
-			writer: writer,
+			http:    req,
+			writers: []ListWriter{writer},
 		}
 	}
 

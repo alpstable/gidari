@@ -62,8 +62,8 @@ func main() {
 	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses", nil)
 
 	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
-	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(bookWriter))
-	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(charWriter))
+	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriters(bookWriter))
+	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriters(charWriter))
 
 	svc.HTTP.Requests(charReqWrapper, housReqWrapper)
 
