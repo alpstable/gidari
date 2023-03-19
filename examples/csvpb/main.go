@@ -47,8 +47,8 @@ func main() {
 	housReq, _ := http.NewRequest(http.MethodGet, api+"/houses/10", nil)      // House Baelish
 
 	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
-	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(listWriter))
-	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(listWriter))
+	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriters(listWriter))
+	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriters(listWriter))
 
 	svc.HTTP.Requests(charReqWrapper, housReqWrapper)
 

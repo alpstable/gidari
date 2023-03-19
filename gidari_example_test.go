@@ -111,8 +111,8 @@ func ExampleHTTPService_Upsert() {
 	w := &ExampleWriter{}
 
 	// Wrap the HTTP Requests in the gidalri.HTTPRequest type.
-	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriter(w))
-	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriter(w))
+	charReqWrapper := gidari.NewHTTPRequest(charReq, gidari.WithWriters(w))
+	housReqWrapper := gidari.NewHTTPRequest(housReq, gidari.WithWriters(w))
 
 	// Add the wrapped HTTP requests to the HTTP Service.
 	svc.HTTP.Requests(charReqWrapper, housReqWrapper)

@@ -264,20 +264,22 @@ func TestIterator(t *testing.T) {
 				// We need to validate various operation for
 				// the upsert storage.
 				for _, req := range tcase.svc.HTTP.requests {
-					mockStorage, ok := req.writer.(*mockUpsertWriter)
-					if !ok {
-						t.Errorf("expected mock storage, got %T", req.writer)
-					}
+					for _, w := range req.writers {
+						stg, ok := w.(*mockUpsertWriter)
+						if !ok {
+							t.Errorf("expected mock storage, got %T", w)
+						}
 
-					// The number of upserts should be equal to the
-					// expected number of upserts. Note that there
-					// can be less requests than upserts, for
-					// example a timeseries request could be broken
-					// into multiple flattened requests for upsert.
-					if mockStorage.count != tcase.expectedNumberOfUpsertsPerStorage {
-						t.Errorf("expected %d upserts, got %d",
-							tcase.expectedNumberOfUpsertsPerStorage,
-							mockStorage.count)
+						// The number of upserts should be equal to the
+						// expected number of upserts. Note that there
+						// can be less requests than upserts, for
+						// example a timeseries request could be broken
+						// into multiple flattened requests for upsert.
+						if stg.count != tcase.expectedNumberOfUpsertsPerStorage {
+							t.Errorf("expected %d upserts, got %d",
+								tcase.expectedNumberOfUpsertsPerStorage,
+								stg.count)
+						}
 					}
 				}
 			})

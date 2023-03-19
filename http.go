@@ -26,8 +26,8 @@ import (
 type Request struct {
 	http *http.Request
 
-	auth   func(*http.Request) (*http.Response, error) // round tripper
-	writer ListWriter
+	auth    func(*http.Request) (*http.Response, error) // round tripper
+	writers []ListWriter
 }
 
 // RequestOption is used to set an option on a request.
@@ -56,11 +56,11 @@ func WithAuth(auth func(*http.Request) (*http.Response, error)) RequestOption {
 	}
 }
 
-// WithWriter sets the optional writer to be used by the HTTP Service upsert
+// WithWriters sets optional writers to be used by the HTTP Service upsert
 // method to write the data from the response.
-func WithWriter(w ListWriter) RequestOption {
+func WithWriters(w ...ListWriter) RequestOption {
 	return func(req *Request) {
-		req.writer = w
+		req.writers = append(req.writers, w...)
 	}
 }
 
@@ -161,7 +161,7 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, d
 			continue
 		}
 
-		job := &listWriterJob{writer: svc.Iterator.Current.Writer}
+		job := &listWriterJob{writers: svc.Iterator.Current.writers}
 
 		// Get the best fit type for decoding the response body. If the
 		// best fit is "Unknown", then return an error.
@@ -241,8 +241,7 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 // "Next" method on the HTTPIteratorService.
 type Current struct {
 	Response *http.Response // HTTP response from the request.
-	Data     []byte         // Data from the response body.
-	Writer   ListWriter     // Writer for storage.
+	writers  []ListWriter   // Writer for storage.
 }
 
 // HTTPIteratorService is a service that will iterate over the requests defined
@@ -399,7 +398,7 @@ func startWebWorker(ctx context.Context, cfg *webWorkerConfig) {
 
 			cfg.currentCh <- &Current{
 				Response: <-rspCh,
-				Writer:   job.req.writer,
+				writers:  job.req.writers,
 			}
 		}(job)
 	}
