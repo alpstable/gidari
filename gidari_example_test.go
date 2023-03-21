@@ -91,7 +91,7 @@ func (w *ExampleWriter) Write(ctx context.Context, list *structpb.ListValue) err
 	return nil
 }
 
-func ExampleHTTPService_Upsert() {
+func ExampleHTTPService_Store() {
 	ctx := context.TODO()
 
 	const api = "https://anapioficeandfire.com/api"
@@ -122,7 +122,7 @@ func ExampleHTTPService_Upsert() {
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), 5))
 
 	// Upsert the responses to the database.
-	if err := svc.HTTP.Upsert(ctx); err != nil {
+	if err := svc.HTTP.Store(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
 	}
 

@@ -72,9 +72,8 @@ func main() {
 	requestPerSecond := 5
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), requestPerSecond))
 
-	// Use Upsert to make requests and in our case write response data to
-	// the MongoDB collectionsMongoDB collections.
-	if err := svc.HTTP.Upsert(ctx); err != nil {
+	// Upser the data to the MongoDB collection.
+	if err := svc.HTTP.Store(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
 	}
 }
