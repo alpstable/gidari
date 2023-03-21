@@ -152,7 +152,7 @@ func bestFitDecodeType(header string) DecodeType {
 	return decodeType
 }
 
-func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, done <-chan struct{}) error {
+func (svc *HTTPService) store(ctx context.Context, jobs chan<- listWriterJob, done <-chan struct{}) error {
 	for svc.Iterator.Next(ctx) {
 		rsp := svc.Iterator.Current.Response
 
@@ -193,10 +193,10 @@ func (svc *HTTPService) upsert(ctx context.Context, jobs chan<- listWriterJob, d
 	return nil
 }
 
-// Upsert will concurrently make the requests to the client and store the data
+// Store will concurrently make the requests to the client and store the data
 // from the responses in the provided storage. If no storage is provided, then
 // the data will be discarded.
-func (svc *HTTPService) Upsert(ctx context.Context) error {
+func (svc *HTTPService) Store(ctx context.Context) error {
 	reqCount := len(svc.requests)
 
 	// If there are no requests, do nothing.
@@ -226,7 +226,7 @@ func (svc *HTTPService) Upsert(ctx context.Context) error {
 		})
 	}
 
-	if err := svc.upsert(ctx, upsertWorkerJobs, done); err != nil {
+	if err := svc.store(ctx, upsertWorkerJobs, done); err != nil {
 		return fmt.Errorf("failed to upsert data: %w", err)
 	}
 

@@ -57,8 +57,8 @@ func main() {
 	requestPerSecond := 5
 	svc.HTTP.RateLimiter(rate.NewLimiter(rate.Every(1*time.Second), requestPerSecond))
 
-	// Use Upsert to make requests and in our case write response data to stdout in CSV format.
-	if err := svc.HTTP.Upsert(ctx); err != nil {
+	// Write the response body to the CSV file.
+	if err := svc.HTTP.Store(ctx); err != nil {
 		log.Fatalf("failed to upsert HTTP responses: %v", err)
 	}
 
