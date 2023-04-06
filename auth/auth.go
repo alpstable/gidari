@@ -58,7 +58,8 @@ func NewCoinbaseRoundTrip(key, secret, passphrase string) RoundTrip {
 			requestPath = fmt.Sprintf("%s?%s", req.URL.Path, req.URL.RawQuery)
 		}
 
-		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		formatBase := 10
+		timestamp := strconv.FormatInt(time.Now().Unix(), formatBase)
 		msg := fmt.Sprintf("%s%s%s%s", timestamp, req.Method, requestPath, string(body))
 
 		skey, err := base64.StdEncoding.DecodeString(secret)
