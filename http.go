@@ -161,6 +161,11 @@ func (svc *HTTPService) store(ctx context.Context, jobs chan<- listWriterJob, do
 			continue
 		}
 
+		// If response status code is not 200 (OK) return with an error
+		if rsp.StatusCode != 200 {
+			return errors.New("Response status not OK")
+		}
+
 		job := &listWriterJob{writers: svc.Iterator.Current.writers}
 
 		// Get the best fit type for decoding the response body. If the
