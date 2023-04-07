@@ -24,6 +24,9 @@ var ErrUnsupportedDecodeType = fmt.Errorf("unsupported decode type")
 // supported.
 var ErrUnsupportedProtobufType = fmt.Errorf("unsupported proto type")
 
+// ErrBadResponse is returned when a response's status code is not 200 or 'OK'.
+var ErrBadResponse = fmt.Errorf("response status code not OK")
+
 // DecodeType is an enum that represents the type of data that is being decoded.
 type DecodeType int32
 
