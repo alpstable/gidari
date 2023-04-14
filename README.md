@@ -19,12 +19,14 @@ For information on using the CLI, see [here](https://github.com/alpstable/gidari
 
 ## Usage
 
-At the moment, Gidari only supports HTTP services. There are two ways to use an HTTP service:
+Gidari supports HTTP and network socket services. There are two ways to use an HTTP service:
 
 1. Iterate over [`http.Response`](https://pkg.go.dev/net/http#Response) data, for pre-defined [`http.Request`](https://pkg.go.dev/net/http#Request)s.
 2. Define a writer to concurrently "write" response data for pre-defined `http.Request`s.
 
-See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) section for usage.
+See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) section for examples.
+
+Network sockets involves subscribing to a socket (such a web socket) and continuously iterating over the data via ReadWriter interface. The results would then be sent to a user-defined ListWriter to be stored. See the Go Docs or [Network Socket Examples](#network-socket-examples) section for examples.
 
 ### Authenticating HTTP Requests
 
