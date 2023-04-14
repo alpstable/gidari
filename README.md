@@ -26,7 +26,7 @@ Gidari supports HTTP and network socket services. There are two ways to use an H
 
 See the Go Docs or [Web-to-Storage Examples](#web-to-storage-examples) section for examples.
 
-Network sockets involves subscribing to a socket (such a web socket) and continuously iterating over the data via ReadWriter interface. The results would then be sent to a user-defined ListWriter to be stored. See the Go Docs or [Network Socket Exmaples](#network-socket-examples) section for examples.
+Network sockets involves subscribing to a socket (such a web socket) and continuously iterating over the data via ReadWriter interface. The results would then be sent to a user-defined ListWriter to be stored. See the Go Docs or [Network Socket Examples](#network-socket-examples) section for examples.
 
 ### Authenticating HTTP Requests
 
