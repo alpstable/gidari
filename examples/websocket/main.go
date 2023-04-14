@@ -64,7 +64,7 @@ func main() {
 	msg := []byte(`{
     "type": "subscribe",
     "product_ids": [
-        "BTC-USD",
+        "BTC-USD"
     ],
     "channels": [
     	"ticker"
