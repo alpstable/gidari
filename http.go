@@ -207,24 +207,11 @@ func (svc *HTTPService) Store(ctx context.Context) error {
 	// Reset the iterator.
 	svc.Iterator = NewHTTPIteratorService(svc)
 
-	// Create a channel to send requests to the worker.
-	upsertWorkerJobs := make(chan listWriterJob, reqCount)
+	listWriterCh := startListWriter(ctx, reqCount)
 
-	// done is a channel that will be closed when the worker is done.
-	done := make(chan struct{}, reqCount)
-
-	// errCh is a channel that will receive any errors from the worker.
-	errCh := make(chan error, 1)
-
-	// Start the upsert worker.
-	for i := 1; i <= runtime.NumCPU(); i++ {
-		go startListWriter(ctx, listWriterConfig{
-			id:    i,
-			jobs:  upsertWorkerJobs,
-			done:  done,
-			errCh: errCh,
-		})
-	}
+	upsertWorkerJobs := listWriterCh.jobs
+	done := listWriterCh.done
+	errCh := listWriterCh.err
 
 	if err := svc.store(ctx, upsertWorkerJobs, done); err != nil {
 		return fmt.Errorf("failed to upsert data: %w", err)

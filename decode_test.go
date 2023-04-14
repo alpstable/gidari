@@ -108,6 +108,69 @@ func TestDecode(t *testing.T) {
 	}
 }
 
+func TestIsPartialJSON(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		data     []byte
+		expected bool
+	}{
+		{
+			name:     "empty data",
+			expected: true,
+		},
+		{
+			name:     "json object",
+			data:     []byte(`{"foo": "bar"}`),
+			expected: false,
+		},
+		{
+			name:     "json array",
+			data:     []byte(`[{"foo": "bar"}]`),
+			expected: false,
+		},
+		{
+			name:     "json array with multiple objects",
+			data:     []byte(`[{"foo": "bar"}, {"foo": "baz"}]`),
+			expected: false,
+		},
+		{
+			name:     "json object with partial data",
+			data:     []byte(`{"foo": "bar`),
+			expected: true,
+		},
+		{
+			name:     "json array with partial data",
+			data:     []byte(`[{"foo": "bar"}`),
+			expected: true,
+		},
+		{
+			name:     "json array with multiple objects with partial data",
+			data:     []byte(`[{"foo": "bar"}, {"foo": "baz"}`),
+			expected: true,
+		},
+		{
+			name:     "json array with multiple objects with partial data",
+			data:     []byte(`[{"foo": "bar"}, {"foo": "baz"`),
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			actual := isPartialJSON(test.data)
+			if actual != test.expected {
+				t.Fatalf("unexpected result: %v", actual)
+			}
+		})
+	}
+}
+
 func BenchmarkDecodeUpsertRequest(b *testing.B) {
 	// Create a very large JSON object.
 	data := []byte(`{`)

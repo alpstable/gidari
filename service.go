@@ -21,6 +21,10 @@ type Service struct {
 	// HTTP is used for transporting and processing HTTP requests and
 	// responses.
 	HTTP *HTTPService
+
+	// Socket is used for transporting and processing data over a socket
+	// connection.
+	Socket *SocketService
 }
 
 // ServiceOption is a function for configuring a Service.
@@ -34,6 +38,7 @@ func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 	}
 
 	svc.HTTP = NewHTTPService(svc)
+	svc.Socket = NewSocketService(svc)
 
 	return svc, nil
 }
@@ -47,17 +52,6 @@ type ListWriter interface {
 type listWriterJob struct {
 	decFunc DecodeFunc
 	writers []ListWriter
-}
-
-type listWriterConfig struct {
-	// id is a unique identifier for the worker. This value MUST be set in
-	// order to start a web worker. One and only one web worker
-	// configuration MUST have an ID of 1 in order to close the response
-	// channel.
-	id    int
-	jobs  <-chan listWriterJob
-	done  chan<- struct{}
-	errCh chan<- error
 }
 
 func writeList(ctx context.Context, job *listWriterJob) <-chan error {
@@ -94,20 +88,63 @@ func writeList(ctx context.Context, job *listWriterJob) <-chan error {
 	return errs
 }
 
+// upsertWorkerJobs := make(chan listWriterJob)
+// go startListWriter(ctx, listWriterConfig{
+//	id:    1,
+//	jobs:  upsertWorkerJobs,
+//	errCh: errs,
+// })
+
+type listWriterChan struct {
+	done <-chan struct{}
+	err  <-chan error
+	jobs chan<- listWriterJob
+}
+
 // startListWriter will start a worker to upsert data from HTTP responses into
 // a database.
-func startListWriter(ctx context.Context, cfg listWriterConfig) {
-	for job := range cfg.jobs {
-		errs := writeList(ctx, &job)
-		if err := <-errs; err != nil {
-			cfg.errCh <- err
-		}
-
-		cfg.done <- struct{}{}
+func startListWriter(ctx context.Context, numJobs int) listWriterChan {
+	if numJobs == 0 {
+		numJobs = 1
 	}
 
-	if cfg.id == 1 {
-		close(cfg.done)
-		close(cfg.errCh)
+	var (
+		jobs  chan listWriterJob
+		done  chan struct{}
+		errCh chan error
+	)
+
+	if numJobs > 0 {
+		done = make(chan struct{}, numJobs)
+		jobs = make(chan listWriterJob, numJobs)
+	} else {
+		jobs = make(chan listWriterJob)
+	}
+
+	errCh = make(chan error, 1)
+
+	go func() {
+		defer close(errCh)
+
+		if done != nil {
+			defer close(done)
+		}
+
+		for job := range jobs {
+			errs := writeList(ctx, &job)
+			if err := <-errs; err != nil {
+				errCh <- err
+			}
+
+			if done != nil {
+				done <- struct{}{}
+			}
+		}
+	}()
+
+	return listWriterChan{
+		done: done,
+		err:  errCh,
+		jobs: jobs,
 	}
 }

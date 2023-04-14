@@ -167,3 +167,58 @@ func (m *mockUpsertWriter) Write(context.Context, *structpb.ListValue) error {
 
 	return nil
 }
+
+type mockConn struct {
+	readData [][]byte
+	readIdx  int
+}
+
+func (c *mockConn) Read(b []byte) (int, error) {
+	if c.readIdx >= len(c.readData) {
+		return 0, io.EOF
+	}
+
+	n := copy(b, c.readData[c.readIdx])
+	c.readIdx++
+
+	return n, nil
+}
+
+func (c *mockConn) Write(b []byte) (int, error) {
+	return len(b), nil
+}
+
+type mockListWriter struct {
+	count   int
+	countMu sync.Mutex
+	data    [][]byte
+}
+
+func (m *mockListWriter) Write(_ context.Context, val *structpb.ListValue) error {
+	m.countMu.Lock()
+	defer m.countMu.Unlock()
+
+	// Marshal the value to JSON.
+	data, err := val.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal value: %w", err)
+	}
+
+	m.data = append(m.data, data)
+	m.count++
+
+	return nil
+}
+
+type mockConnBlocker struct{}
+
+func (m *mockConnBlocker) Read(b []byte) (int, error) {
+	ch := make(chan struct{})
+	<-ch
+
+	return 0, nil
+}
+
+func (m *mockConnBlocker) Write(b []byte) (int, error) {
+	return len(b), nil
+}

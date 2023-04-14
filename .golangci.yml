@@ -61,9 +61,11 @@ issues:
 linters-settings:
   varnamelen:
     ignore-names:
-      - wg # for wait groups
-      - i # for indexing
-      - w # for writers
+      - wg  # for wait groups
+      - i   # for indexing
+      - w   # for writers
+      - rw  # for reader-writers
+      - n   # n is commonly used as the size of a buffer after readjk:w
   revive:
     severity: warning
     rules:
