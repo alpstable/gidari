@@ -9,9 +9,12 @@
 package gidari
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
@@ -85,4 +88,56 @@ func decodeFuncJSON(rsp *http.Response) DecodeFunc {
 
 		return nil
 	}
+}
+
+func decodeFuncJSONFromBytes(b []byte) DecodeFunc {
+	return func(list *structpb.ListValue) error {
+		// Decode the response into a list of values.
+		dec := json.NewDecoder(bytes.NewReader(b))
+
+		for dec.More() {
+			val := &structpb.Value{}
+			if err := dec.Decode(val); err != nil {
+				return fmt.Errorf("failed to decode json: %w", err)
+			}
+
+			if err := addValue(list, val); err != nil {
+				return fmt.Errorf("failed to add value to list: %w", err)
+			}
+		}
+
+		return nil
+	}
+}
+
+func isPartialJSON(data []byte) bool {
+	if len(data) == 0 {
+		return true
+	}
+
+	// Define regular expressions to match the beginning and ending
+	// characters of a JSON object or array
+	objectStart := regexp.MustCompile(`^\s*\{`)
+	objectEnd := regexp.MustCompile(`\}\s*$`)
+	arrayStart := regexp.MustCompile(`^\s*\[`)
+	arrayEnd := regexp.MustCompile(`\]\s*$`)
+
+	// Convert the byte slice to a string and trim any leading/trailing
+	// whitespace
+	str := string(data)
+	str = strings.TrimSpace(str)
+
+	// Check if the string starts with an opening bracket '{' or '[' and
+	// ends with a closing bracket '}' or ']'
+	if objectStart.MatchString(str) && !objectEnd.MatchString(str) {
+		return true
+	}
+
+	if arrayStart.MatchString(str) && !arrayEnd.MatchString(str) {
+		return true
+	}
+
+	// If the string does not match any of the above conditions, it is a
+	// complete JSON object or array
+	return false
 }
