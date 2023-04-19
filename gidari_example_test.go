@@ -154,7 +154,7 @@ func ExampleWithAuth() {
 	}
 
 	// Set a round tripper that will sign the requests.
-	roundTripper := auth.NewCoinbaseRoundTrip(key, secret, passphrase)
+	roundTripper, _ := auth.NewCoinbaseRoundTrip(key, secret, passphrase)
 	withAuth := gidari.WithAuth(roundTripper)
 
 	// Create some requests and add them to the service.

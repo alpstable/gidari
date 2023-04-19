@@ -9,10 +9,18 @@
 package auth
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
+)
+
+const (
+	krakenTestURL   = "https://api.kraken.com/"
+	coinbaseTestURL = "https://api-public.sandbox.exchange.coinbase.com"
 )
 
 type roundTrip struct {
@@ -25,58 +33,112 @@ func (r *roundTrip) RoundTrip(req *http.Request) (*http.Response, error) {
 	return r.rtripper(req)
 }
 
-func TestNewCoinbaseRoundTripper(t *testing.T) {
+func newTestKrakenRoundTrip(t *testing.T, key, secret string) *roundTrip {
+	t.Helper()
+
+	rtripper, err := NewKrakenRoundTrip(key, secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &roundTrip{rtripper: rtripper}
+}
+
+func newTestCoinbaseRoundTrip(t *testing.T, key, secret, passphrase string) *roundTrip {
+	t.Helper()
+
+	rtripper, err := NewCoinbaseRoundTrip(key, secret, passphrase)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &roundTrip{rtripper: rtripper}
+}
+
+func TestNewKrakenRoundTripper(t *testing.T) {
 	t.Parallel()
 
-	const api = "https://api-public.sandbox.exchange.coinbase.com"
+	krakenAPIKey := os.Getenv("KRAKEN_API_KEY")
+	krakenAPISecret := os.Getenv("KRAKEN_API_SECRET")
 
-	secret := os.Getenv("COINBASE_API_SECRET")
-	key := os.Getenv("COINBASE_API_KEY")
-	passphrase := os.Getenv("COINBASE_API_PASSPHRASE")
+	coinbaseAPISecret := os.Getenv("COINBASE_API_SECRET")
+	coinbaseAPIKey := os.Getenv("COINBASE_API_KEY")
+	coinbaseAPIPassphrase := os.Getenv("COINBASE_API_PASSPHRASE")
 
-	// If the environment variabls are not set, we should skip this test.
-	if secret == "" || key == "" || passphrase == "" {
-		t.Skip("COINBASE_API_SECRET, COINBASE_API_KEY, and " +
-			"COINBASE_API_PASSPHRASE must be set to run this test")
+	tests := []struct {
+		name      string
+		method    string
+		api       string
+		path      string
+		roundTrip *roundTrip
+	}{
+		{
+			name:      "test kraken public api",
+			method:    http.MethodGet,
+			api:       krakenTestURL,
+			path:      "/0/public/Time",
+			roundTrip: newTestKrakenRoundTrip(t, krakenAPIKey, krakenAPISecret),
+		},
+		{
+			name:      "test kraken private api",
+			method:    http.MethodPost,
+			api:       krakenTestURL,
+			path:      "/0/private/Balance",
+			roundTrip: newTestKrakenRoundTrip(t, krakenAPIKey, krakenAPISecret),
+		},
+		{
+			name:      "test coinbase private api",
+			method:    http.MethodGet,
+			api:       coinbaseTestURL,
+			path:      "/accounts",
+			roundTrip: newTestCoinbaseRoundTrip(t, coinbaseAPIKey, coinbaseAPISecret, coinbaseAPIPassphrase),
+		},
 	}
 
-	// Create a new CoinbaseRoundTripper.
-	rtripper := NewCoinbaseRoundTrip(key, secret, passphrase)
+	for _, test := range tests {
+		test := test
 
-	// Check that the CoinbaseRoundTripper is not nil.
-	if rtripper == nil {
-		t.Fatal("CoinbaseRoundTripper is nil")
-	}
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			// Create a new client with the CoinbaseRoundTripper.
+			client := &http.Client{Transport: test.roundTrip}
 
-	roundTrip := &roundTrip{rtripper: rtripper}
+			// Create a new request for /accounts.
+			u, err := url.JoinPath(test.api, test.path)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Create a new client with the CoinbaseRoundTripper.
-	client := &http.Client{Transport: roundTrip}
+			req, err := http.NewRequestWithContext(context.Background(), test.method, u, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Create a new request for /accounts.
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, api+"/accounts", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+			// Send the request.
+			rsp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Send the request.
-	rsp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+			// Check that the response is not nil.
+			if rsp == nil {
+				t.Fatal("response is nil")
+			}
 
-	// Check that the response is not nil.
-	if rsp == nil {
-		t.Fatal("response is nil")
-	}
+			// Check that the response status code is 200.
+			if rsp.StatusCode != http.StatusOK {
+				var buf bytes.Buffer
+				if _, err := io.Copy(&buf, rsp.Body); err != nil {
+					t.Fatalf("failed to copy response body: %v", err)
+				}
 
-	// Check that the response status code is 200.
-	if rsp.StatusCode != http.StatusOK {
-		t.Fatal("response status code is not 200")
-	}
+				t.Fatalf("response status code is not 200: %d: %s", rsp.StatusCode, buf.String())
+			}
 
-	// Close the response body.
-	if err := rsp.Body.Close(); err != nil {
-		t.Fatalf("failed to close response body: %v", err)
+			// Close the response body.
+			if err := rsp.Body.Close(); err != nil {
+				t.Fatalf("failed to close response body: %v", err)
+			}
+		})
 	}
 }
