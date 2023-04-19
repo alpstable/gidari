@@ -20,7 +20,7 @@ jobs:
       # This is required for forked repositories trying to push to main.
       - name: Fetch repository secrets
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-        uses: superbrothers/setup-repo-secrets@v1
+        uses: alpstable/gidari
         with:
           access-token: ${{ secrets.ACCESS_TOKEN }}
           secrets: |
