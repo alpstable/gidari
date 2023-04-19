@@ -39,6 +39,10 @@ func newTestKrakenRoundTrip(t *testing.T, key, secret string) *roundTrip {
 
 	rtripper, err := NewKrakenRoundTrip(key, secret)
 	if err != nil {
+		if errors.Is(err, errInvalidRoundTripArgs) {
+			t.Skip(err)
+		}
+
 		t.Fatal(err)
 	}
 
@@ -112,10 +116,6 @@ func TestNewKrakenRoundTripper(t *testing.T) {
 
 			req, err := http.NewRequestWithContext(context.Background(), test.method, u, nil)
 			if err != nil {
-				if errors.Is(err, errInvalidRoundTripArgs) {
-					t.Skip(err)
-				}
-
 				t.Fatal(err)
 			}
 
