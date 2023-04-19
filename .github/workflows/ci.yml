@@ -23,6 +23,6 @@ jobs:
           COINBASE_API_PASSPHRASE: ${{ secrets.COINBASE_API_PASSPHRASE }}
           COINBASE_API_SECRET: ${{ secrets.COINBASE_API_SECRET }}
           KRAKEN_API_KEY: ${{ secrets.KRAKEN_API_KEY }}
-          KRAKEN_API_SECRET: ${{ secret.KRAKEN_API_SECRET }}
+          KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
           TEST: ${{ env.TEST }}
         run: make tests
