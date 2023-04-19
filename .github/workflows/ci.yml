@@ -17,6 +17,19 @@ jobs:
         with:
           go-version: 1.19
 
+      # This is required for forked repositories trying to push to main.
+      - name: Fetch repository secrets
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: superbrothers/setup-repo-secrets@v1
+        with:
+          access-token: ${{ secrets.ACCESS_TOKEN }}
+          secrets: |
+            COINBASE_API_KEY
+            COINBASE_API_PASSPHRASE
+            COINBASE_API_SECRET
+            KRAKEN_API_KEY
+            KRAKEN_API_SECRET
+
       - name: Run Test
         env:
           COINBASE_API_KEY: ${{ secrets.COINBASE_API_KEY }}
