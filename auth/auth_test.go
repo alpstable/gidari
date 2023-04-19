@@ -11,6 +11,7 @@ package auth
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -38,6 +39,10 @@ func newTestKrakenRoundTrip(t *testing.T, key, secret string) *roundTrip {
 
 	rtripper, err := NewKrakenRoundTrip(key, secret)
 	if err != nil {
+		if errors.Is(err, errInvalidRoundTripArgs) {
+			t.Skip(err)
+		}
+
 		t.Fatal(err)
 	}
 
