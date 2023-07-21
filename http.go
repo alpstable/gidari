@@ -117,7 +117,7 @@ func (svc *HTTPService) Client(client Client) *HTTPService {
 // If no client has been set for the service, the default "http.DefaultClient"
 // defined by the "net/http" package will be used.
 func (svc *HTTPService) Requests(reqs ...*Request) *HTTPService {
-	svc.requests = append(svc.requests, reqs...)
+	svc.requests = reqs
 
 	return svc
 }
